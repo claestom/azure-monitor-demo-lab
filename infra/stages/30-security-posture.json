@@ -1,0 +1,860 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "13713568238219540609"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "namePrefix": {
+      "type": "string",
+      "defaultValue": "amlab",
+      "minLength": 3,
+      "maxLength": 8,
+      "metadata": {
+        "description": "Short prefix used to build resource names."
+      }
+    },
+    "ownerTag": {
+      "type": "string",
+      "defaultValue": "demo-lab",
+      "metadata": {
+        "description": "Tag every resource with this owner."
+      }
+    }
+  },
+  "variables": {
+    "suffix": "[uniqueString(resourceGroup().id)]",
+    "lawCentralName": "[format('law-{0}-central-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "actionGroupName": "[format('ag-{0}-email', parameters('namePrefix'))]",
+    "securityWorkbookName": "[format('wb-{0}-security', parameters('namePrefix'))]",
+    "commonTags": {
+      "owner": "[parameters('ownerTag')]",
+      "purpose": "azure-monitor-demo-lab",
+      "costCenter": "demo"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "law-rbac",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "centralLawId": {
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawCentralName'))]"
+          },
+          "centralLawName": {
+            "value": "[variables('lawCentralName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "8545516125681944633"
+            }
+          },
+          "parameters": {
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID."
+              }
+            },
+            "centralLawName": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region (unused — kept for consistency)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags (unused — kept for consistency)."
+              }
+            },
+            "workspaceReaderPrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "(Optional) Object ID of a user/group for the \"all-tables reader\" role. Leave empty to skip."
+              }
+            },
+            "tableReaderPrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "(Optional) Object ID of a user/group for the table-restricted role. Leave empty to skip."
+              }
+            },
+            "rowFilteredPrincipalId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "(Optional) Object ID of a user/group for the row-level filtered role. Leave empty to skip."
+              }
+            }
+          },
+          "variables": {
+            "logAnalyticsReaderRoleId": "73c42c96-874c-492b-b04d-ab87d138a893",
+            "tableCondition": "((!(ActionMatches{'Microsoft.OperationalInsights/workspaces/tables/data/read'})) OR (@Resource[Microsoft.OperationalInsights/workspaces/tables:name] StringEquals 'SecurityAudit_CL'))",
+            "rowCondition": "((!(ActionMatches{'Microsoft.OperationalInsights/workspaces/tables/data/read'})) OR ((@Resource[Microsoft.OperationalInsights/workspaces/tables:name] StringEquals 'SecurityAudit_CL') AND (@Resource[Microsoft.OperationalInsights/workspaces/tables/record:Severity<$key_case_sensitive$>] StringEquals 'Critical')))"
+          },
+          "resources": [
+            {
+              "condition": "[not(empty(parameters('workspaceReaderPrincipalId')))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('centralLawName'))]",
+              "name": "[guid(parameters('centralLawId'), variables('logAnalyticsReaderRoleId'), parameters('workspaceReaderPrincipalId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('logAnalyticsReaderRoleId'))]",
+                "principalId": "[parameters('workspaceReaderPrincipalId')]",
+                "principalType": "User"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleDefinitions",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, 'amlab-granular-log-reader')]",
+              "properties": {
+                "roleName": "[format('AMLAB - Granular Log Reader ({0})', uniqueString(resourceGroup().id))]",
+                "description": "Granular RBAC role for Log Analytics. Assign with ABAC conditions to restrict table or row-level access. Uses DataAction for data plane control.",
+                "type": "CustomRole",
+                "permissions": [
+                  {
+                    "actions": [
+                      "Microsoft.OperationalInsights/workspaces/read",
+                      "Microsoft.OperationalInsights/workspaces/query/read"
+                    ],
+                    "notActions": [],
+                    "dataActions": [
+                      "Microsoft.OperationalInsights/workspaces/tables/data/read"
+                    ],
+                    "notDataActions": []
+                  }
+                ],
+                "assignableScopes": [
+                  "[resourceGroup().id]"
+                ]
+              }
+            },
+            {
+              "condition": "[not(empty(parameters('tableReaderPrincipalId')))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('centralLawName'))]",
+              "name": "[guid(parameters('centralLawId'), 'granular-table-reader', parameters('tableReaderPrincipalId'))]",
+              "properties": {
+                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', guid(resourceGroup().id, 'amlab-granular-log-reader'))]",
+                "principalId": "[parameters('tableReaderPrincipalId')]",
+                "principalType": "User",
+                "condition": "[variables('tableCondition')]",
+                "conditionVersion": "2.0"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Authorization/roleDefinitions', guid(resourceGroup().id, 'amlab-granular-log-reader'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('rowFilteredPrincipalId')))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('centralLawName'))]",
+              "name": "[guid(parameters('centralLawId'), 'granular-row-filtered', parameters('rowFilteredPrincipalId'))]",
+              "properties": {
+                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', guid(resourceGroup().id, 'amlab-granular-log-reader'))]",
+                "principalId": "[parameters('rowFilteredPrincipalId')]",
+                "principalType": "User",
+                "condition": "[variables('rowCondition')]",
+                "conditionVersion": "2.0"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Authorization/roleDefinitions', guid(resourceGroup().id, 'amlab-granular-log-reader'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "granularRoleName": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Authorization/roleDefinitions', guid(resourceGroup().id, 'amlab-granular-log-reader')), '2022-04-01').roleName]"
+            },
+            "rbacSummary": {
+              "type": "string",
+              "value": "Granular RBAC deployed: (1) workspace-level via Log Analytics Reader, (2) table-level via ABAC condition restricting to SecurityAudit_CL, (3) row-level via ABAC condition filtering Severity==Critical only. Custom role \"AMLAB - Granular Log Reader\" uses DataActions for data plane control."
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "security-posture-alerts",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "workspaceId": {
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawCentralName'))]"
+          },
+          "actionGroupId": {
+            "value": "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "15529012368281587446"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region for scheduled query alerts."
+              }
+            },
+            "workspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central Log Analytics workspace resource ID."
+              }
+            },
+            "actionGroupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Action group resource ID."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/scheduledQueryRules",
+              "apiVersion": "2023-03-15-preview",
+              "name": "alert-security-control-plane-drift",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Control-plane drift watch: unusual bursts of write/delete operations.",
+                "enabled": true,
+                "severity": 2,
+                "scopes": [
+                  "[parameters('workspaceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT15M",
+                "criteria": {
+                  "allOf": [
+                    {
+                      "query": "AzureActivity | where TimeGenerated > ago(15m) | where ActivityStatusValue == \"Success\" | where OperationNameValue has_any (\"/write\", \"/delete\", \"/action\") | summarize Changes = count()",
+                      "timeAggregation": "Count",
+                      "operator": "GreaterThan",
+                      "threshold": 40,
+                      "failingPeriods": {
+                        "numberOfEvaluationPeriods": 1,
+                        "minFailingPeriodsToAlert": 1
+                      }
+                    }
+                  ]
+                },
+                "autoMitigate": true,
+                "actions": {
+                  "actionGroups": [
+                    "[parameters('actionGroupId')]"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/scheduledQueryRules",
+              "apiVersion": "2023-03-15-preview",
+              "name": "alert-security-privilege-escalation-watch",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Privilege escalation watch: high-risk RBAC mutations in activity logs.",
+                "enabled": true,
+                "severity": 1,
+                "scopes": [
+                  "[parameters('workspaceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT30M",
+                "criteria": {
+                  "allOf": [
+                    {
+                      "query": "AzureActivity | where TimeGenerated > ago(30m) | where ActivityStatusValue == \"Success\" | where OperationNameValue has_any (\"roleAssignments/write\", \"roleDefinitions/write\", \"elevateAccess/action\") | summarize Hits = count()",
+                      "timeAggregation": "Count",
+                      "operator": "GreaterThan",
+                      "threshold": 0,
+                      "failingPeriods": {
+                        "numberOfEvaluationPeriods": 1,
+                        "minFailingPeriodsToAlert": 1
+                      }
+                    }
+                  ]
+                },
+                "autoMitigate": true,
+                "actions": {
+                  "actionGroups": [
+                    "[parameters('actionGroupId')]"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/scheduledQueryRules",
+              "apiVersion": "2023-03-15-preview",
+              "name": "alert-security-exfil-early-warning",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Exfiltration early warning: outbound traffic spikes in flow analytics.",
+                "enabled": true,
+                "severity": 2,
+                "skipQueryValidation": true,
+                "scopes": [
+                  "[parameters('workspaceId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT30M",
+                "criteria": {
+                  "allOf": [
+                    {
+                      "query": "NTANetAnalytics | where TimeGenerated > ago(30m) | where SubType == \"FlowLog\" | where FlowDirection == \"O\" | summarize OutboundBytes = sum(BytesSrcToDest) | where OutboundBytes > 1000000000",
+                      "timeAggregation": "Count",
+                      "operator": "GreaterThan",
+                      "threshold": 0,
+                      "failingPeriods": {
+                        "numberOfEvaluationPeriods": 1,
+                        "minFailingPeriodsToAlert": 1
+                      }
+                    }
+                  ]
+                },
+                "autoMitigate": true,
+                "actions": {
+                  "actionGroups": [
+                    "[parameters('actionGroupId')]"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "security-workbook",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[guid(resourceGroup().id, variables('securityWorkbookName'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "centralLawId": {
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawCentralName'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "8486905438972871987"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Workbook resource name (GUID)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region for the workbook resource."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central Log Analytics workspace resource ID (sourceId for the workbook)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "variables": {
+            "tilesQuery": "let activity = AzureActivity | where TimeGenerated > ago(24h) | where ActivityStatusValue == \"Success\";\r\nlet writes      = toscalar(activity | where OperationNameValue has_any (\"/write\",\"/delete\",\"/action\") | summarize count());\r\nlet rbac        = toscalar(activity | where OperationNameValue has_any (\"roleAssignments/write\",\"roleDefinitions/write\",\"elevateAccess/action\") | summarize count());\r\nlet kvOps       = toscalar(AzureDiagnostics | where TimeGenerated > ago(24h) | where ResourceType == \"VAULTS\" | summarize count());\r\nlet ntaFlows    = toscalar(NTANetAnalytics | where TimeGenerated > ago(24h) | where SubType == \"FlowLog\" | summarize count());\r\nlet maliciousNw = toscalar(NTANetAnalytics | where TimeGenerated > ago(24h) | where SubType == \"FlowLog\" | where FlowType == \"MaliciousFlow\" or AclName has \"MaliciousFlow\" | summarize count());\r\nlet signins     = toscalar(union isfuzzy=true (SigninLogs | where TimeGenerated > ago(24h) | summarize count()), (print SignInsCount = 0 | project Count = SignInsCount) | summarize sum(Count));\r\nprint\r\n    ['Control-plane changes (24h)']  = writes,\r\n    ['RBAC / elevation events (24h)']= rbac,\r\n    ['Key Vault ops (24h)']          = kvOps,\r\n    ['Network flows (24h)']          = ntaFlows,\r\n    ['Malicious flow hits (24h)']    = maliciousNw,\r\n    ['Entra sign-ins (24h)']         = signins\r\n",
+            "signinsTrendQuery": "SigninLogs\r\n| where TimeGenerated > ago(24h)\r\n| summarize Success = countif(ResultType == 0), Failed = countif(ResultType != 0) by bin(TimeGenerated, 1h)\r\n| render timechart\r\n",
+            "signinsFailuresQuery": "SigninLogs\r\n| where TimeGenerated > ago(24h)\r\n| where ResultType != 0\r\n| summarize Failures = count() by ResultType = tostring(ResultType), Reason = tostring(ResultDescription)\r\n| top 10 by Failures desc\r\n",
+            "signinsByLocationQuery": "SigninLogs\r\n| where TimeGenerated > ago(24h)\r\n| extend Country = tostring(LocationDetails.countryOrRegion)\r\n| where isnotempty(Country)\r\n| summarize SignIns = count() by Country\r\n| top 10 by SignIns desc\r\n",
+            "signinsRiskyQuery": "SigninLogs\r\n| where TimeGenerated > ago(7d)\r\n| where RiskLevelDuringSignIn in (\"medium\",\"high\") or RiskLevelAggregated in (\"medium\",\"high\") or RiskState != \"none\"\r\n| project TimeGenerated, UserPrincipalName, AppDisplayName, IPAddress, RiskLevelDuringSignIn, RiskState, ResultDescription\r\n| order by TimeGenerated desc\r\n| take 50\r\n",
+            "topOperationsQuery": "AzureActivity\r\n| where TimeGenerated > ago(24h)\r\n| where ActivityStatusValue == \"Success\"\r\n| where OperationNameValue has_any (\"/write\",\"/delete\",\"/action\")\r\n| summarize Count = count() by OperationName = tostring(OperationNameValue)\r\n| top 15 by Count desc\r\n",
+            "topCallersQuery": "AzureActivity\r\n| where TimeGenerated > ago(24h)\r\n| where ActivityStatusValue == \"Success\"\r\n| where OperationNameValue has_any (\"/write\",\"/delete\",\"/action\")\r\n| summarize Changes = count() by Caller = iif(isempty(Caller), \"(system / managed identity)\", Caller)\r\n| top 15 by Changes desc\r\n",
+            "writeDeleteTimelineQuery": "AzureActivity\r\n| where TimeGenerated > ago(24h)\r\n| where ActivityStatusValue == \"Success\"\r\n| extend Action = case(\r\n    OperationNameValue has \"/delete\", \"Delete\",\r\n    OperationNameValue has \"/write\", \"Write\",\r\n    OperationNameValue has \"/action\", \"Action\",\r\n    \"Other\")\r\n| where Action != \"Other\"\r\n| summarize Count = count() by bin(TimeGenerated, 30m), Action\r\n| render timechart\r\n",
+            "failedOperationsQuery": "AzureActivity\r\n| where TimeGenerated > ago(24h)\r\n| where ActivityStatusValue in (\"Failed\",\"Failure\")\r\n| where OperationNameValue has_any (\"/write\",\"/delete\",\"/action\")\r\n| summarize Failures = count(), Operations = make_set(OperationNameValue, 5) by Caller = iif(isempty(Caller), \"(system / managed identity)\", Caller)\r\n| top 15 by Failures desc\r\n",
+            "privEscQuery": "AzureActivity\r\n| where TimeGenerated > ago(7d)\r\n| where OperationNameValue has_any (\"roleAssignments/write\",\"roleDefinitions/write\",\"elevateAccess/action\")\r\n| project TimeGenerated, Caller, OperationName = tostring(OperationNameValue), Status = ActivityStatusValue, Resource = _ResourceId, CorrelationId\r\n| order by TimeGenerated desc\r\n| take 100\r\n",
+            "privEscByCallerQuery": "AzureActivity\r\n| where TimeGenerated > ago(7d)\r\n| where OperationNameValue has_any (\"roleAssignments/write\",\"roleDefinitions/write\",\"elevateAccess/action\")\r\n| summarize Events = count() by Caller = iif(isempty(Caller), \"(system / managed identity)\", Caller)\r\n| top 10 by Events desc\r\n",
+            "topEgressQuery": "NTANetAnalytics\r\n| where TimeGenerated > ago(24h)\r\n| where SubType == \"FlowLog\"\r\n| where FlowDirection == \"O\"\r\n| summarize OutboundBytes = sum(BytesSrcToDest), Flows = count() by DestIp\r\n| extend OutboundMB = round(todouble(OutboundBytes) / 1024 / 1024, 2)\r\n| top 15 by OutboundBytes desc\r\n| project DestIp, OutboundMB, Flows\r\n",
+            "egressTimelineQuery": "NTANetAnalytics\r\n| where TimeGenerated > ago(24h)\r\n| where SubType == \"FlowLog\"\r\n| where FlowDirection == \"O\"\r\n| summarize OutboundMB = round(todouble(sum(BytesSrcToDest))/1024/1024, 2) by bin(TimeGenerated, 30m)\r\n| render timechart\r\n",
+            "deniedFlowsQuery": "NTANetAnalytics\r\n| where TimeGenerated > ago(24h)\r\n| where SubType == \"FlowLog\"\r\n| where FlowStatus == \"D\"\r\n| summarize DeniedFlows = count() by SrcIp, DestIp, DestPort = tostring(DestPort), L7Protocol = tostring(L7Protocol)\r\n| top 20 by DeniedFlows desc\r\n",
+            "maliciousFlowsQuery": "NTANetAnalytics\r\n| where TimeGenerated > ago(7d)\r\n| where SubType == \"FlowLog\"\r\n| where FlowType == \"MaliciousFlow\" or AclName has \"MaliciousFlow\"\r\n| project TimeGenerated, SrcIp, DestIp, DestPort, FlowDirection, FlowStatus, L7Protocol, BytesSrcToDest, AclName\r\n| order by TimeGenerated desc\r\n| take 50\r\n",
+            "lifecycleByProviderQuery": "AzureActivity\r\n| where TimeGenerated > ago(7d)\r\n| where ActivityStatusValue == \"Success\"\r\n| where OperationNameValue has_any (\"/write\",\"/delete\")\r\n| extend Action = iif(OperationNameValue has \"/delete\", \"Delete\", \"Write\")\r\n| summarize Count = count() by ResourceProvider = tostring(ResourceProviderValue), Action\r\n| top 20 by Count desc\r\n",
+            "lifecycleTimelineQuery": "AzureActivity\r\n| where TimeGenerated > ago(7d)\r\n| where ActivityStatusValue == \"Success\"\r\n| where OperationNameValue has_any (\"/write\",\"/delete\")\r\n| summarize Events = count() by bin(TimeGenerated, 1h), ResourceProvider = tostring(ResourceProviderValue)\r\n| render timechart\r\n",
+            "keyVaultOpsQuery": "AzureDiagnostics\r\n| where TimeGenerated > ago(24h)\r\n| where ResourceType == \"VAULTS\"\r\n| summarize Count = count() by OperationName, ResultType, identity_claim_upn_s = tostring(identity_claim_upn_s)\r\n| top 25 by Count desc\r\n",
+            "keyVaultFailuresQuery": "AzureDiagnostics\r\n| where TimeGenerated > ago(7d)\r\n| where ResourceType == \"VAULTS\"\r\n| where ResultType != \"Success\"\r\n| project TimeGenerated, Resource, OperationName, ResultType, ResultSignature, identity_claim_upn_s = tostring(identity_claim_upn_s), CallerIPAddress\r\n| order by TimeGenerated desc\r\n| take 50\r\n",
+            "storageOpsQuery": "AzureDiagnostics\r\n| where TimeGenerated > ago(24h)\r\n| where ResourceProvider == \"MICROSOFT.STORAGE\"\r\n| summarize Count = count() by OperationName, statusText_s = tostring(statusText_s)\r\n| top 20 by Count desc\r\n",
+            "linkedAlertsQuery": "AlertsManagementResources\r\n| where type == \"microsoft.alertsmanagement/alerts\"\r\n| extend ruleId = tostring(properties.essentials.alertRule)\r\n| extend ruleName = tostring(split(ruleId, \"/\")[-1])\r\n| where ruleName has_any (\r\n    \"alert-security-control-plane-drift\",\r\n    \"alert-security-privilege-escalation-watch\",\r\n    \"alert-security-exfil-early-warning\")\r\n| extend Severity = tostring(properties.essentials.severity), State = tostring(properties.essentials.alertState),\r\n         FiredTime = todatetime(properties.essentials.startDateTime)\r\n| project FiredTime, ruleName, Severity, State, MonitorCondition = tostring(properties.essentials.monitorCondition)\r\n| order by FiredTime desc\r\n| take 50\r\n",
+            "workbookContent": {
+              "version": "Notebook/1.0",
+              "items": [
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "## 🛡️ Security operations — single pane of glass\n\nThis workbook surfaces the most useful security telemetry from the Azure Monitor demo lab:\n\n* **Identity** — Entra sign-ins (success / failure / risky)\n* **Control plane** — Azure Resource Manager CRUD activity, top operations & callers\n* **Privilege escalation** — RBAC role assignments / definitions / elevateAccess\n* **Network** — egress hotspots, denied flows, malicious-flow hits (from VNet Flow Logs + Traffic Analytics)\n* **Lifecycle** — resource churn by provider\n* **Sensitive data plane** — Key Vault secret reads, Storage transactions\n* **Linked alerts** — fires from scenarios 47/48/49\n\n> Time scope defaults to 24h for tiles, 7d for higher-signal panels (privilege escalation, malicious flows). All queries are pinned to the central lab workspace."
+                  },
+                  "name": "header"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('tilesQuery')]",
+                    "size": 3,
+                    "title": "Last 24 hours — security snapshot",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "tiles",
+                    "tileSettings": {
+                      "showBorder": true,
+                      "titleContent": {
+                        "columnMatch": "Column1"
+                      },
+                      "leftContent": {
+                        "columnMatch": "Column2",
+                        "formatter": 12
+                      }
+                    }
+                  },
+                  "name": "tiles24h"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "### 👤 Identity & sign-ins\n\nEntra ID sign-in telemetry. **If the panels below show \"No data\"**, Entra diagnostic settings are not yet forwarding `SigninLogs` to this workspace — see `scripts/setup-rbac-demo.ps1` and Azure portal → Entra ID → Diagnostic settings → ship `SignInLogs` to `law-amlab-central`."
+                  },
+                  "name": "identityHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('signinsTrendQuery')]",
+                    "size": 1,
+                    "title": "Sign-ins over time (last 24h)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "timechart"
+                  },
+                  "name": "signinsTrend"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('signinsFailuresQuery')]",
+                    "size": 1,
+                    "title": "Top sign-in failure reasons (24h)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "barchart"
+                  },
+                  "name": "signinsFailures"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('signinsByLocationQuery')]",
+                    "size": 1,
+                    "title": "Sign-ins by country (24h)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "piechart"
+                  },
+                  "name": "signinsLocation"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('signinsRiskyQuery')]",
+                    "size": 1,
+                    "title": "Risky sign-ins (last 7d)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "signinsRisky"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "### 🛠️ Control plane — CRUD activity\n\nAll successful `/write`, `/delete`, `/action` operations from `AzureActivity`. Look for: unusual callers, weekend bursts, sudden delete storms (linked alert: `alert-security-control-plane-drift`)."
+                  },
+                  "name": "crudHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('writeDeleteTimelineQuery')]",
+                    "size": 1,
+                    "title": "Write / Delete / Action timeline (24h, 30m bins)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "timechart"
+                  },
+                  "name": "crudTimeline"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('topOperationsQuery')]",
+                    "size": 1,
+                    "title": "Top 15 operations (24h)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "barchart"
+                  },
+                  "name": "crudTopOps"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('topCallersQuery')]",
+                    "size": 1,
+                    "title": "Top 15 callers (24h)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "barchart"
+                  },
+                  "name": "crudTopCallers"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('failedOperationsQuery')]",
+                    "size": 1,
+                    "title": "Failed control-plane operations by caller (24h)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "crudFailures"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "### 🚨 Privilege escalation — RBAC & elevateAccess\n\nHighest-severity panel: any unexpected entry here is potentially an account compromise. Backing alert: `alert-security-privilege-escalation-watch` (severity 1)."
+                  },
+                  "name": "privEscHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('privEscByCallerQuery')]",
+                    "size": 1,
+                    "title": "RBAC / elevation events by caller (7d)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "barchart"
+                  },
+                  "name": "privEscByCaller"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('privEscQuery')]",
+                    "size": 1,
+                    "title": "Recent RBAC / elevateAccess operations (7d, top 100)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "privEscDetail"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "### 🌐 Network — egress & exfiltration\n\nFrom VNet Flow Logs enriched by Traffic Analytics (`NTANetAnalytics`). The exfil early-warning alert fires when 30-min outbound bytes exceed 1 GB — see `alert-security-exfil-early-warning`.\n\n> Uses the modern `NTANetAnalytics` table (the legacy `AzureNetworkAnalytics_CL` from NSG flow logs is being retired Sep-2027)."
+                  },
+                  "name": "networkHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('egressTimelineQuery')]",
+                    "size": 1,
+                    "title": "Outbound traffic (MB) over time — 24h",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "timechart"
+                  },
+                  "name": "egressTimeline"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('topEgressQuery')]",
+                    "size": 1,
+                    "title": "Top 15 egress destinations (24h)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "topEgress"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('deniedFlowsQuery')]",
+                    "size": 1,
+                    "title": "Denied flows — top 20 (24h)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "deniedFlows"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('maliciousFlowsQuery')]",
+                    "size": 1,
+                    "title": "Malicious-flow hits (Traffic Analytics threat intel, 7d)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "maliciousFlows"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "### 🔄 Lifecycle — resource churn by provider\n\nHow many `write` / `delete` events per resource provider in the last 7 days. Healthy labs see a small steady trickle; a flat line followed by a spike = batch deploy or batch delete (potential blast radius)."
+                  },
+                  "name": "lifecycleHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('lifecycleByProviderQuery')]",
+                    "size": 1,
+                    "title": "Top 20 (provider, action) pairs (7d)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "barchart"
+                  },
+                  "name": "lifecycleByProvider"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('lifecycleTimelineQuery')]",
+                    "size": 1,
+                    "title": "Resource events by provider over time (7d)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "timechart"
+                  },
+                  "name": "lifecycleTimeline"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "### 🔐 Sensitive data plane — Key Vault & Storage\n\nKey Vault secret/key access and Storage transactions from `AzureDiagnostics`. Spikes in `SecretGet` or `KeyGet` from unusual identities are worth pivoting to a Sentinel hunt."
+                  },
+                  "name": "dataPlaneHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('keyVaultOpsQuery')]",
+                    "size": 1,
+                    "title": "Key Vault operations (24h)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "barchart"
+                  },
+                  "name": "kvOps"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('keyVaultFailuresQuery')]",
+                    "size": 1,
+                    "title": "Key Vault failures (7d, top 50)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "kvFailures"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('storageOpsQuery')]",
+                    "size": 1,
+                    "title": "Storage operations (24h)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "barchart"
+                  },
+                  "name": "storageOps"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "### 🔔 Linked security alerts\n\nFires from the three security-posture alerts. Empty = quiet lab (good). See `DEMO-SCENARIOS.md` scenarios 47, 48, 49 to trigger each one.\n\n| Alert | Scenario | Severity |\n| --- | --- | --- |\n| `alert-security-control-plane-drift` | 47 | Sev 2 |\n| `alert-security-privilege-escalation-watch` | 48 | Sev 1 |\n| `alert-security-exfil-early-warning` | 49 | Sev 2 |"
+                  },
+                  "name": "alertsHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('linkedAlertsQuery')]",
+                    "size": 1,
+                    "title": "Recent fires from security alerts",
+                    "queryType": 1,
+                    "resourceType": "microsoft.resourcegraph/resources",
+                    "crossComponentResources": [
+                      "value::selected"
+                    ]
+                  },
+                  "name": "linkedAlerts"
+                }
+              ],
+              "fallbackResourceIds": [
+                "[parameters('centralLawId')]"
+              ]
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/workbooks",
+              "apiVersion": "2023-06-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "shared",
+              "properties": {
+                "displayName": "🛡️ Azure Monitor Demo Lab — Security operations",
+                "serializedData": "[string(variables('workbookContent'))]",
+                "category": "workbook",
+                "sourceId": "[parameters('centralLawId')]",
+                "version": "1.0"
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/workbooks', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "securityWorkbookId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'security-workbook'), '2022-09-01').outputs.id.value]"
+    }
+  }
+}

@@ -1,0 +1,70 @@
+# =====================================================================================
+# FEATURE 3 — Smart Detection ramp
+#
+# A 60-minute Job that progressively ramps the failure rate of requests against the
+# App Service from ~1% to ~30%. This triggers App Insights *Smart Detection* (anomaly
+# detection — no alert rule required). Expect an email from Azure within ~15 min after
+# the ramp starts.
+#
+# Replace __APP_SERVICE_URL__ at deploy time (scripts/start-ramp.ps1 does this).
+# =====================================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loadgen-ramp-script
+  namespace: demo
+data:
+  ramp.sh: |
+    #!/bin/sh
+    set -eu
+    TARGET="${TARGET:-__APP_SERVICE_URL__}"
+    START=$(date +%s)
+    END=$(( START + 3600 ))   # 60 minutes
+    echo "Smart Detection ramp starting against $TARGET"
+    while [ "$(date +%s)" -lt "$END" ]; do
+      NOW=$(date +%s)
+      ELAPSED=$(( NOW - START ))
+      # Linear ramp from 1% to 30% over 3600 s
+      PCT=$(( 1 + (ELAPSED * 29 / 3600) ))
+      RND=$(( RANDOM % 100 ))
+      if [ "$RND" -lt "$PCT" ]; then
+        curl -s -o /dev/null -w "%{http_code} (fail-target pct=$PCT) " "$TARGET/api/explode" || true
+      else
+        curl -s -o /dev/null -w "%{http_code} (ok pct=$PCT) " "$TARGET/" || true
+      fi
+      echo ""
+      sleep 2
+    done
+    echo "Ramp complete."
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadgen-ramp
+  namespace: demo
+  labels:
+    app: loadgen-ramp
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 7200
+  template:
+    metadata:
+      labels:
+        app: loadgen-ramp
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: ramp
+          image: curlimages/curl:8.11.1
+          command: ["sh", "/scripts/ramp.sh"]
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+          resources:
+            requests: { cpu: "50m", memory: "32Mi" }
+            limits:   { cpu: "200m", memory: "128Mi" }
+      volumes:
+        - name: script
+          configMap:
+            name: loadgen-ramp-script
+            defaultMode: 0755

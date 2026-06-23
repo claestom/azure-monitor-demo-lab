@@ -1,0 +1,95 @@
+# Stage C — Alerts and response
+
+> **Goal of this stage:** turn the lab from "observable" into "responsive." We add the Action Group (email + Logic App + optional SIEM webhook), a catalog of metric/log/activity alerts on the Stage B workloads, the AMBA baseline rule pack, resource/service health alerts, alert processing rules for routing/suppression, and a VMSS with predictive autoscale to demonstrate alert-to-action loops.
+>
+> **Maps to scenarios:** 7, 8, 12, 15, 17, 19, 23, 37.
+
+## 1) What gets created
+
+| Group | Resource(s) | Purpose |
+|---|---|---|
+| Automitigation Logic App | `la-amlab-automitigate` | Generic HTTP-triggered Logic App. Its callback URL becomes a webhook receiver on the Action Group — proves "alert ⇒ workflow" end-to-end. |
+| Action Group | `ag-amlab-email` | Receivers: 1 × email (`alertEmail` param), 1 × webhook (Logic App), and 0–1 × secure webhook for an external SIEM (`siemWebhookUrl` if non-empty). |
+| Workload alerts (`alerts.bicep`) | Metric/log alerts on AKS, App Service, App Insights, Linux VM, Windows VM | Demonstrate the alert taxonomies: metric vs. log, static vs. dynamic threshold, single-resource vs. resource-graph scoped. |
+| AMBA baseline | Azure Monitor Baseline Alerts rule set | The Microsoft-published "minimum viable monitoring" rule pack applied to VMs, web app, AKS, and App Service plan. |
+| Health alerts | `health-alerts.bicep` | Service Health + Resource Health subscription-scope alerts. Demonstrates platform-impact alerting (planned maintenance, outages). |
+| Alert processing rules | `apr-amlab-*` | Routing/suppression rules at the RG scope (e.g., suppress alerts at night, force-add the action group on all alerts in the RG). |
+| VMSS | `vmss-amlab` (Standard_B1s, with predictive autoscale) | Tied into the alerting story — autoscale events surface in `AzureActivity` and become demo material in Stage D. |
+
+> Cross-stage references: `law-amlab-central`, `appi-amlab`, `aks-amlab`, web app, app plan, both VMs are all `existing` references.
+
+## 2) Speaker notes
+
+1. **"One action group, many receivers."**
+   Show the Action Group page: email + Logic App webhook + (optional) SIEM webhook. Customers usually have all three. Emphasise that an Action Group is the *receiver fan-out*, not the *router*.
+
+2. **"Routing happens in *alert processing rules*."**
+   Open an APR. Demonstrate add-action-group, suppression schedules. This is the right place to filter, not in 100 individual alerts.
+
+3. **"AMBA is the floor, not the ceiling."**
+   AMBA baseline gives a customer's `MTTD` story in 5 minutes. Show the rule list in `Monitor → Alerts → Alert rules`. Frame as: *"This is what you should always have on; everything else is workload-specific."*
+
+4. **"Webhook = workflow."**
+   Trigger a synthetic alert (e.g., stop the web app or push App Insights load). Show the Logic App run history light up. This is the moment customers see auto-mitigation isn't sci-fi.
+
+5. **"Dynamic thresholds beat static thresholds for variable workloads."**
+   Pick one dynamic-threshold alert from `alerts.bicep` and explain the *Smart Detection* learning window. Pair this with App Insights anomalies if time permits.
+
+6. **"Predictive autoscale needs alerts too."**
+   The VMSS is here on purpose — show that autoscale events emit `AzureActivity` rows and how alerts on those events drive change tracking.
+
+7. **"Stage C is cheap; the cost is alert *fatigue*."**
+   Cost-wise this stage adds nearly nothing (≤ €10/mo). The real cost is signal-to-noise. Use this slot to talk about *alert processing rules*, severity discipline, and on-call rotations.
+
+## 3) Portal walkthrough (UI)
+
+1. **`ag-amlab-email` → Receivers** — show email, Logic App webhook, optional SIEM webhook.
+2. **Monitor → Alerts → Alert rules** — filter scope by RG; show the catalog. Sort by severity and signal type.
+3. **Monitor → Alerts → Alert processing rules** — open one; show condition + actions + suppression window if present.
+4. **`la-amlab-automitigate` → Runs history** — empty for now; will fill after the first test alert.
+5. **`vmss-amlab` → Scaling** — show predictive autoscale enabled.
+6. **AMBA rules** — search Alert rules for `AMBA` or `[AMBA]` prefix. Show the rule pack across resource types.
+7. **Service Health → Health alerts** — show the subscription-scope rule pointed at our Action Group.
+8. **Trigger a synthetic alert** — easiest: `az webapp stop -n <webapp> -g <rg>`, wait 5–10 min for the App Service availability/5xx alert (or the AMBA web app rule) to fire, observe email + Logic App run, then `az webapp start`.
+
+## 4) CLI validation
+
+```powershell
+$sub = '<your-subscription-id>'
+$rg  = 'rg-azure-monitor-lab-terraform-test'
+az account set --subscription $sub
+
+# Action group with receivers
+az monitor action-group show -g $rg -n ag-amlab-email --query "{name:name,emailReceivers:emailReceivers[].emailAddress,webhookReceivers:webhookReceivers[].name}" -o json
+
+# Logic App callback registered as webhook
+az resource show -g $rg -n la-amlab-automitigate --resource-type Microsoft.Logic/workflows --query "{name:name,state:properties.state,trigger:properties.definition.triggers}" -o json
+
+# Catalog of metric alerts and log search alerts
+az monitor metrics alert list -g $rg --query "[].{name:name,severity:severity,enabled:enabled,scopes:scopes}" -o table
+az monitor scheduled-query list -g $rg --query "[].{name:name,severity:properties.severity,enabled:properties.enabled}" -o table
+
+# Activity log + health alerts (subscription scope)
+az monitor activity-log alert list --query "[?contains(scopes[0], '$sub')].{name:name,enabled:enabled}" -o table
+
+# Alert processing rules
+az monitor alert-processing-rule list -g $rg --query "[].{name:name,enabled:properties.enabled,scopes:properties.scopes}" -o table
+
+# VMSS + predictive autoscale
+az vmss show -g $rg -n vmss-amlab --query "{name:name,sku:sku,capacity:sku.capacity}" -o table
+az monitor autoscale list -g $rg --query "[].{name:name,enabled:enabled,predictiveAutoscalePolicy:predictiveAutoscalePolicy.scaleMode}" -o table
+
+# Smoke test (no destructive intent — start it back up immediately)
+$app = az webapp list -g $rg --query "[?starts_with(name, 'app-amlab')].name | [0]" -o tsv
+az webapp stop -g $rg -n $app
+# wait 5–10 minutes
+az webapp start -g $rg -n $app
+```
+
+## 5) Done-when
+
+1. `ag-amlab-email` has at least one email receiver and one webhook receiver.
+2. Alerts list contains at least one metric, one log, one activity, and one AMBA rule.
+3. At least one alert processing rule is present and enabled.
+4. The Logic App's *Runs* page shows at least one successful run after a synthetic trigger.
+5. The email receiver has received and acknowledged at least one alert during the session — best confidence-builder you can give the customer.

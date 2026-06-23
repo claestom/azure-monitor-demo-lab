@@ -1,0 +1,1694 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "18426203510670770335"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "namePrefix": {
+      "type": "string",
+      "defaultValue": "amlab",
+      "minLength": 3,
+      "maxLength": 8,
+      "metadata": {
+        "description": "Short prefix used to build resource names."
+      }
+    },
+    "alertEmail": {
+      "type": "string",
+      "metadata": {
+        "description": "Email address that receives Action Group notifications."
+      }
+    },
+    "siemWebhookUrl": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional secondary SIEM webhook URL added to the Action Group."
+      }
+    },
+    "vmAdminUsername": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "Admin username for VMSS."
+      }
+    },
+    "vmAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Admin password for VMSS."
+      }
+    },
+    "deployWindowsVm": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Deploy the Windows demo VM."
+      }
+    },
+    "deployLinuxVm": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Deploy the Linux demo VM."
+      }
+    },
+    "ownerTag": {
+      "type": "string",
+      "defaultValue": "demo-lab",
+      "metadata": {
+        "description": "Tag every resource with this owner."
+      }
+    }
+  },
+  "variables": {
+    "suffix": "[uniqueString(resourceGroup().id)]",
+    "lawCentralName": "[format('law-{0}-central-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "appInsightsName": "[format('appi-{0}', parameters('namePrefix'))]",
+    "linuxVmName": "[format('vm-{0}-lin', parameters('namePrefix'))]",
+    "windowsVmName": "[format('vmwin{0}', take(variables('suffix'), 4))]",
+    "aksName": "[format('aks-{0}', parameters('namePrefix'))]",
+    "appPlanName": "[format('plan-{0}', parameters('namePrefix'))]",
+    "webAppName": "[format('app-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "actionGroupName": "[format('ag-{0}-email', parameters('namePrefix'))]",
+    "vmssName": "[format('vmss-{0}', parameters('namePrefix'))]",
+    "vnetName": "[format('vnet-{0}', parameters('namePrefix'))]",
+    "commonTags": {
+      "owner": "[parameters('ownerTag')]",
+      "purpose": "azure-monitor-demo-lab",
+      "costCenter": "demo"
+    },
+    "workloadSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'snet-workload')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "automitigation-logicapp",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('la-{0}-automitigate', parameters('namePrefix'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "14299518871303356779"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Logic App name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Logic/workflows",
+              "apiVersion": "2019-05-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "state": "Enabled",
+                "definition": {
+                  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                  "contentVersion": "1.0.0.0",
+                  "parameters": {},
+                  "triggers": {
+                    "manual": {
+                      "type": "Request",
+                      "kind": "Http",
+                      "inputs": {
+                        "schema": {
+                          "type": "object",
+                          "properties": {
+                            "schemaId": {
+                              "type": "string"
+                            },
+                            "data": {
+                              "type": "object",
+                              "properties": {
+                                "essentials": {
+                                  "type": "object",
+                                  "properties": {
+                                    "alertId": {
+                                      "type": "string"
+                                    },
+                                    "alertRule": {
+                                      "type": "string"
+                                    },
+                                    "severity": {
+                                      "type": "string"
+                                    },
+                                    "signalType": {
+                                      "type": "string"
+                                    },
+                                    "monitorCondition": {
+                                      "type": "string"
+                                    },
+                                    "alertTargetIDs": {
+                                      "type": "array"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "actions": {
+                    "Parse_target": {
+                      "type": "Compose",
+                      "inputs": "@first(triggerBody()?['data']?['essentials']?['alertTargetIDs'])",
+                      "runAfter": {}
+                    },
+                    "Is_VM": {
+                      "type": "If",
+                      "expression": {
+                        "and": [
+                          {
+                            "contains": [
+                              "@toLower(outputs('Parse_target'))",
+                              "microsoft.compute/virtualmachines"
+                            ]
+                          },
+                          {
+                            "equals": [
+                              "@toLower(triggerBody()?['data']?['essentials']?['monitorCondition'])",
+                              "fired"
+                            ]
+                          }
+                        ]
+                      },
+                      "runAfter": {
+                        "Parse_target": [
+                          "Succeeded"
+                        ]
+                      },
+                      "actions": {
+                        "Start_VM": {
+                          "type": "Http",
+                          "inputs": {
+                            "method": "POST",
+                            "uri": "@{concat('https://management.azure.com', outputs('Parse_target'), '/start?api-version=2024-03-01')}",
+                            "authentication": {
+                              "type": "ManagedServiceIdentity",
+                              "audience": "https://management.azure.com"
+                            }
+                          }
+                        }
+                      },
+                      "else": {
+                        "actions": {
+                          "Log_no_op": {
+                            "type": "Compose",
+                            "inputs": "No matching mitigation action for this alert."
+                          }
+                        }
+                      }
+                    },
+                    "Respond": {
+                      "type": "Response",
+                      "kind": "Http",
+                      "inputs": {
+                        "statusCode": 200,
+                        "body": {
+                          "message": "Auto-mitigation Logic App processed the alert.",
+                          "target": "@outputs('Parse_target')",
+                          "fired": "@triggerBody()?['data']?['essentials']?['monitorCondition']"
+                        }
+                      },
+                      "runAfter": {
+                        "Is_VM": [
+                          "Succeeded",
+                          "Skipped",
+                          "Failed"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.Logic/workflows', parameters('name')), 'rg-contributor')]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.Logic/workflows', parameters('name')), '2019-05-01', 'full').identity.principalId]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Logic/workflows', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Logic/workflows', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "callbackUrl": {
+              "type": "string",
+              "value": "[listCallbackURL(format('{0}/triggers/manual', resourceId('Microsoft.Logic/workflows', parameters('name'))), '2019-05-01').value]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "actiongroup",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('actionGroupName')]"
+          },
+          "email": {
+            "value": "[parameters('alertEmail')]"
+          },
+          "webhookUrl": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'automitigation-logicapp'), '2022-09-01').outputs.callbackUrl.value]"
+          },
+          "siemWebhookUrl": {
+            "value": "[parameters('siemWebhookUrl')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "7239962435507003194"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Action Group name."
+              }
+            },
+            "email": {
+              "type": "string",
+              "metadata": {
+                "description": "Email recipient for the Action Group."
+              }
+            },
+            "webhookUrl": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional webhook URL (e.g., auto-mitigation Logic App callback URL). Leave empty to skip."
+              }
+            },
+            "siemWebhookUrl": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional secondary webhook URL (e.g. SIEM ingestion endpoint / Microsoft Teams Incoming Webhook). Common Alert Schema enabled. Empty = skip."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/actionGroups",
+              "apiVersion": "2023-09-01-preview",
+              "name": "[parameters('name')]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "groupShortName": "amlabAG",
+                "enabled": true,
+                "emailReceivers": "[if(empty(parameters('email')), createArray(), createArray(createObject('name', 'demo-owner', 'emailAddress', parameters('email'), 'useCommonAlertSchema', true())))]",
+                "webhookReceivers": "[concat(if(empty(parameters('webhookUrl')), createArray(), createArray(createObject('name', 'automitigation-logicapp', 'serviceUri', parameters('webhookUrl'), 'useCommonAlertSchema', true()))), if(empty(parameters('siemWebhookUrl')), createArray(), createArray(createObject('name', 'siem-forward', 'serviceUri', parameters('siemWebhookUrl'), 'useCommonAlertSchema', true()))))]"
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/actionGroups', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'automitigation-logicapp')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "alerts",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "actionGroupId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
+          },
+          "aksId": {
+            "value": "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
+          },
+          "webAppId": {
+            "value": "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+          },
+          "appInsightsId": {
+            "value": "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+          },
+          "linuxVmId": "[if(parameters('deployLinuxVm'), createObject('value', resourceId('Microsoft.Compute/virtualMachines', variables('linuxVmName'))), createObject('value', ''))]",
+          "windowsVmId": "[if(parameters('deployWindowsVm'), createObject('value', resourceId('Microsoft.Compute/virtualMachines', variables('windowsVmName'))), createObject('value', ''))]",
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "6796254641340571856"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region for alert rules (must be a region that supports metric/scheduled query alerts)."
+              }
+            },
+            "actionGroupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Action group resource ID."
+              }
+            },
+            "aksId": {
+              "type": "string",
+              "metadata": {
+                "description": "AKS resource ID."
+              }
+            },
+            "webAppId": {
+              "type": "string",
+              "metadata": {
+                "description": "Web App resource ID."
+              }
+            },
+            "appInsightsId": {
+              "type": "string",
+              "metadata": {
+                "description": "App Insights resource ID."
+              }
+            },
+            "linuxVmId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Linux VM resource ID (empty if not deployed)."
+              }
+            },
+            "windowsVmId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Windows VM resource ID (empty if not deployed)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "variables": {
+            "vmIds": "[filter(createArray(parameters('linuxVmId'), parameters('windowsVmId')), lambda('id', not(empty(lambdaVariables('id')))))]"
+          },
+          "resources": [
+            {
+              "condition": "[not(empty(variables('vmIds')))]",
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "alert-vm-cpu-high",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Lab VM CPU > 80% for 5 minutes",
+                "severity": 2,
+                "enabled": true,
+                "scopes": "[variables('vmIds')]",
+                "targetResourceType": "Microsoft.Compute/virtualMachines",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "CpuPercentage",
+                      "metricNamespace": "Microsoft.Compute/virtualMachines",
+                      "metricName": "Percentage CPU",
+                      "operator": "GreaterThan",
+                      "threshold": 80,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "alert-webapp-5xx",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Web App returned more than 5 HTTP 5xx in last 5 minutes",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('webAppId')]"
+                ],
+                "targetResourceType": "Microsoft.Web/sites",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "Http5xx",
+                      "metricNamespace": "Microsoft.Web/sites",
+                      "metricName": "Http5xx",
+                      "operator": "GreaterThan",
+                      "threshold": 5,
+                      "timeAggregation": "Total",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "alert-aks-node-cpu-high",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "AKS node CPU usage > 80% for 5 minutes",
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('aksId')]"
+                ],
+                "targetResourceType": "Microsoft.ContainerService/managedClusters",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "NodeCpu",
+                      "metricNamespace": "Microsoft.ContainerService/managedClusters",
+                      "metricName": "node_cpu_usage_percentage",
+                      "operator": "GreaterThan",
+                      "threshold": 80,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/scheduledQueryRules",
+              "apiVersion": "2023-03-15-preview",
+              "name": "alert-appinsights-failed-requests",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "App Insights: more than 10 failed requests in 5 minutes",
+                "enabled": true,
+                "severity": 2,
+                "scopes": [
+                  "[parameters('appInsightsId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "allOf": [
+                    {
+                      "query": "requests | where success == false | summarize Failed = count()",
+                      "timeAggregation": "Count",
+                      "operator": "GreaterThan",
+                      "threshold": 10,
+                      "failingPeriods": {
+                        "numberOfEvaluationPeriods": 1,
+                        "minFailingPeriodsToAlert": 1
+                      }
+                    }
+                  ]
+                },
+                "autoMitigate": true,
+                "actions": {
+                  "actionGroups": [
+                    "[parameters('actionGroupId')]"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/scheduledQueryRules",
+              "apiVersion": "2023-03-15-preview",
+              "name": "alert-aks-pod-restart-spike",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "AKS pod restart count > 5 in any pod over 15 minutes",
+                "enabled": true,
+                "severity": 2,
+                "scopes": [
+                  "[parameters('aksId')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT15M",
+                "criteria": {
+                  "allOf": [
+                    {
+                      "query": "KubePodInventory | where TimeGenerated > ago(15m) | summarize Restarts = sum(toint(ContainerRestartCount)) by Name | where Restarts > 5",
+                      "timeAggregation": "Count",
+                      "operator": "GreaterThan",
+                      "threshold": 0,
+                      "failingPeriods": {
+                        "numberOfEvaluationPeriods": 1,
+                        "minFailingPeriodsToAlert": 1
+                      }
+                    }
+                  ]
+                },
+                "autoMitigate": true,
+                "actions": {
+                  "actionGroups": [
+                    "[parameters('actionGroupId')]"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "amba",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "actionGroupId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
+          },
+          "vmIds": {
+            "value": "[concat(if(parameters('deployLinuxVm'), createArray(resourceId('Microsoft.Compute/virtualMachines', variables('linuxVmName'))), createArray()), if(parameters('deployWindowsVm'), createArray(resourceId('Microsoft.Compute/virtualMachines', variables('windowsVmName'))), createArray()))]"
+          },
+          "webAppId": {
+            "value": "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+          },
+          "aksId": {
+            "value": "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
+          },
+          "appPlanId": {
+            "value": "[resourceId('Microsoft.Web/serverfarms', variables('appPlanName'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "14788737389900725275"
+            }
+          },
+          "parameters": {
+            "actionGroupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Action Group resource ID to notify."
+              }
+            },
+            "vmIds": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Resource IDs of VMs to monitor (multi-resource alerts)."
+              }
+            },
+            "webAppId": {
+              "type": "string",
+              "metadata": {
+                "description": "Web App resource ID."
+              }
+            },
+            "aksId": {
+              "type": "string",
+              "metadata": {
+                "description": "AKS cluster resource ID."
+              }
+            },
+            "appPlanId": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service Plan resource ID."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region (for log-query / multi-resource metric alerts)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "condition": "[not(empty(parameters('vmIds')))]",
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "amba-vm-available-memory-low",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "AMBA: VM available memory < 10% of total for 5 min",
+                "severity": 2,
+                "enabled": true,
+                "scopes": "[parameters('vmIds')]",
+                "targetResourceType": "Microsoft.Compute/virtualMachines",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "AvailableMem",
+                      "metricNamespace": "Microsoft.Compute/virtualMachines",
+                      "metricName": "Available Memory Bytes",
+                      "operator": "LessThan",
+                      "threshold": 200000000,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "copy": {
+                "name": "amba_vm_net_in",
+                "count": "[length(parameters('vmIds'))]"
+              },
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "[format('amba-vm-network-in-spike-{0}', copyIndex())]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "AMBA: VM Network In > 200 MB in 5 min (per-VM; this metric does not support multi-resource scope)",
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('vmIds')[copyIndex()]]"
+                ],
+                "targetResourceType": "Microsoft.Compute/virtualMachines",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "NetIn",
+                      "metricNamespace": "Microsoft.Compute/virtualMachines",
+                      "metricName": "Network In Total",
+                      "operator": "GreaterThan",
+                      "threshold": 209715200,
+                      "timeAggregation": "Total",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "amba-webapp-response-time",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "AMBA: App Service average response time > 5 s for 5 min",
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('webAppId')]"
+                ],
+                "targetResourceType": "Microsoft.Web/sites",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "AvgResponseTime",
+                      "metricNamespace": "Microsoft.Web/sites",
+                      "metricName": "AverageResponseTime",
+                      "operator": "GreaterThan",
+                      "threshold": 5,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "amba-webapp-4xx-rate",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "AMBA: App Service > 100 HTTP 4xx in 5 min (excluding intentional load gen 404 noise will still trip; tune as needed)",
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('webAppId')]"
+                ],
+                "targetResourceType": "Microsoft.Web/sites",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "Http4xx",
+                      "metricNamespace": "Microsoft.Web/sites",
+                      "metricName": "Http4xx",
+                      "operator": "GreaterThan",
+                      "threshold": 100,
+                      "timeAggregation": "Total",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "amba-appplan-cpu-high",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "AMBA: App Service Plan CPU > 80% for 10 min",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('appPlanId')]"
+                ],
+                "targetResourceType": "Microsoft.Web/serverfarms",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT10M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "PlanCpu",
+                      "metricNamespace": "Microsoft.Web/serverfarms",
+                      "metricName": "CpuPercentage",
+                      "operator": "GreaterThan",
+                      "threshold": 80,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "amba-appplan-memory-high",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "AMBA: App Service Plan memory > 85% for 10 min",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('appPlanId')]"
+                ],
+                "targetResourceType": "Microsoft.Web/serverfarms",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT10M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "PlanMem",
+                      "metricNamespace": "Microsoft.Web/serverfarms",
+                      "metricName": "MemoryPercentage",
+                      "operator": "GreaterThan",
+                      "threshold": 85,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "amba-aks-memory-working-set-high",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "AMBA: AKS node memory working set > 85% for 10 min",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('aksId')]"
+                ],
+                "targetResourceType": "Microsoft.ContainerService/managedClusters",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT10M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "MemWorkingSet",
+                      "metricNamespace": "Microsoft.ContainerService/managedClusters",
+                      "metricName": "node_memory_working_set_percentage",
+                      "operator": "GreaterThan",
+                      "threshold": 85,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "amba-aks-disk-used-high",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "AMBA: AKS node disk used > 80% for 10 min",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('aksId')]"
+                ],
+                "targetResourceType": "Microsoft.ContainerService/managedClusters",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT10M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "DiskUsed",
+                      "metricNamespace": "Microsoft.ContainerService/managedClusters",
+                      "metricName": "node_disk_usage_percentage",
+                      "operator": "GreaterThan",
+                      "threshold": 80,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "amba-aks-pods-not-ready",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "AMBA: AKS pods in Not Ready state > 0 for 5 min",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('aksId')]"
+                ],
+                "targetResourceType": "Microsoft.ContainerService/managedClusters",
+                "targetResourceRegion": "[parameters('location')]",
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "PodsNotReady",
+                      "metricNamespace": "Microsoft.ContainerService/managedClusters",
+                      "metricName": "kube_pod_status_ready",
+                      "operator": "LessThan",
+                      "threshold": 1,
+                      "timeAggregation": "Average",
+                      "criterionType": "StaticThresholdCriterion"
+                    }
+                  ]
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "count": {
+              "type": "int",
+              "value": 9
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "health-alerts",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "actionGroupId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "4004965451071112259"
+            }
+          },
+          "parameters": {
+            "actionGroupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Action Group resource ID."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/activityLogAlerts",
+              "apiVersion": "2020-10-01",
+              "name": "alert-service-health",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "enabled": true,
+                "description": "Notify on any Azure Service Health event affecting this subscription",
+                "scopes": [
+                  "[subscription().id]"
+                ],
+                "condition": {
+                  "allOf": [
+                    {
+                      "field": "category",
+                      "equals": "ServiceHealth"
+                    }
+                  ]
+                },
+                "actions": {
+                  "actionGroups": [
+                    {
+                      "actionGroupId": "[parameters('actionGroupId')]"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/activityLogAlerts",
+              "apiVersion": "2020-10-01",
+              "name": "alert-resource-health",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "enabled": true,
+                "description": "Notify on Resource Health changes (Unavailable / Degraded) inside this resource group",
+                "scopes": [
+                  "[resourceGroup().id]"
+                ],
+                "condition": {
+                  "allOf": [
+                    {
+                      "field": "category",
+                      "equals": "ResourceHealth"
+                    },
+                    {
+                      "anyOf": [
+                        {
+                          "field": "properties.currentHealthStatus",
+                          "equals": "Unavailable"
+                        },
+                        {
+                          "field": "properties.currentHealthStatus",
+                          "equals": "Degraded"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "actions": {
+                  "actionGroups": [
+                    {
+                      "actionGroupId": "[parameters('actionGroupId')]"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "alert-processing-rules",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "namePrefix": {
+            "value": "[parameters('namePrefix')]"
+          },
+          "resourceGroupId": {
+            "value": "[resourceGroup().id]"
+          },
+          "primaryActionGroupId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "13121049081722469721"
+            }
+          },
+          "parameters": {
+            "namePrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Name prefix for the processing rules."
+              }
+            },
+            "resourceGroupId": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().id]",
+              "metadata": {
+                "description": "Resource Group ID scope for the rules."
+              }
+            },
+            "primaryActionGroupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Primary Action Group ID (on-call / high severity)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.AlertsManagement/actionRules",
+              "apiVersion": "2021-08-08",
+              "name": "[format('apr-{0}-maintenance-window', parameters('namePrefix'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Suppress all alerts during weekly maintenance window (Sunday 02:00–06:00 UTC).",
+                "enabled": true,
+                "scopes": [
+                  "[parameters('resourceGroupId')]"
+                ],
+                "actions": [
+                  {
+                    "actionType": "RemoveAllActionGroups"
+                  }
+                ],
+                "schedule": {
+                  "effectiveFrom": "2025-01-01T02:00:00",
+                  "effectiveUntil": "2030-12-31T06:00:00",
+                  "timeZone": "UTC",
+                  "recurrences": [
+                    {
+                      "recurrenceType": "Weekly",
+                      "daysOfWeek": [
+                        "Sunday"
+                      ],
+                      "startTime": "02:00:00",
+                      "endTime": "06:00:00"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.AlertsManagement/actionRules",
+              "apiVersion": "2021-08-08",
+              "name": "[format('apr-{0}-suppress-low-sev', parameters('namePrefix'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Suppress Sev3 and Sev4 (informational) alerts — keeps on-call focused on real incidents.",
+                "enabled": false,
+                "scopes": [
+                  "[parameters('resourceGroupId')]"
+                ],
+                "actions": [
+                  {
+                    "actionType": "RemoveAllActionGroups"
+                  }
+                ],
+                "conditions": [
+                  {
+                    "field": "Severity",
+                    "operator": "Equals",
+                    "values": [
+                      "Sev3",
+                      "Sev4"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.AlertsManagement/actionRules",
+              "apiVersion": "2021-08-08",
+              "name": "[format('apr-{0}-nightly-patch-window', parameters('namePrefix'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Suppress all alerts during the nightly patch window (02:00–04:00 UTC, daily).",
+                "enabled": true,
+                "scopes": [
+                  "[parameters('resourceGroupId')]"
+                ],
+                "actions": [
+                  {
+                    "actionType": "RemoveAllActionGroups"
+                  }
+                ],
+                "schedule": {
+                  "effectiveFrom": "2025-01-01T02:00:00",
+                  "effectiveUntil": "2030-12-31T04:00:00",
+                  "timeZone": "UTC",
+                  "recurrences": [
+                    {
+                      "recurrenceType": "Daily",
+                      "startTime": "02:00:00",
+                      "endTime": "04:00:00"
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "maintenanceRuleName": {
+              "type": "string",
+              "value": "[format('apr-{0}-maintenance-window', parameters('namePrefix'))]"
+            },
+            "suppressLowSevRuleName": {
+              "type": "string",
+              "value": "[format('apr-{0}-suppress-low-sev', parameters('namePrefix'))]"
+            },
+            "nightlyMaintenanceRuleName": {
+              "type": "string",
+              "value": "[format('apr-{0}-nightly-patch-window', parameters('namePrefix'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "vmss",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('vmssName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "vmSize": {
+            "value": "Standard_B1s"
+          },
+          "adminUsername": {
+            "value": "[parameters('vmAdminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('vmAdminPassword')]"
+          },
+          "subnetId": {
+            "value": "[variables('workloadSubnetId')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "533414499167899336"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "VMSS name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "vmSize": {
+              "type": "string",
+              "defaultValue": "Standard_B1s",
+              "metadata": {
+                "description": "VM SKU (kept tiny for a demo lab)."
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "Admin username."
+              }
+            },
+            "adminPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Admin password."
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet resource ID for the VMSS instances."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Compute/virtualMachineScaleSets",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "[parameters('vmSize')]",
+                "tier": "Standard",
+                "capacity": 1
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "overprovision": false,
+                "upgradePolicy": {
+                  "mode": "Automatic"
+                },
+                "virtualMachineProfile": {
+                  "osProfile": {
+                    "computerNamePrefix": "[take(parameters('name'), 9)]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "linuxConfiguration": {
+                      "disablePasswordAuthentication": false,
+                      "provisionVMAgent": true
+                    }
+                  },
+                  "storageProfile": {
+                    "imageReference": {
+                      "publisher": "Canonical",
+                      "offer": "0001-com-ubuntu-server-jammy",
+                      "sku": "22_04-lts-gen2",
+                      "version": "latest"
+                    },
+                    "osDisk": {
+                      "createOption": "FromImage",
+                      "managedDisk": {
+                        "storageAccountType": "Standard_LRS"
+                      }
+                    }
+                  },
+                  "networkProfile": {
+                    "networkInterfaceConfigurations": [
+                      {
+                        "name": "[format('nic-{0}', parameters('name'))]",
+                        "properties": {
+                          "primary": true,
+                          "ipConfigurations": [
+                            {
+                              "name": "ipconfig1",
+                              "properties": {
+                                "primary": true,
+                                "subnet": {
+                                  "id": "[parameters('subnetId')]"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/autoscalesettings",
+              "apiVersion": "2022-10-01",
+              "name": "[format('autoscale-{0}', parameters('name'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "name": "[format('autoscale-{0}', parameters('name'))]",
+                "enabled": true,
+                "targetResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('name'))]",
+                "predictiveAutoscalePolicy": {
+                  "scaleMode": "ForecastOnly",
+                  "scaleLookAheadTime": "PT10M"
+                },
+                "profiles": [
+                  {
+                    "name": "default",
+                    "capacity": {
+                      "minimum": "1",
+                      "maximum": "5",
+                      "default": "1"
+                    },
+                    "rules": [
+                      {
+                        "metricTrigger": {
+                          "metricName": "Percentage CPU",
+                          "metricNamespace": "",
+                          "metricResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('name'))]",
+                          "timeGrain": "PT1M",
+                          "statistic": "Average",
+                          "timeWindow": "PT10M",
+                          "timeAggregation": "Average",
+                          "operator": "GreaterThan",
+                          "threshold": 70
+                        },
+                        "scaleAction": {
+                          "direction": "Increase",
+                          "type": "ChangeCount",
+                          "value": "1",
+                          "cooldown": "PT5M"
+                        }
+                      },
+                      {
+                        "metricTrigger": {
+                          "metricName": "Percentage CPU",
+                          "metricNamespace": "",
+                          "metricResourceUri": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('name'))]",
+                          "timeGrain": "PT1M",
+                          "statistic": "Average",
+                          "timeWindow": "PT10M",
+                          "timeAggregation": "Average",
+                          "operator": "LessThan",
+                          "threshold": 30
+                        },
+                        "scaleAction": {
+                          "direction": "Decrease",
+                          "type": "ChangeCount",
+                          "value": "1",
+                          "cooldown": "PT5M"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vmssId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', parameters('name'))]"
+            },
+            "vmssName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "autoscaleSettingName": {
+              "type": "string",
+              "value": "[format('autoscale-{0}', parameters('name'))]"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

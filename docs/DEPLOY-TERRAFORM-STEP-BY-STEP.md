@@ -1,0 +1,302 @@
+# Azure Monitor Demo Lab - Step-by-Step Deployment with Terraform
+
+This guide is for customers standardizing on Terraform while still using this lab.
+
+## 1) Strategy options
+
+Use one of these patterns.
+
+1. Fastest adoption (recommended first): Terraform orchestrates staged deployments of compiled Bicep/ARM templates, one per stage.
+2. Full native Terraform: rewrite each module to azurerm/azapi resources, stage by stage.
+
+Start with option 1 to prove scenario flow quickly, then migrate to option 2 incrementally.
+
+## 2) Guardrails
+
+Before every terraform apply:
+
+```powershell
+$sub='<your-subscription-id>'
+az account set --subscription $sub
+az account show --query "{name:name,id:id,tenantId:tenantId}" -o table
+```
+
+### Planning aid
+
+For workshop planning and customer expectation-setting, use:
+- [CUSTOMER-STAGE-HANDOUT.md](CUSTOMER-STAGE-HANDOUT.md)
+
+### Per-stage deep dives (deployed inventory + speaker notes + UI/CLI walkthroughs)
+
+- [STAGE-A-FOUNDATION.md](STAGE-A-FOUNDATION.md)
+- [STAGE-B-WORKLOADS.md](STAGE-B-WORKLOADS.md)
+- [STAGE-C-ALERTING.md](STAGE-C-ALERTING.md)
+- [STAGE-D-SECURITY-POSTURE.md](STAGE-D-SECURITY-POSTURE.md)
+- [STAGE-E-OPTIONAL-ADVANCED.md](STAGE-E-OPTIONAL-ADVANCED.md)
+
+## 3) Stage model (same as Bicep)
+
+1. Stage A - Foundation
+2. Stage B - Workloads and dashboards
+3. Stage C - Alerts and response
+4. Stage D - Security posture (47/48/49)
+5. Stage E - Optional advanced add-ons
+
+Keeping stage boundaries identical across Bicep and Terraform avoids customer confusion.
+
+## 4) Stage details (scenarios + deployed services)
+
+Use this matrix in customer sessions so Terraform users see exactly what each apply wave introduces.
+
+| Stage | High-level scenario goals | Scenario IDs (from DEMO-SCENARIOS.md) | Azure services/resources deployed |
+|---|---|---|---|
+| Stage A - Foundation | Build the shared monitoring substrate and governance prerequisites. | 1, 5, 6, 9 (foundation portions) | Resource group, central LAW + AppInsights LAW, workspace-based App Insights, Azure Monitor Workspace, DCE baseline, core networking (VNet/NSG), baseline diagnostics and policy assignments, shared storage/event-hub/Key Vault foundations, VM Insights DCR and AzureActivity workspace transform DCR, saved queries, KQL functions, traffic-lights and cost workbooks. |
+| Stage B - Workloads and dashboards | Onboard app/compute workloads and expose observability views. | 2, 3, 4, 22, 28, 29, 30, 31, 32, 34, 35, 36, 42 | Linux/Windows VMs with AMA + DCR associations, AKS with Container Insights + Managed Prometheus + Grafana, App Service plan/web app with App Insights, Connection Monitor, VNet flow logs + Traffic Analytics. |
+| Stage C - Alerts and response | Introduce detection, routing, and auto-response controls. | 7, 8, 12, 15, 17, 19, 23, 37 | Action Group with email + Logic App + optional SIEM webhook, metric/log/AKS/App alerts, AMBA baseline alert set, Service/Resource Health alerts, alert processing rules, VMSS with predictive autoscale. |
+| Stage D - Security posture | Deliver Azure Monitor-native security detections without requiring SIEM. | 27, 47, 48, 49 | LAW granular RBAC roles + ABAC assignments, scheduled query alerts for control-plane drift, privilege-escalation watch, and exfil early warning. |
+| Stage E - Optional advanced add-ons | Add optional SOC and reliability preview capabilities. | 43, 44, 45, 46 | Optional Sentinel onboarding and analytics rule, Heartbeat data export, Managed Prometheus rule group, availability tests, health model, SLI identity prerequisites. |
+
+### Dependency and apply order
+
+1. Apply Stage A first; it provides shared IDs and telemetry sinks.
+2. Apply Stage B next; workload resources require Stage A workspaces/network.
+3. Apply Stage C after Stage B; alert scopes/actions depend on deployed workloads.
+4. Apply Stage D after Stage A and C; security detections need Activity data and action routing.
+5. Apply Stage E last; optional features rely on the previously deployed monitor estate.
+
+### Acceptance criteria by stage
+
+1. Stage A: workspace ingestion and baseline diagnostics confirmed.
+2. Stage B: workload telemetry visible in queries/workbooks.
+3. Stage C: at least one alert path test reaches the Action Group.
+4. Stage D: scenarios 47/48/49 query outputs are non-empty and alert rules evaluate.
+5. Stage E: optional Sentinel/health/SLI capabilities are reachable and testable.
+
+## 5) Terraform scaffold (orchestrating staged ARM/Bicep)
+
+This repo ships a working staged Terraform scaffold at `terraform/` and pre-compiled stage templates at `infra/stages/`:
+
+| Stage toggle | Template (compiled from Bicep) |
+|---|---|
+| `enable_stage_a` | `infra/stages/00-foundation.json` |
+| `enable_stage_b` | `infra/stages/10-workloads.json` |
+| `enable_stage_c` | `infra/stages/20-alerting.json` |
+| `enable_stage_d` | `infra/stages/30-security-posture.json` |
+| `enable_stage_e` | `infra/stages/40-optional-advanced.json` |
+
+Each toggle gates its own `azapi_resource "Microsoft.Resources/deployments@2022-09-01"` block, so flipping a flag truly adds or removes only that stage's deployment.
+
+Folder layout:
+
+- `terraform/providers.tf`
+- `terraform/variables.tf`
+- `terraform/main.tf`
+- `terraform/stages.tfvars`
+
+### Regenerating stage templates from Bicep
+
+If you change anything under `infra/stages/*.bicep`, recompile the JSON templates that Terraform consumes:
+
+```powershell
+az bicep build --file infra/stages/00-foundation.bicep        --outfile infra/stages/00-foundation.json
+az bicep build --file infra/stages/10-workloads.bicep         --outfile infra/stages/10-workloads.json
+az bicep build --file infra/stages/20-alerting.bicep          --outfile infra/stages/20-alerting.json
+az bicep build --file infra/stages/30-security-posture.bicep  --outfile infra/stages/30-security-posture.json
+az bicep build --file infra/stages/40-optional-advanced.bicep --outfile infra/stages/40-optional-advanced.json
+```
+
+The legacy `infra/main.bicep` continues to work unchanged for the original Bicep-only deployment path.
+
+## 6) Deployment runbook
+
+### Step 1 - Confirm the existing terraform files
+
+The shipped files already contain the staged wiring described above. Open them and confirm:
+
+- `terraform/providers.tf` declares `azurerm ~> 4.0` and `azapi ~> 2.0` and threads `subscription_id` through both providers.
+- `terraform/variables.tf` declares the five stage toggles plus shared inputs (`subscription_id`, `resource_group_name` (default `rg-azure-monitor-lab`), `location`, `alert_email`, `vm_admin_password`, etc.).
+- `terraform/main.tf` declares one `data "azurerm_resource_group"` (BYO RG, looked up by name) plus five `azapi_resource` deployments, each guarded by its own stage toggle.
+
+### Step 2 - Set inputs in `terraform/stages.tfvars`
+
+**Recommended:** bootstrap from the central `lab.config.json` instead of hand-editing this file. From the repo root:
+
+```powershell
+Copy-Item lab.config.json.example lab.config.json
+notepad lab.config.json   # fill in subscriptionId, tenantId, alertEmail, vmAdminPassword, stageToggles, ...
+./scripts/sync-config.ps1 # regenerates terraform/stages.tfvars + .azure-target.json + infra/main.parameters.json
+```
+
+`scripts/sync-config.ps1` writes `terraform/stages.tfvars` from your central config, including the five stage toggles. Re-run it any time you change `lab.config.json` (e.g. to flip the next stage).
+
+**Or hand-edit `terraform/stages.tfvars` directly** (skip `sync-config.ps1`; the file is gitignored):
+
+```hcl
+subscription_id     = "<your-subscription-id>"
+resource_group_name = "rg-azure-monitor-lab"   # optional - default is rg-azure-monitor-lab
+location            = "swedencentral"
+alert_email         = "your.alias@example.com"
+vm_admin_password   = "<STRONG-PASSWORD>"
+
+enable_stage_a = true
+enable_stage_b = false
+enable_stage_c = false
+enable_stage_d = false
+enable_stage_e = false
+```
+
+> Note: if `lab.config.json` exists, running `scripts/deploy.ps1` will auto-overwrite `terraform/stages.tfvars` on its next invocation. Pick **one** workflow (central config OR hand-edit) and stick with it.
+
+### Step 3 - Create the resource group (BYO)
+
+Terraform looks the RG up via data source rather than creating it, so `terraform destroy` will not nuke it. Create it once (idempotent - safe to re-run):
+
+```powershell
+az group create -n rg-azure-monitor-lab -l swedencentral --tags purpose=azure-monitor-demo-lab owner=demo-lab
+```
+
+If you skip this step, `terraform plan` will fail with `Resource Group "rg-azure-monitor-lab" was not found`.
+
+### Step 4 - Init
+
+```powershell
+cd terraform
+terraform init
+```
+
+### Step 5 - Plan/apply Stage A
+
+```powershell
+terraform plan -var-file stages.tfvars
+terraform apply -var-file stages.tfvars
+```
+
+Expected plan summary with only Stage A enabled:
+
+```
+Plan: 1 to add, 0 to change, 0 to destroy.
+```
+
+If your shell reports "Too many command line arguments", retype the command manually (to avoid smart dashes from copy/paste) and keep the space-separated form shown above.
+
+### Step 6 - Enable Stage B, then C, then D, then E
+
+Flip one stage flag at a time in `stages.tfvars` and re-run plan/apply. Each new `terraform plan` should show exactly one additional `azapi_resource.stage_*` add when you enable the next stage.
+
+### Step 7 - Security stage validation
+
+After Stage D, verify Activity Log ingestion:
+
+```powershell
+$lawId = az monitor log-analytics workspace show -g rg-azure-monitor-lab -n law-amlab-central --query customerId -o tsv
+az monitor log-analytics query -w $lawId --analytics-query "AzureActivity | where TimeGenerated > ago(1d) | summarize count()" -o table
+```
+
+If count is zero, scenarios 47/48/49 alerts will not trigger.
+
+## 7) Native Terraform migration path (after orchestration works)
+
+Migrate in this order:
+
+1. Foundation resources (LAW, App Insights workspace binding, AMW, networking)
+2. Workload resources (VM, AKS, App Service, Grafana)
+3. Alerting resources (action groups, metric/log/activity alerts)
+4. Security posture query alerts and RBAC
+5. Optional preview resources (health model, SLI, Sentinel)
+
+Use `azapi_resource` for preview/control-plane resources not fully covered in `azurerm`.
+
+## 8) Scenario parity matrix
+
+Keep this matrix during migration:
+
+- 27 -> LAW RBAC resources (Stage D, `30-security-posture.json`)
+- 47 -> AzureActivity control-plane drift query alert (Stage D)
+- 48 -> roleAssignments write/elevateAccess query alert (Stage D)
+- 49 -> exfil early-warning query alert on Traffic Analytics (Stage D)
+
+A stage is complete only when both resource deployment and scenario validation are done.
+
+## 9) Recommended definition of done
+
+For each stage:
+1. `terraform plan` shows only expected changes.
+2. `terraform apply` is idempotent on second run.
+3. Required scenario query returns data.
+4. At least one alert test is executed and received in Action Group.
+
+## 10) Tearing down the lab
+
+The resource group is BYO (Terraform does not own it via data source), so `terraform destroy` alone will not cascade-delete the LAWs, VMs, AKS, alerts, etc. — it only removes the five staged deployment records. Use Option A.
+
+### Option A - delete the resource group directly (recommended)
+
+Cascade-delete the whole RG, then clear Terraform state so the next apply starts clean.
+
+```powershell
+$sub='<your-subscription-id>'
+$rg='rg-azure-monitor-lab'
+az account set --subscription $sub
+az account show --query "{name:name,id:id,tenantId:tenantId}" -o table
+
+# Cascade-delete the whole RG (async)
+az group delete -n $rg --yes --no-wait
+
+# Clear terraform state so the next apply starts clean
+cd terraform
+terraform state list | ForEach-Object { terraform state rm $_ }
+```
+
+Or just run the wrapper:
+
+```powershell
+.\scripts\teardown.ps1 -ResourceGroup rg-azure-monitor-lab -Yes
+```
+
+### Option B - terraform destroy + manual RG cleanup
+
+Use this if you want to drive teardown through Terraform first (e.g. for state-machine cleanliness in CI), then clean the RG yourself.
+
+```powershell
+cd terraform
+terraform destroy -var-file stages.tfvars   # removes the 5 deployment records only
+az group delete -n rg-azure-monitor-lab --yes --no-wait   # nukes the actual resources
+```
+
+### Post-teardown: cleanup of artifacts that live outside the RG
+
+A few resources are subscription-scoped or live in `NetworkWatcherRG` and survive RG deletion.
+
+1. Soft-deleted Log Analytics workspaces (14-day grace period; names stay reserved until purged or expired):
+
+```powershell
+az monitor log-analytics workspace list-deleted-workspaces --subscription $sub --query "[?contains(name,'amlab')]" -o table
+# Permanent purge if needed:
+# az rest --method delete --url "https://management.azure.com/subscriptions/$sub/providers/Microsoft.OperationalInsights/locations/swedencentral/deletedWorkspaces/<name>?api-version=2023-09-01"
+```
+
+2. Soft-deleted Application Insights components (also 14-day grace):
+
+```powershell
+az monitor app-insights component list-deleted --subscription $sub --query "[?contains(name,'amlab')]" -o table
+```
+
+3. NSG/VNet flow logs in `NetworkWatcherRG` (Stage B creates them outside the lab RG):
+
+```powershell
+az network watcher flow-log list -l swedencentral --subscription $sub --query "[?contains(name,'amlab')].{name:name,enabled:enabled}" -o table
+# az network watcher flow-log delete -l swedencentral -n <flowLogName> --subscription $sub
+```
+
+4. Custom role definition from Stage D (`AMLAB - Granular Log Reader (<hash>)`). Auto-removed once no scopes reference it; force-delete if it lingers:
+
+```powershell
+az role definition list --custom-role-only true --subscription $sub --query "[?starts_with(roleName,'AMLAB - Granular Log Reader')]" -o table
+# az role definition delete --name "AMLAB - Granular Log Reader (<hash>)" --subscription $sub
+```
+
+5. Confirm the RG is gone:
+
+```powershell
+az group exists -n $rg --subscription $sub   # false once the async delete completes
+```

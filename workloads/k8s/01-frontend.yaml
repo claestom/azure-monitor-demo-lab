@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo
+  labels:
+    purpose: azure-monitor-demo-lab
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-frontend
+  namespace: demo
+  labels:
+    app: hello-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hello-frontend
+  template:
+    metadata:
+      labels:
+        app: hello-frontend
+    spec:
+      containers:
+        - name: hello
+          image: mcr.microsoft.com/azuredocs/aks-helloworld:v1
+          ports:
+            - containerPort: 80
+          env:
+            - name: TITLE
+              value: "Azure Monitor Demo Lab"
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-frontend
+  namespace: demo
+spec:
+  type: LoadBalancer
+  selector:
+    app: hello-frontend
+  ports:
+    - port: 80
+      targetPort: 80

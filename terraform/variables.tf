@@ -1,0 +1,86 @@
+variable "subscription_id" { type = string }
+
+variable "resource_group_name" {
+  type        = string
+  default     = "rg-azure-monitor-lab"
+  description = "Name of the resource group hosting the lab. The RG MUST already exist in the subscription before running terraform apply (Terraform only looks it up via data source, it does not create or destroy the RG). Create it with: az group create -n <name> -l <location>."
+}
+
+variable "location" { type = string }
+variable "alert_email" { type = string }
+variable "vm_admin_password" {
+  type      = string
+  sensitive = true
+}
+
+variable "name_prefix" {
+  type    = string
+  default = "amlab"
+}
+
+variable "owner_tag" {
+  type    = string
+  default = "demo-lab"
+}
+
+variable "daily_cap_gb" {
+  type    = number
+  default = 1
+}
+
+variable "enable_law_replication" {
+  type    = bool
+  default = false
+}
+
+variable "law_replication_location" {
+  type    = string
+  default = ""
+}
+
+variable "vm_admin_username" {
+  type    = string
+  default = "azureuser"
+}
+
+variable "deploy_windows_vm" {
+  type    = bool
+  default = true
+}
+
+variable "deploy_linux_vm" {
+  type    = bool
+  default = true
+}
+
+variable "vm_size" {
+  type    = string
+  default = "Standard_B2s"
+}
+
+variable "aks_node_vm_size" {
+  type    = string
+  default = "Standard_B2s"
+}
+
+variable "aks_node_count" {
+  type    = number
+  default = 1
+}
+
+variable "siem_webhook_url" {
+  type      = string
+  default   = ""
+  sensitive = true
+}
+
+variable "enable_sentinel" {
+  type    = bool
+  default = true
+}
+
+variable "enable_stage_a" { type = bool }
+variable "enable_stage_b" { type = bool }
+variable "enable_stage_c" { type = bool }
+variable "enable_stage_d" { type = bool }
+variable "enable_stage_e" { type = bool }

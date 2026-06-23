@@ -1,0 +1,1654 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "9182743583887725808"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "namePrefix": {
+      "type": "string",
+      "defaultValue": "amlab",
+      "minLength": 3,
+      "maxLength": 8,
+      "metadata": {
+        "description": "Short prefix used to build resource names."
+      }
+    },
+    "vmAdminUsername": {
+      "type": "string",
+      "defaultValue": "azureuser",
+      "metadata": {
+        "description": "Admin username for the demo VMs."
+      }
+    },
+    "vmAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Admin password for the demo VMs."
+      }
+    },
+    "deployWindowsVm": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Deploy the Windows demo VM."
+      }
+    },
+    "deployLinuxVm": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Deploy the Linux demo VM."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_B2s",
+      "metadata": {
+        "description": "VM size."
+      }
+    },
+    "aksNodeVmSize": {
+      "type": "string",
+      "defaultValue": "Standard_B2s",
+      "metadata": {
+        "description": "AKS node VM size."
+      }
+    },
+    "aksNodeCount": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "AKS node count."
+      }
+    },
+    "ownerTag": {
+      "type": "string",
+      "defaultValue": "demo-lab",
+      "metadata": {
+        "description": "Tag every resource with this owner."
+      }
+    }
+  },
+  "variables": {
+    "suffix": "[uniqueString(resourceGroup().id)]",
+    "lawCentralName": "[format('law-{0}-central-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "lawAppInsightsName": "[format('law-{0}-appinsights-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "appInsightsName": "[format('appi-{0}', parameters('namePrefix'))]",
+    "amwName": "[format('amw-{0}', parameters('namePrefix'))]",
+    "grafanaName": "[format('amg-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 4))]",
+    "vnetName": "[format('vnet-{0}', parameters('namePrefix'))]",
+    "linuxVmName": "[format('vm-{0}-lin', parameters('namePrefix'))]",
+    "windowsVmName": "[format('vmwin{0}', take(variables('suffix'), 4))]",
+    "aksName": "[format('aks-{0}', parameters('namePrefix'))]",
+    "aksDnsPrefix": "[format('{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 6))]",
+    "appPlanName": "[format('plan-{0}', parameters('namePrefix'))]",
+    "webAppName": "[format('app-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "dcrVmInsightsName": "[format('dcr-{0}-vminsights', parameters('namePrefix'))]",
+    "dcrPrometheusName": "[format('dcr-{0}-prometheus', parameters('namePrefix'))]",
+    "dceName": "[format('dce-{0}', parameters('namePrefix'))]",
+    "storageAccountName": "[format('st{0}{1}', parameters('namePrefix'), take(variables('suffix'), 8))]",
+    "eventHubNsName": "[format('evhns-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "commonTags": {
+      "owner": "[parameters('ownerTag')]",
+      "purpose": "azure-monitor-demo-lab",
+      "costCenter": "demo"
+    },
+    "workloadSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'snet-workload')]"
+  },
+  "resources": [
+    {
+      "condition": "[parameters('deployLinuxVm')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "vm-linux",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "vmName": {
+            "value": "[variables('linuxVmName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "vmSize": {
+            "value": "[parameters('vmSize')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('vmAdminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('vmAdminPassword')]"
+          },
+          "subnetId": {
+            "value": "[variables('workloadSubnetId')]"
+          },
+          "dcrId": {
+            "value": "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrVmInsightsName'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "12131549831957383843"
+            }
+          },
+          "parameters": {
+            "vmName": {
+              "type": "string",
+              "metadata": {
+                "description": "Linux VM name (max 64 chars; hostname max 63)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "vmSize": {
+              "type": "string",
+              "defaultValue": "Standard_B2s",
+              "metadata": {
+                "description": "VM SKU."
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "Admin username."
+              }
+            },
+            "adminPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Admin password."
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet resource ID."
+              }
+            },
+            "dcrId": {
+              "type": "string",
+              "metadata": {
+                "description": "Data Collection Rule for VM Insights."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-09-01",
+              "name": "[format('pip-{0}', parameters('vmName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static",
+                "publicIPAddressVersion": "IPv4"
+              }
+            },
+            {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2023-09-01",
+              "name": "[format('nic-{0}', parameters('vmName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "privateIPAllocationMethod": "Dynamic",
+                      "subnet": {
+                        "id": "[parameters('subnetId')]"
+                      },
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('pip-{0}', parameters('vmName')))]"
+                      }
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('pip-{0}', parameters('vmName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('vmName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                  "computerName": "[parameters('vmName')]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "adminPassword": "[parameters('adminPassword')]",
+                  "linuxConfiguration": {
+                    "disablePasswordAuthentication": false,
+                    "provisionVMAgent": true
+                  }
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "Canonical",
+                    "offer": "0001-com-ubuntu-server-jammy",
+                    "sku": "22_04-lts-gen2",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "Standard_LRS"
+                    }
+                  }
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('vmName')))]"
+                    }
+                  ]
+                },
+                "diagnosticsProfile": {
+                  "bootDiagnostics": {
+                    "enabled": true
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('vmName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}/{1}', parameters('vmName'), 'AzureMonitorLinuxAgent')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "publisher": "Microsoft.Azure.Monitor",
+                "type": "AzureMonitorLinuxAgent",
+                "typeHandlerVersion": "1.30",
+                "autoUpgradeMinorVersion": true,
+                "enableAutomaticUpgrade": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}/{1}', parameters('vmName'), 'NetworkWatcherAgentLinux')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "publisher": "Microsoft.Azure.NetworkWatcher",
+                "type": "NetworkWatcherAgentLinux",
+                "typeHandlerVersion": "1.4",
+                "autoUpgradeMinorVersion": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'AzureMonitorLinuxAgent')]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/dataCollectionRuleAssociations",
+              "apiVersion": "2023-03-11",
+              "scope": "[format('Microsoft.Compute/virtualMachines/{0}', parameters('vmName'))]",
+              "name": "vminsights-association",
+              "properties": {
+                "dataCollectionRuleId": "[parameters('dcrId')]",
+                "description": "Associate VM Insights DCR"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'AzureMonitorLinuxAgent')]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vmId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+            },
+            "vmName": {
+              "type": "string",
+              "value": "[parameters('vmName')]"
+            },
+            "publicIp": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('pip-{0}', parameters('vmName'))), '2023-09-01').ipAddress]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[parameters('deployWindowsVm')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "vm-windows",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "vmName": {
+            "value": "[variables('windowsVmName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "vmSize": {
+            "value": "[parameters('vmSize')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('vmAdminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('vmAdminPassword')]"
+          },
+          "subnetId": {
+            "value": "[variables('workloadSubnetId')]"
+          },
+          "dcrId": {
+            "value": "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrVmInsightsName'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "2277149854853002146"
+            }
+          },
+          "parameters": {
+            "vmName": {
+              "type": "string",
+              "maxLength": 15,
+              "metadata": {
+                "description": "Windows VM name (computer name max 15 chars)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "vmSize": {
+              "type": "string",
+              "defaultValue": "Standard_B2s",
+              "metadata": {
+                "description": "VM SKU."
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "Admin username."
+              }
+            },
+            "adminPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Admin password."
+              }
+            },
+            "subnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Subnet resource ID."
+              }
+            },
+            "dcrId": {
+              "type": "string",
+              "metadata": {
+                "description": "Data Collection Rule for VM Insights."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-09-01",
+              "name": "[format('pip-{0}', parameters('vmName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static",
+                "publicIPAddressVersion": "IPv4"
+              }
+            },
+            {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2023-09-01",
+              "name": "[format('nic-{0}', parameters('vmName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "privateIPAllocationMethod": "Dynamic",
+                      "subnet": {
+                        "id": "[parameters('subnetId')]"
+                      },
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('pip-{0}', parameters('vmName')))]"
+                      }
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('pip-{0}', parameters('vmName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2024-03-01",
+              "name": "[parameters('vmName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                  "computerName": "[parameters('vmName')]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "adminPassword": "[parameters('adminPassword')]",
+                  "windowsConfiguration": {
+                    "provisionVMAgent": true,
+                    "enableAutomaticUpdates": true,
+                    "patchSettings": {
+                      "patchMode": "AutomaticByOS"
+                    }
+                  }
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "MicrosoftWindowsServer",
+                    "offer": "WindowsServer",
+                    "sku": "2022-datacenter-azure-edition",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "Standard_LRS"
+                    }
+                  }
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('vmName')))]"
+                    }
+                  ]
+                },
+                "diagnosticsProfile": {
+                  "bootDiagnostics": {
+                    "enabled": true
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('vmName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}/{1}', parameters('vmName'), 'AzureMonitorWindowsAgent')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "publisher": "Microsoft.Azure.Monitor",
+                "type": "AzureMonitorWindowsAgent",
+                "typeHandlerVersion": "1.21",
+                "autoUpgradeMinorVersion": true,
+                "enableAutomaticUpgrade": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}/{1}', parameters('vmName'), 'NetworkWatcherAgentWindows')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "publisher": "Microsoft.Azure.NetworkWatcher",
+                "type": "NetworkWatcherAgentWindows",
+                "typeHandlerVersion": "1.4",
+                "autoUpgradeMinorVersion": true
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'AzureMonitorWindowsAgent')]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}/{1}', parameters('vmName'), 'DependencyAgentWindows')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "publisher": "Microsoft.Azure.Monitoring.DependencyAgent",
+                "type": "DependencyAgentWindows",
+                "typeHandlerVersion": "9.10",
+                "autoUpgradeMinorVersion": true,
+                "enableAutomaticUpgrade": true,
+                "settings": {
+                  "enableAMA": "true"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'AzureMonitorWindowsAgent')]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/dataCollectionRuleAssociations",
+              "apiVersion": "2023-03-11",
+              "scope": "[format('Microsoft.Compute/virtualMachines/{0}', parameters('vmName'))]",
+              "name": "vminsights-association",
+              "properties": {
+                "dataCollectionRuleId": "[parameters('dcrId')]",
+                "description": "Associate VM Insights DCR"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('vmName'), 'AzureMonitorWindowsAgent')]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vmId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+            },
+            "vmName": {
+              "type": "string",
+              "value": "[parameters('vmName')]"
+            },
+            "publicIp": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', format('pip-{0}', parameters('vmName'))), '2023-09-01').ipAddress]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "aks",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('aksName')]"
+          },
+          "dnsPrefix": {
+            "value": "[variables('aksDnsPrefix')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "nodeVmSize": {
+            "value": "[parameters('aksNodeVmSize')]"
+          },
+          "nodeCount": {
+            "value": "[parameters('aksNodeCount')]"
+          },
+          "centralLawId": {
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawCentralName'))]"
+          },
+          "azureMonitorWorkspaceId": {
+            "value": "[resourceId('Microsoft.Monitor/accounts', variables('amwName'))]"
+          },
+          "dataCollectionEndpointId": {
+            "value": "[resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dceName'))]"
+          },
+          "dcrPrometheusName": {
+            "value": "[variables('dcrPrometheusName')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "10800112660087944742"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "AKS cluster name."
+              }
+            },
+            "dnsPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "DNS prefix."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "nodeVmSize": {
+              "type": "string",
+              "defaultValue": "Standard_B2s",
+              "metadata": {
+                "description": "Node VM size."
+              }
+            },
+            "nodeCount": {
+              "type": "int",
+              "defaultValue": 1,
+              "metadata": {
+                "description": "Node count."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW for Container Insights logs."
+              }
+            },
+            "azureMonitorWorkspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure Monitor Workspace for Managed Prometheus metrics."
+              }
+            },
+            "dataCollectionEndpointId": {
+              "type": "string",
+              "metadata": {
+                "description": "Data Collection Endpoint for Prometheus DCR."
+              }
+            },
+            "dcrPrometheusName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name for the Prometheus DCR."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ContainerService/managedClusters",
+              "apiVersion": "2024-05-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "sku": {
+                "name": "Base",
+                "tier": "Free"
+              },
+              "properties": {
+                "kubernetesVersion": "1.34",
+                "dnsPrefix": "[parameters('dnsPrefix')]",
+                "enableRBAC": true,
+                "agentPoolProfiles": [
+                  {
+                    "name": "systempool",
+                    "count": "[parameters('nodeCount')]",
+                    "vmSize": "[parameters('nodeVmSize')]",
+                    "osType": "Linux",
+                    "osSKU": "Ubuntu",
+                    "mode": "System",
+                    "type": "VirtualMachineScaleSets",
+                    "maxPods": 30,
+                    "enableAutoScaling": false
+                  }
+                ],
+                "networkProfile": {
+                  "networkPlugin": "azure",
+                  "networkPolicy": "azure",
+                  "loadBalancerSku": "standard",
+                  "serviceCidr": "10.100.0.0/16",
+                  "dnsServiceIP": "10.100.0.10"
+                },
+                "addonProfiles": {
+                  "omsagent": {
+                    "enabled": true,
+                    "config": {
+                      "logAnalyticsWorkspaceResourceID": "[parameters('centralLawId')]",
+                      "useAADAuth": "true"
+                    }
+                  }
+                },
+                "azureMonitorProfile": {
+                  "metrics": {
+                    "enabled": true,
+                    "kubeStateMetrics": {
+                      "metricLabelsAllowlist": "*",
+                      "metricAnnotationsAllowList": "*"
+                    }
+                  }
+                },
+                "apiServerAccessProfile": {
+                  "enablePrivateCluster": false
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', parameters('name'))]",
+              "name": "send-to-central-law",
+              "properties": {
+                "workspaceId": "[parameters('centralLawId')]",
+                "logs": [
+                  {
+                    "categoryGroup": "allLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ContainerService/managedClusters', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/dataCollectionRules",
+              "apiVersion": "2023-03-11",
+              "name": "[parameters('dcrPrometheusName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "Linux",
+              "properties": {
+                "dataCollectionEndpointId": "[parameters('dataCollectionEndpointId')]",
+                "dataSources": {
+                  "prometheusForwarder": [
+                    {
+                      "name": "PrometheusDataSource",
+                      "streams": [
+                        "Microsoft-PrometheusMetrics"
+                      ],
+                      "labelIncludeFilter": {}
+                    }
+                  ]
+                },
+                "destinations": {
+                  "monitoringAccounts": [
+                    {
+                      "accountResourceId": "[parameters('azureMonitorWorkspaceId')]",
+                      "name": "amwDestination"
+                    }
+                  ]
+                },
+                "dataFlows": [
+                  {
+                    "streams": [
+                      "Microsoft-PrometheusMetrics"
+                    ],
+                    "destinations": [
+                      "amwDestination"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/dataCollectionRuleAssociations",
+              "apiVersion": "2023-03-11",
+              "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', parameters('name'))]",
+              "name": "prometheus-association",
+              "properties": {
+                "dataCollectionRuleId": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrPrometheusName'))]",
+                "description": "Send AKS cluster Prometheus metrics to Azure Monitor Workspace"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ContainerService/managedClusters', parameters('name'))]",
+                "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('dcrPrometheusName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "controlPlaneFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ContainerService/managedClusters', parameters('name')), '2024-05-01').fqdn]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "grafana",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('grafanaName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "azureMonitorWorkspaceId": {
+            "value": "[resourceId('Microsoft.Monitor/accounts', variables('amwName'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "9598521564876409291"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure Managed Grafana name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "azureMonitorWorkspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure Monitor Workspace resource ID to integrate (Managed Prometheus)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Dashboard/grafana",
+              "apiVersion": "2024-10-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "publicNetworkAccess": "Enabled",
+                "apiKey": "Enabled",
+                "deterministicOutboundIP": "Disabled",
+                "grafanaIntegrations": {
+                  "azureMonitorWorkspaceIntegrations": [
+                    {
+                      "azureMonitorWorkspaceResourceId": "[parameters('azureMonitorWorkspaceId')]"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.Dashboard/grafana', parameters('name')), 'monitoring-reader')]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.Dashboard/grafana', parameters('name')), '2024-10-01', 'full').identity.principalId]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Dashboard/grafana', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Dashboard/grafana', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "endpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Dashboard/grafana', parameters('name')), '2024-10-01').endpoint]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "appservice",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "planName": {
+            "value": "[variables('appPlanName')]"
+          },
+          "webAppName": {
+            "value": "[variables('webAppName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
+          },
+          "appInsightsInstrumentationKey": {
+            "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').InstrumentationKey]"
+          },
+          "centralLawId": {
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawCentralName'))]"
+          },
+          "diagStorageAccountId": {
+            "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+          },
+          "diagEventHubAuthRuleId": {
+            "value": "[resourceId('Microsoft.EventHub/namespaces/authorizationRules', variables('eventHubNsName'), 'RootManageSharedAccessKey')]"
+          },
+          "diagEventHubName": {
+            "value": "diagstream"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "1819095795312396139"
+            }
+          },
+          "parameters": {
+            "planName": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service Plan name."
+              }
+            },
+            "webAppName": {
+              "type": "string",
+              "metadata": {
+                "description": "Web App name (must be globally unique)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "string",
+              "metadata": {
+                "description": "App Insights connection string."
+              }
+            },
+            "appInsightsInstrumentationKey": {
+              "type": "string",
+              "metadata": {
+                "description": "App Insights instrumentation key (legacy fallback)."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW for diagnostic settings."
+              }
+            },
+            "diagStorageAccountId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional: Storage Account resource ID for the \"archive\" fan-out diag setting. Empty = skip."
+              }
+            },
+            "diagEventHubAuthRuleId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional: Event Hub authorization rule ID + hub name for the SIEM fan-out diag setting. Empty = skip."
+              }
+            },
+            "diagEventHubName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Event hub name (only used if diagEventHubAuthRuleId is supplied)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Web/serverfarms",
+              "apiVersion": "2023-12-01",
+              "name": "[parameters('planName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "B1",
+                "tier": "Basic",
+                "capacity": 1
+              },
+              "kind": "linux",
+              "properties": {
+                "reserved": true
+              }
+            },
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2023-12-01",
+              "name": "[parameters('webAppName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "app,linux",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]",
+                "httpsOnly": true,
+                "siteConfig": {
+                  "linuxFxVersion": "DOTNETCORE|8.0",
+                  "alwaysOn": true,
+                  "ftpsState": "Disabled",
+                  "minTlsVersion": "1.2",
+                  "http20Enabled": true,
+                  "healthCheckPath": "/",
+                  "appSettings": [
+                    {
+                      "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+                      "value": "[parameters('appInsightsConnectionString')]"
+                    },
+                    {
+                      "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                      "value": "[parameters('appInsightsInstrumentationKey')]"
+                    },
+                    {
+                      "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+                      "value": "~3"
+                    },
+                    {
+                      "name": "XDT_MicrosoftApplicationInsights_Mode",
+                      "value": "recommended"
+                    },
+                    {
+                      "name": "XDT_MicrosoftApplicationInsights_PreemptSdk",
+                      "value": "1"
+                    },
+                    {
+                      "name": "InstrumentationEngine_EXTENSION_VERSION",
+                      "value": "disabled"
+                    },
+                    {
+                      "name": "XDT_MicrosoftApplicationInsightsJava",
+                      "value": "0"
+                    },
+                    {
+                      "name": "APPINSIGHTS_PROFILERFEATURE_VERSION",
+                      "value": "1.0.0"
+                    },
+                    {
+                      "name": "DiagnosticServices_EXTENSION_VERSION",
+                      "value": "~3"
+                    },
+                    {
+                      "name": "APPINSIGHTS_SNAPSHOTFEATURE_VERSION",
+                      "value": "1.0.0"
+                    },
+                    {
+                      "name": "SnapshotDebugger_EXTENSION_VERSION",
+                      "value": "~1"
+                    },
+                    {
+                      "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+                      "value": "true"
+                    },
+                    {
+                      "name": "WEBSITE_HTTPLOGGING_RETENTION_DAYS",
+                      "value": "3"
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Web/sites/{0}', parameters('webAppName'))]",
+              "name": "send-to-central-law",
+              "properties": {
+                "workspaceId": "[parameters('centralLawId')]",
+                "logs": [
+                  {
+                    "categoryGroup": "allLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('diagStorageAccountId')))]",
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Web/sites/{0}', parameters('webAppName'))]",
+              "name": "archive-to-blob",
+              "properties": {
+                "storageAccountId": "[parameters('diagStorageAccountId')]",
+                "logs": [
+                  {
+                    "categoryGroup": "allLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('diagEventHubAuthRuleId')))]",
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Web/sites/{0}', parameters('webAppName'))]",
+              "name": "stream-to-eventhub",
+              "properties": {
+                "eventHubAuthorizationRuleId": "[parameters('diagEventHubAuthRuleId')]",
+                "eventHubName": "[parameters('diagEventHubName')]",
+                "logs": [
+                  {
+                    "categoryGroup": "allLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "webAppId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/sites', parameters('webAppName'))]"
+            },
+            "webAppName": {
+              "type": "string",
+              "value": "[parameters('webAppName')]"
+            },
+            "defaultHost": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Web/sites', parameters('webAppName')), '2023-12-01').defaultHostName]"
+            },
+            "planId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Web/serverfarms', parameters('planName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "connection-monitor",
+      "subscriptionId": "[subscription().subscriptionId]",
+      "resourceGroup": "NetworkWatcherRG",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "centralLawId": {
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawCentralName'))]"
+          },
+          "linuxVmId": "[if(parameters('deployLinuxVm'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'vm-linux'), '2022-09-01').outputs.vmId.value), createObject('value', ''))]",
+          "windowsVmId": "[if(parameters('deployWindowsVm'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'vm-windows'), '2022-09-01').outputs.vmId.value), createObject('value', ''))]",
+          "appServiceHost": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appservice'), '2022-09-01').outputs.defaultHost.value]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "1762279408233800432"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID (results destination)."
+              }
+            },
+            "linuxVmId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Resource ID of the Linux VM source."
+              }
+            },
+            "windowsVmId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Resource ID of the Windows VM source."
+              }
+            },
+            "appServiceHost": {
+              "type": "string",
+              "metadata": {
+                "description": "App Service URL to test (no scheme, just host: e.g. app-amlab.azurewebsites.net)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "variables": {
+            "hasLinux": "[not(empty(parameters('linuxVmId')))]",
+            "hasWin": "[not(empty(parameters('windowsVmId')))]",
+            "endpoints": "[concat(if(variables('hasLinux'), createArray(createObject('name', 'src-vm-linux', 'type', 'AzureVM', 'resourceId', parameters('linuxVmId'))), createArray()), if(variables('hasWin'), createArray(createObject('name', 'src-vm-windows', 'type', 'AzureVM', 'resourceId', parameters('windowsVmId'))), createArray()), createArray(createObject('name', 'dst-appservice', 'type', 'ExternalAddress', 'address', parameters('appServiceHost'))))]",
+            "testConfigs": [
+              {
+                "name": "tc-https-appservice",
+                "testFrequencySec": 60,
+                "protocol": "Tcp",
+                "tcpConfiguration": {
+                  "port": 443,
+                  "disableTraceRoute": false
+                },
+                "successThreshold": {
+                  "checksFailedPercent": 30,
+                  "roundTripTimeMs": 2000
+                }
+              }
+            ],
+            "sourceNames": "[concat(if(variables('hasLinux'), createArray('src-vm-linux'), createArray()), if(variables('hasWin'), createArray('src-vm-windows'), createArray()))]",
+            "testGroups": "[if(empty(variables('sourceNames')), createArray(), createArray(createObject('name', 'tg-vms-to-appservice', 'disable', false(), 'sources', variables('sourceNames'), 'destinations', createArray('dst-appservice'), 'testConfigurations', createArray('tc-https-appservice'))))]"
+          },
+          "resources": [
+            {
+              "condition": "[not(empty(variables('testGroups')))]",
+              "type": "Microsoft.Network/networkWatchers/connectionMonitors",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', format('NetworkWatcher_{0}', parameters('location')), 'cm-amlab-vms-to-appservice')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "endpoints": "[variables('endpoints')]",
+                "testConfigurations": "[variables('testConfigs')]",
+                "testGroups": "[variables('testGroups')]",
+                "outputs": [
+                  {
+                    "type": "Workspace",
+                    "workspaceSettings": {
+                      "workspaceResourceId": "[parameters('centralLawId')]"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "networkWatcherId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/networkWatchers', format('NetworkWatcher_{0}', parameters('location')))]"
+            },
+            "connectionMonitorName": {
+              "type": "string",
+              "value": "[if(not(empty(variables('testGroups'))), 'cm-amlab-vms-to-appservice', '')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'appservice')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-linux')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-windows')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "flow-logs",
+      "subscriptionId": "[subscription().subscriptionId]",
+      "resourceGroup": "NetworkWatcherRG",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('fl-{0}', parameters('namePrefix'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "targetVnetId": {
+            "value": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
+          },
+          "networkWatcherId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, 'NetworkWatcherRG'), 'Microsoft.Resources/deployments', 'connection-monitor'), '2022-09-01').outputs.networkWatcherId.value]"
+          },
+          "storageAccountId": {
+            "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+          },
+          "centralLawId": {
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawCentralName'))]"
+          },
+          "centralLawRegion": {
+            "value": "[parameters('location')]"
+          },
+          "centralLawCustomerId": {
+            "value": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', variables('lawCentralName')), '2023-09-01').customerId]"
+          },
+          "retentionDays": {
+            "value": 7
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "6945808001549553726"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Flow log resource name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "targetVnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Target VNet resource ID (the thing we capture flows for)."
+              }
+            },
+            "networkWatcherId": {
+              "type": "string",
+              "metadata": {
+                "description": "Network Watcher resource ID (must be same region)."
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account resource ID where raw flow logs are written."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID — Traffic Analytics workspace."
+              }
+            },
+            "centralLawRegion": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW region (Traffic Analytics needs the workspace region)."
+              }
+            },
+            "centralLawCustomerId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW GUID (customerId) — Traffic Analytics needs the workspace customer ID."
+              }
+            },
+            "retentionDays": {
+              "type": "int",
+              "defaultValue": 7,
+              "metadata": {
+                "description": "Retention days for raw flow logs in storage."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkWatchers/flowLogs",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', last(split(parameters('networkWatcherId'), '/')), parameters('name'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "targetResourceId": "[parameters('targetVnetId')]",
+                "storageId": "[parameters('storageAccountId')]",
+                "enabled": true,
+                "format": {
+                  "type": "JSON",
+                  "version": 2
+                },
+                "retentionPolicy": {
+                  "days": "[parameters('retentionDays')]",
+                  "enabled": true
+                },
+                "flowAnalyticsConfiguration": {
+                  "networkWatcherFlowAnalyticsConfiguration": {
+                    "enabled": true,
+                    "workspaceId": "[parameters('centralLawCustomerId')]",
+                    "workspaceRegion": "[parameters('centralLawRegion')]",
+                    "workspaceResourceId": "[parameters('centralLawId')]",
+                    "trafficAnalyticsInterval": 10
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/networkWatchers/flowLogs', split(format('{0}/{1}', last(split(parameters('networkWatcherId'), '/')), parameters('name')), '/')[0], split(format('{0}/{1}', last(split(parameters('networkWatcherId'), '/')), parameters('name')), '/')[1])]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[format('{0}/{1}', last(split(parameters('networkWatcherId'), '/')), parameters('name'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, 'NetworkWatcherRG'), 'Microsoft.Resources/deployments', 'connection-monitor')]"
+      ]
+    }
+  ]
+}

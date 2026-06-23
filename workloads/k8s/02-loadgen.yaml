@@ -1,0 +1,60 @@
+# k6 load generator running as a CronJob.
+# Hits the App Service hello-world endpoint every minute, with a few intentional
+# bad requests so AppRequests in App Insights show failures and 5xx in App Service.
+# Replace __APP_SERVICE_URL__ at deploy time (post-deploy.ps1 does this).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-script
+  namespace: demo
+data:
+  loadtest.js: |
+    import http from 'k6/http';
+    import { sleep, check } from 'k6';
+    export const options = { vus: 3, duration: '50s' };
+    const TARGET = __APP_SERVICE_URL__;
+    export default function () {
+      const ok  = http.get(TARGET + '/');
+      check(ok, { 'status 200': r => r.status === 200 });
+      // Hit a couple of paths that don't exist to generate 404s and an occasional
+      // 5xx-style failure pattern in AppServiceHTTPLogs / AppRequests.
+      http.get(TARGET + '/does-not-exist-' + Math.floor(Math.random()*1000));
+      if (Math.random() < 0.15) {
+        http.get(TARGET + '/api/explode?force=1');
+      }
+      sleep(1);
+    }
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: loadgen
+  namespace: demo
+spec:
+  schedule: "*/1 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            app: loadgen
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: k6
+              image: grafana/k6:0.50.0
+              args: ["run", "/scripts/loadtest.js"]
+              volumeMounts:
+                - name: script
+                  mountPath: /scripts
+              resources:
+                requests: { cpu: "50m",  memory: "64Mi"  }
+                limits:   { cpu: "300m", memory: "256Mi" }
+          volumes:
+            - name: script
+              configMap:
+                name: k6-script

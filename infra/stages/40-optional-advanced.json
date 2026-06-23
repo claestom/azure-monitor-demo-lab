@@ -1,0 +1,1960 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "10093613182595534834"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "namePrefix": {
+      "type": "string",
+      "defaultValue": "amlab",
+      "minLength": 3,
+      "maxLength": 8,
+      "metadata": {
+        "description": "Short prefix used to build resource names."
+      }
+    },
+    "enableSentinel": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Enable Microsoft Sentinel on the central workspace."
+      }
+    },
+    "deployWindowsVm": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Deploy the Windows demo VM."
+      }
+    },
+    "deployLinuxVm": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Deploy the Linux demo VM."
+      }
+    },
+    "ownerTag": {
+      "type": "string",
+      "defaultValue": "demo-lab",
+      "metadata": {
+        "description": "Tag every resource with this owner."
+      }
+    }
+  },
+  "variables": {
+    "suffix": "[uniqueString(resourceGroup().id)]",
+    "lawCentralName": "[format('law-{0}-central-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "amwName": "[format('amw-{0}', parameters('namePrefix'))]",
+    "aksName": "[format('aks-{0}', parameters('namePrefix'))]",
+    "actionGroupName": "[format('ag-{0}-email', parameters('namePrefix'))]",
+    "storageAccountName": "[format('st{0}{1}', parameters('namePrefix'), take(variables('suffix'), 8))]",
+    "appInsightsName": "[format('appi-{0}', parameters('namePrefix'))]",
+    "webAppName": "[format('app-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "vmssName": "[format('vmss-{0}', parameters('namePrefix'))]",
+    "linuxVmName": "[format('vm-{0}-lin', parameters('namePrefix'))]",
+    "windowsVmName": "[format('vmwin{0}', take(variables('suffix'), 4))]",
+    "sliUamiName": "[format('id-sli-{0}', parameters('namePrefix'))]",
+    "commonTags": {
+      "owner": "[parameters('ownerTag')]",
+      "purpose": "azure-monitor-demo-lab",
+      "costCenter": "demo"
+    }
+  },
+  "resources": [
+    {
+      "condition": "[parameters('enableSentinel')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "sentinel",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "workspaceName": {
+            "value": "[variables('lawCentralName')]"
+          },
+          "workspaceId": {
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawCentralName'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "601425594486634112"
+            }
+          },
+          "parameters": {
+            "workspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW name."
+              }
+            },
+            "workspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationsManagement/solutions",
+              "apiVersion": "2015-11-01-preview",
+              "name": "[format('SecurityInsights({0})', parameters('workspaceName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "workspaceResourceId": "[parameters('workspaceId')]"
+              },
+              "plan": {
+                "name": "[format('SecurityInsights({0})', parameters('workspaceName'))]",
+                "product": "OMSGallery/SecurityInsights",
+                "publisher": "Microsoft",
+                "promotionCode": ""
+              }
+            },
+            {
+              "type": "Microsoft.SecurityInsights/onboardingStates",
+              "apiVersion": "2024-09-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('workspaceName'))]",
+              "name": "default",
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationsManagement/solutions', format('SecurityInsights({0})', parameters('workspaceName')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.SecurityInsights/alertRules",
+              "apiVersion": "2024-09-01",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('workspaceName'))]",
+              "name": "0a1b2c3d-amlab-rg-delete-alert",
+              "kind": "Scheduled",
+              "properties": {
+                "displayName": "amlab — Resource deletion in lab RG",
+                "description": "Demo Sentinel rule: any successful delete operation in the lab RG over the last 1h.",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "AzureActivity\n| where TimeGenerated > ago(1h)\n| where ActivityStatusValue == \"Success\"\n| where OperationNameValue endswith \"/delete\"\n| project TimeGenerated, Caller, OperationNameValue, _ResourceId",
+                "queryFrequency": "PT15M",
+                "queryPeriod": "PT1H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT1H",
+                "suppressionEnabled": false,
+                "tactics": [
+                  "Impact"
+                ],
+                "techniques": [
+                  "T1485"
+                ],
+                "eventGroupingSettings": {
+                  "aggregationKind": "AlertPerResult"
+                },
+                "entityMappings": [
+                  {
+                    "entityType": "Account",
+                    "fieldMappings": [
+                      {
+                        "identifier": "FullName",
+                        "columnName": "Caller"
+                      }
+                    ]
+                  },
+                  {
+                    "entityType": "AzureResource",
+                    "fieldMappings": [
+                      {
+                        "identifier": "ResourceId",
+                        "columnName": "_ResourceId"
+                      }
+                    ]
+                  }
+                ],
+                "incidentConfiguration": {
+                  "createIncident": true,
+                  "groupingConfiguration": {
+                    "enabled": true,
+                    "reopenClosedIncident": false,
+                    "lookbackDuration": "PT5H",
+                    "matchingMethod": "AnyAlert"
+                  }
+                }
+              },
+              "dependsOn": [
+                "[extensionResourceId(resourceId('Microsoft.OperationalInsights/workspaces', parameters('workspaceName')), 'Microsoft.SecurityInsights/onboardingStates', 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "sentinelOnboarded": {
+              "type": "bool",
+              "value": true
+            },
+            "ruleName": {
+              "type": "string",
+              "value": "0a1b2c3d-amlab-rg-delete-alert"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "data-export",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('exp-{0}-heartbeat', parameters('namePrefix'))]"
+          },
+          "workspaceName": {
+            "value": "[variables('lawCentralName')]"
+          },
+          "storageAccountId": {
+            "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+          },
+          "tables": {
+            "value": [
+              "Heartbeat"
+            ]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "14552688936156756826"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Data Export rule name."
+              }
+            },
+            "workspaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Workspace name (this is a child resource of the LAW)."
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Target storage account resource ID."
+              }
+            },
+            "tables": {
+              "type": "array",
+              "defaultValue": [
+                "Heartbeat"
+              ],
+              "metadata": {
+                "description": "Tables to export. Defaults to Heartbeat (small + always populated)."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces/dataExports",
+              "apiVersion": "2023-09-01",
+              "name": "[format('{0}/{1}', parameters('workspaceName'), parameters('name'))]",
+              "properties": {
+                "destination": {
+                  "resourceId": "[parameters('storageAccountId')]"
+                },
+                "tableNames": "[parameters('tables')]",
+                "enable": true
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces/dataExports', parameters('workspaceName'), parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "prometheus-rules",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('prg-{0}', parameters('namePrefix'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "azureMonitorWorkspaceId": {
+            "value": "[resourceId('Microsoft.Monitor/accounts', variables('amwName'))]"
+          },
+          "aksClusterId": {
+            "value": "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
+          },
+          "actionGroupId": {
+            "value": "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "231953381752664213"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Rule group name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region (Prometheus rule groups must match AMW region)."
+              }
+            },
+            "azureMonitorWorkspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure Monitor Workspace (AMW) resource ID — the rules query metrics here."
+              }
+            },
+            "aksClusterId": {
+              "type": "string",
+              "metadata": {
+                "description": "AKS cluster resource ID — populates the `clusterName` label for context."
+              }
+            },
+            "actionGroupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Action group ID for alert notifications."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.AlertsManagement/prometheusRuleGroups",
+              "apiVersion": "2023-03-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Demo lab: recording + alerting rules on AKS Prometheus metrics.",
+                "enabled": true,
+                "clusterName": "[last(split(parameters('aksClusterId'), '/'))]",
+                "interval": "PT1M",
+                "scopes": [
+                  "[parameters('azureMonitorWorkspaceId')]"
+                ],
+                "rules": [
+                  {
+                    "record": "amlab:node_cpu_seconds:rate5m",
+                    "expression": "sum by (instance) (rate(node_cpu_seconds_total{mode!=\"idle\"}[5m]))",
+                    "labels": {
+                      "source": "amlab"
+                    }
+                  },
+                  {
+                    "record": "amlab:container_memory_working_set_bytes:sum",
+                    "expression": "sum by (namespace) (container_memory_working_set_bytes{container!=\"\"})",
+                    "labels": {
+                      "source": "amlab"
+                    }
+                  },
+                  {
+                    "alert": "AmlabPodCrashLooping",
+                    "expression": "max_over_time(kube_pod_container_status_waiting_reason{reason=\"CrashLoopBackOff\"}[5m]) > 0",
+                    "for": "PT5M",
+                    "severity": 3,
+                    "labels": {
+                      "team": "demo-lab",
+                      "severity": "warning"
+                    },
+                    "annotations": {
+                      "summary": "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crashlooping",
+                      "description": "Container {{ $labels.container }} has been in CrashLoopBackOff for at least 5 minutes."
+                    },
+                    "resolveConfiguration": {
+                      "autoResolved": true,
+                      "timeToResolve": "PT10M"
+                    },
+                    "actions": [
+                      {
+                        "actionGroupId": "[parameters('actionGroupId')]"
+                      }
+                    ]
+                  },
+                  {
+                    "alert": "AmlabNodeMemoryPressure",
+                    "expression": "node_memory_MemAvailable_bytes < 209715200",
+                    "for": "PT10M",
+                    "severity": 2,
+                    "labels": {
+                      "team": "demo-lab"
+                    },
+                    "annotations": {
+                      "summary": "AKS node {{ $labels.instance }} low memory",
+                      "description": "Available memory has been below 200 MiB for 10 minutes."
+                    },
+                    "resolveConfiguration": {
+                      "autoResolved": true,
+                      "timeToResolve": "PT15M"
+                    },
+                    "actions": [
+                      {
+                        "actionGroupId": "[parameters('actionGroupId')]"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.AlertsManagement/prometheusRuleGroups', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "availability-test",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('test-{0}-app', parameters('namePrefix'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "appInsightsId": {
+            "value": "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+          },
+          "testUrl": {
+            "value": "[format('https://{0}/', reference(resourceId('Microsoft.Web/sites', variables('webAppName')), '2023-12-01').defaultHostName)]"
+          },
+          "actionGroupId": {
+            "value": "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "15495859199310160941"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the availability test."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region (must match App Insights region)."
+              }
+            },
+            "appInsightsId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Application Insights instance."
+              }
+            },
+            "testUrl": {
+              "type": "string",
+              "metadata": {
+                "description": "URL to test (e.g. https://app-amlab-tr75i.azurewebsites.net/)."
+              }
+            },
+            "actionGroupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Action Group resource ID for failure alerts."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "variables": {
+            "testLocations": [
+              {
+                "Id": "us-tx-sn1-azr"
+              },
+              {
+                "Id": "us-il-ch1-azr"
+              },
+              {
+                "Id": "emea-gb-db3-azr"
+              },
+              {
+                "Id": "emea-nl-ams-azr"
+              },
+              {
+                "Id": "apac-sg-sin-azr"
+              }
+            ]
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/webtests",
+              "apiVersion": "2022-06-15",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[union(parameters('tags'), createObject(format('hidden-link:{0}', parameters('appInsightsId')), 'Resource'))]",
+              "kind": "standard",
+              "properties": {
+                "SyntheticMonitorId": "[parameters('name')]",
+                "Name": "[parameters('name')]",
+                "Description": "Standard URL ping test for the demo App Service — tests from 5 global locations every 5 min.",
+                "Enabled": true,
+                "Frequency": 300,
+                "Timeout": 120,
+                "Kind": "standard",
+                "RetryEnabled": true,
+                "Locations": "[variables('testLocations')]",
+                "Request": {
+                  "RequestUrl": "[parameters('testUrl')]",
+                  "HttpVerb": "GET",
+                  "ParseDependentRequests": false,
+                  "FollowRedirects": true
+                },
+                "ValidationRules": {
+                  "ExpectedHttpStatusCode": 200,
+                  "SSLCheck": true,
+                  "SSLCertRemainingLifetimeCheck": 7
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "[format('alert-{0}', parameters('name'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "[format('Availability test \"{0}\" failing from 2+ global locations.', parameters('name'))]",
+                "severity": 1,
+                "enabled": true,
+                "scopes": [
+                  "[parameters('appInsightsId')]",
+                  "[resourceId('Microsoft.Insights/webtests', parameters('name'))]"
+                ],
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.WebtestLocationAvailabilityCriteria",
+                  "webTestId": "[resourceId('Microsoft.Insights/webtests', parameters('name'))]",
+                  "componentId": "[parameters('appInsightsId')]",
+                  "failedLocationCount": 2
+                },
+                "actions": [
+                  {
+                    "actionGroupId": "[parameters('actionGroupId')]"
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/webtests', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "testId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/webtests', parameters('name'))]"
+            },
+            "testName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "health-model",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "healthModelName": {
+            "value": "[format('hm-{0}-workload', parameters('namePrefix'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "webAppId": {
+            "value": "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"
+          },
+          "appInsightsId": {
+            "value": "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+          },
+          "aksId": {
+            "value": "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksName'))]"
+          },
+          "linuxVmId": "[if(parameters('deployLinuxVm'), createObject('value', resourceId('Microsoft.Compute/virtualMachines', variables('linuxVmName'))), createObject('value', ''))]",
+          "windowsVmId": "[if(parameters('deployWindowsVm'), createObject('value', resourceId('Microsoft.Compute/virtualMachines', variables('windowsVmName'))), createObject('value', ''))]",
+          "vmssId": {
+            "value": "[resourceId('Microsoft.Compute/virtualMachineScaleSets', variables('vmssName'))]"
+          },
+          "keyVaultId": {
+            "value": "[resourceId('Microsoft.KeyVault/vaults', format('kv-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 5)))]"
+          },
+          "storageAccountId": {
+            "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+          },
+          "actionGroupId": {
+            "value": "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "18236062229913747199"
+            }
+          },
+          "parameters": {
+            "healthModelName": {
+              "type": "string",
+              "defaultValue": "hm-amlab-workload",
+              "minLength": 3,
+              "maxLength": 44,
+              "metadata": {
+                "description": "Name of the Health Model resource. Also becomes the root-entity name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "swedencentral",
+              "allowedValues": [
+                "uksouth",
+                "canadacentral",
+                "centralus",
+                "swedencentral",
+                "southeastasia"
+              ],
+              "metadata": {
+                "description": "Region for the Health Model. Must be one of the supported preview regions."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags applied to the Health Model resource."
+              }
+            },
+            "webAppId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the App Service (web app)."
+              }
+            },
+            "appInsightsId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Application Insights component."
+              }
+            },
+            "aksId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the AKS cluster."
+              }
+            },
+            "linuxVmId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Resource ID of the Linux VM. Empty string if not deployed."
+              }
+            },
+            "windowsVmId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Resource ID of the Windows VM. Empty string if not deployed."
+              }
+            },
+            "vmssId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the VMSS."
+              }
+            },
+            "keyVaultId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Key Vault."
+              }
+            },
+            "storageAccountId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Storage Account."
+              }
+            },
+            "actionGroupId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Resource ID of the Action Group to notify on entity degraded/unhealthy. Optional."
+              }
+            }
+          },
+          "variables": {
+            "rootName": "[parameters('healthModelName')]",
+            "authName": "systemAssigned",
+            "actionGroupIds": "[if(empty(parameters('actionGroupId')), createArray(), createArray(parameters('actionGroupId')))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.CloudHealth/healthmodels",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[parameters('healthModelName')]",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "tags": "[parameters('tags')]",
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/authenticationsettings",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'systemAssigned')]",
+              "properties": {
+                "displayName": "System-assigned managed identity",
+                "authenticationKind": "ManagedIdentity",
+                "managedIdentityName": "SystemAssigned"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
+                "principalId": "[reference(resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), '2026-01-01-preview', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'frontend')]",
+              "properties": {
+                "displayName": "Frontend",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": -300,
+                  "y": 200
+                },
+                "icon": {
+                  "iconName": "EarthGlobe"
+                },
+                "signalGroups": {
+                  "dependencies": {
+                    "aggregationType": "WorstOf",
+                    "ignoreUnknown": true
+                  }
+                },
+                "alerts": "[if(empty(parameters('actionGroupId')), null(), createObject('unhealthy', createObject('severity', 'Sev1', 'description', 'AMLAB frontend tier unhealthy (webapp + App Insights rollup)', 'actionGroupIds', variables('actionGroupIds'))))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'compute')]",
+              "properties": {
+                "displayName": "Compute fleet",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": 0,
+                  "y": 200
+                },
+                "icon": {
+                  "iconName": "Server"
+                },
+                "signalGroups": {
+                  "dependencies": {
+                    "aggregationType": "MaxNotHealthy",
+                    "unhealthyThreshold": 50,
+                    "degradedThreshold": 25,
+                    "unit": "Percentage",
+                    "ignoreUnknown": true
+                  }
+                },
+                "alerts": "[if(empty(parameters('actionGroupId')), null(), createObject('degraded', createObject('severity', 'Sev3', 'description', 'AMLAB compute fleet: 25%+ of nodes/VMs not healthy.', 'actionGroupIds', variables('actionGroupIds')), 'unhealthy', createObject('severity', 'Sev1', 'description', 'AMLAB compute fleet: 50%+ of nodes/VMs not healthy.', 'actionGroupIds', variables('actionGroupIds'))))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'platform')]",
+              "properties": {
+                "displayName": "Shared platform services",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": 300,
+                  "y": 200
+                },
+                "icon": {
+                  "iconName": "Storage"
+                },
+                "signalGroups": {
+                  "dependencies": {
+                    "aggregationType": "WorstOf",
+                    "ignoreUnknown": true
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'webapp')]",
+              "properties": {
+                "displayName": "App Service (webapp)",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": -400,
+                  "y": 450
+                },
+                "icon": {
+                  "iconName": "AppService"
+                },
+                "healthObjective": 99,
+                "signalGroups": {
+                  "azureResource": {
+                    "authenticationSetting": "[variables('authName')]",
+                    "azureResourceId": "[parameters('webAppId')]",
+                    "azureResourceKind": "app",
+                    "signals": [
+                      {
+                        "name": "http5xx",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "HTTP 5xx errors (5 min)",
+                        "metricNamespace": "Microsoft.Web/sites",
+                        "metricName": "Http5xx",
+                        "aggregationType": "Total",
+                        "dataUnit": "Count",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT1M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 10
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 30
+                          }
+                        }
+                      },
+                      {
+                        "name": "responseTime",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Avg response time (ms)",
+                        "metricNamespace": "Microsoft.Web/sites",
+                        "metricName": "HttpResponseTime",
+                        "aggregationType": "Average",
+                        "dataUnit": "MilliSeconds",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT1M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 1000
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 3000
+                          }
+                        }
+                      },
+                      {
+                        "name": "cpu",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "CPU time (s)",
+                        "metricNamespace": "Microsoft.Web/sites",
+                        "metricName": "CpuTime",
+                        "aggregationType": "Total",
+                        "dataUnit": "Seconds",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 60
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 180
+                          }
+                        }
+                      },
+                      {
+                        "name": "memory",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Memory working set",
+                        "metricNamespace": "Microsoft.Web/sites",
+                        "metricName": "MemoryWorkingSet",
+                        "aggregationType": "Average",
+                        "dataUnit": "Bytes",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 1073741824
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 1610612736
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "alerts": "[if(empty(parameters('actionGroupId')), null(), createObject('unhealthy', createObject('severity', 'Sev2', 'description', 'AMLAB webapp unhealthy (5xx / latency / CPU / memory exceed thresholds).', 'actionGroupIds', variables('actionGroupIds'))))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), 'systemAssigned')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'appinsights')]",
+              "properties": {
+                "displayName": "Application Insights (telemetry)",
+                "impact": "Suppressed",
+                "canvasPosition": {
+                  "x": -200,
+                  "y": 450
+                },
+                "icon": {
+                  "iconName": "ApplicationInsights"
+                },
+                "signalGroups": {
+                  "azureResource": {
+                    "authenticationSetting": "[variables('authName')]",
+                    "azureResourceId": "[parameters('appInsightsId')]",
+                    "azureResourceKind": "web",
+                    "signals": [
+                      {
+                        "name": "failedRequests",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Failed requests (5 min)",
+                        "metricNamespace": "microsoft.insights/components",
+                        "metricName": "requests/failed",
+                        "aggregationType": "Count",
+                        "dataUnit": "Count",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT1M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 20
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 50
+                          }
+                        }
+                      },
+                      {
+                        "name": "requestDuration",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Request duration (avg)",
+                        "metricNamespace": "microsoft.insights/components",
+                        "metricName": "requests/duration",
+                        "aggregationType": "Average",
+                        "dataUnit": "MilliSeconds",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 1500
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 3000
+                          }
+                        }
+                      },
+                      {
+                        "name": "exceptions",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Exceptions (5 min)",
+                        "metricNamespace": "microsoft.insights/components",
+                        "metricName": "exceptions/count",
+                        "aggregationType": "Count",
+                        "dataUnit": "Count",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 5
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 20
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), 'systemAssigned')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('linuxVmId')))]",
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'linuxvm')]",
+              "properties": {
+                "displayName": "Linux VM",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": -100,
+                  "y": 450
+                },
+                "icon": {
+                  "iconName": "VirtualMachineLinux"
+                },
+                "signalGroups": {
+                  "azureResource": {
+                    "authenticationSetting": "[variables('authName')]",
+                    "azureResourceId": "[parameters('linuxVmId')]",
+                    "azureResourceKind": "linux",
+                    "signals": [
+                      {
+                        "name": "cpu",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "CPU %",
+                        "metricNamespace": "Microsoft.Compute/virtualMachines",
+                        "metricName": "Percentage CPU",
+                        "aggregationType": "Average",
+                        "dataUnit": "Percent",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 60
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 85
+                          }
+                        }
+                      },
+                      {
+                        "name": "availableMemory",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Available memory",
+                        "metricNamespace": "Microsoft.Compute/virtualMachines",
+                        "metricName": "Available Memory Bytes",
+                        "aggregationType": "Average",
+                        "dataUnit": "Bytes",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "LessThan",
+                            "threshold": 536870912
+                          },
+                          "unhealthyRule": {
+                            "operator": "LessThan",
+                            "threshold": 268435456
+                          }
+                        }
+                      },
+                      {
+                        "name": "diskRead",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Disk read bytes (5 min total)",
+                        "metricNamespace": "Microsoft.Compute/virtualMachines",
+                        "metricName": "Disk Read Bytes",
+                        "aggregationType": "Total",
+                        "dataUnit": "Bytes",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 15000000000
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 60000000000
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), 'systemAssigned')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('windowsVmId')))]",
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'winserver')]",
+              "properties": {
+                "displayName": "Windows VM",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": 0,
+                  "y": 450
+                },
+                "icon": {
+                  "iconName": "VirtualMachineWindows"
+                },
+                "signalGroups": {
+                  "azureResource": {
+                    "authenticationSetting": "[variables('authName')]",
+                    "azureResourceId": "[parameters('windowsVmId')]",
+                    "azureResourceKind": "windows",
+                    "signals": [
+                      {
+                        "name": "cpu",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "CPU %",
+                        "metricNamespace": "Microsoft.Compute/virtualMachines",
+                        "metricName": "Percentage CPU",
+                        "aggregationType": "Average",
+                        "dataUnit": "Percent",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 60
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 85
+                          }
+                        }
+                      },
+                      {
+                        "name": "availableMemory",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Available memory",
+                        "metricNamespace": "Microsoft.Compute/virtualMachines",
+                        "metricName": "Available Memory Bytes",
+                        "aggregationType": "Average",
+                        "dataUnit": "Bytes",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "LessThan",
+                            "threshold": 536870912
+                          },
+                          "unhealthyRule": {
+                            "operator": "LessThan",
+                            "threshold": 268435456
+                          }
+                        }
+                      },
+                      {
+                        "name": "diskWrite",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Disk write bytes (5 min total)",
+                        "metricNamespace": "Microsoft.Compute/virtualMachines",
+                        "metricName": "Disk Write Bytes",
+                        "aggregationType": "Total",
+                        "dataUnit": "Bytes",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 15000000000
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 60000000000
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), 'systemAssigned')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'vmss')]",
+              "properties": {
+                "displayName": "VMSS (predictive autoscale)",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": 100,
+                  "y": 450
+                },
+                "icon": {
+                  "iconName": "VirtualMachineScaleSet"
+                },
+                "signalGroups": {
+                  "azureResource": {
+                    "authenticationSetting": "[variables('authName')]",
+                    "azureResourceId": "[parameters('vmssId')]",
+                    "azureResourceKind": "vmss",
+                    "signals": [
+                      {
+                        "name": "cpu",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "CPU % (avg)",
+                        "metricNamespace": "Microsoft.Compute/virtualMachineScaleSets",
+                        "metricName": "Percentage CPU",
+                        "aggregationType": "Average",
+                        "dataUnit": "Percent",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 60
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 85
+                          }
+                        }
+                      },
+                      {
+                        "name": "availableMemory",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Available memory (avg per instance)",
+                        "metricNamespace": "Microsoft.Compute/virtualMachineScaleSets",
+                        "metricName": "Available Memory Bytes",
+                        "aggregationType": "Average",
+                        "dataUnit": "Bytes",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "LessThan",
+                            "threshold": 536870912
+                          },
+                          "unhealthyRule": {
+                            "operator": "LessThan",
+                            "threshold": 268435456
+                          }
+                        }
+                      },
+                      {
+                        "name": "networkIn",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Network in (5 min total)",
+                        "metricNamespace": "Microsoft.Compute/virtualMachineScaleSets",
+                        "metricName": "Network In Total",
+                        "aggregationType": "Total",
+                        "dataUnit": "Bytes",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 524288000
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 2147483648
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "alerts": "[if(empty(parameters('actionGroupId')), null(), createObject('unhealthy', createObject('severity', 'Sev2', 'description', 'AMLAB VMSS CPU sustained above 85%.', 'actionGroupIds', variables('actionGroupIds'))))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), 'systemAssigned')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'aks')]",
+              "properties": {
+                "displayName": "AKS cluster",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": 200,
+                  "y": 450
+                },
+                "icon": {
+                  "iconName": "Kubernetes"
+                },
+                "signalGroups": {
+                  "azureResource": {
+                    "authenticationSetting": "[variables('authName')]",
+                    "azureResourceId": "[parameters('aksId')]",
+                    "azureResourceKind": "k8s",
+                    "signals": [
+                      {
+                        "name": "nodeCpu",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Node CPU % (avg)",
+                        "metricNamespace": "Microsoft.ContainerService/managedClusters",
+                        "metricName": "node_cpu_usage_percentage",
+                        "aggregationType": "Average",
+                        "dataUnit": "Percent",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 60
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 85
+                          }
+                        }
+                      },
+                      {
+                        "name": "nodeMemory",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Node memory working set %",
+                        "metricNamespace": "Microsoft.ContainerService/managedClusters",
+                        "metricName": "node_memory_working_set_percentage",
+                        "aggregationType": "Average",
+                        "dataUnit": "Percent",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 70
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 90
+                          }
+                        }
+                      },
+                      {
+                        "name": "nodeDisk",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Node disk usage %",
+                        "metricNamespace": "Microsoft.ContainerService/managedClusters",
+                        "metricName": "node_disk_usage_percentage",
+                        "aggregationType": "Average",
+                        "dataUnit": "Percent",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 75
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 90
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), 'systemAssigned')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'keyvault')]",
+              "properties": {
+                "displayName": "Key Vault",
+                "impact": "Limited",
+                "canvasPosition": {
+                  "x": 250,
+                  "y": 450
+                },
+                "icon": {
+                  "iconName": "KeyVault"
+                },
+                "signalGroups": {
+                  "azureResource": {
+                    "authenticationSetting": "[variables('authName')]",
+                    "azureResourceId": "[parameters('keyVaultId')]",
+                    "azureResourceKind": "vault",
+                    "signals": [
+                      {
+                        "name": "availability",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Availability %",
+                        "metricNamespace": "Microsoft.KeyVault/vaults",
+                        "metricName": "Availability",
+                        "aggregationType": "Average",
+                        "dataUnit": "Percent",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "LessThan",
+                            "threshold": 100
+                          },
+                          "unhealthyRule": {
+                            "operator": "LessThan",
+                            "threshold": 99
+                          }
+                        }
+                      },
+                      {
+                        "name": "apiLatency",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "API latency (avg)",
+                        "metricNamespace": "Microsoft.KeyVault/vaults",
+                        "metricName": "ServiceApiLatency",
+                        "aggregationType": "Average",
+                        "dataUnit": "MilliSeconds",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 200
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 1000
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), 'systemAssigned')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'storage')]",
+              "properties": {
+                "displayName": "Storage Account",
+                "impact": "Limited",
+                "canvasPosition": {
+                  "x": 400,
+                  "y": 450
+                },
+                "icon": {
+                  "iconName": "StorageAccount"
+                },
+                "signalGroups": {
+                  "azureResource": {
+                    "authenticationSetting": "[variables('authName')]",
+                    "azureResourceId": "[parameters('storageAccountId')]",
+                    "azureResourceKind": "storage",
+                    "signals": [
+                      {
+                        "name": "e2eLatency",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "End-to-end latency (avg)",
+                        "metricNamespace": "Microsoft.Storage/storageAccounts",
+                        "metricName": "SuccessE2ELatency",
+                        "aggregationType": "Average",
+                        "dataUnit": "MilliSeconds",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 100
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 500
+                          }
+                        }
+                      },
+                      {
+                        "name": "availability",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Availability %",
+                        "metricNamespace": "Microsoft.Storage/storageAccounts",
+                        "metricName": "Availability",
+                        "aggregationType": "Average",
+                        "dataUnit": "Percent",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "LessThan",
+                            "threshold": 100
+                          },
+                          "unhealthyRule": {
+                            "operator": "LessThan",
+                            "threshold": 99
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), 'systemAssigned')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'frontend-to-root')]",
+              "properties": {
+                "parentEntityName": "[variables('rootName')]",
+                "childEntityName": "frontend",
+                "displayName": "Frontend"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'frontend')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'compute-to-root')]",
+              "properties": {
+                "parentEntityName": "[variables('rootName')]",
+                "childEntityName": "compute",
+                "displayName": "Compute fleet"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'compute')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'platform-to-root')]",
+              "properties": {
+                "parentEntityName": "[variables('rootName')]",
+                "childEntityName": "platform",
+                "displayName": "Shared platform"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'platform')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'webapp-to-frontend')]",
+              "properties": {
+                "parentEntityName": "frontend",
+                "childEntityName": "webapp"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'frontend')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'webapp')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'appinsights-to-frontend')]",
+              "properties": {
+                "parentEntityName": "frontend",
+                "childEntityName": "appinsights"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'appinsights')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'frontend')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('linuxVmId')))]",
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'linuxvm-to-compute')]",
+              "properties": {
+                "parentEntityName": "compute",
+                "childEntityName": "linuxvm"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'compute')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'linuxvm')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('windowsVmId')))]",
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'winserver-to-compute')]",
+              "properties": {
+                "parentEntityName": "compute",
+                "childEntityName": "winserver"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'compute')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'winserver')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'vmss-to-compute')]",
+              "properties": {
+                "parentEntityName": "compute",
+                "childEntityName": "vmss"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'compute')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'vmss')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'aks-to-compute')]",
+              "properties": {
+                "parentEntityName": "compute",
+                "childEntityName": "aks"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'aks')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'compute')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'keyvault-to-platform')]",
+              "properties": {
+                "parentEntityName": "platform",
+                "childEntityName": "keyvault"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'keyvault')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'platform')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'storage-to-platform')]",
+              "properties": {
+                "parentEntityName": "platform",
+                "childEntityName": "storage"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'platform')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'storage')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "healthModelId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+            },
+            "healthModelName": {
+              "type": "string",
+              "value": "[parameters('healthModelName')]"
+            },
+            "healthModelPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), '2026-01-01-preview', 'full').identity.principalId]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "sli-identity",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "uamiName": {
+            "value": "[variables('sliUamiName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "azureMonitorWorkspaceId": {
+            "value": "[resourceId('Microsoft.Monitor/accounts', variables('amwName'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "10173493696332454138"
+            }
+          },
+          "parameters": {
+            "uamiName": {
+              "type": "string",
+              "metadata": {
+                "description": "User-Assigned Managed Identity name used by every SLI in this lab."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region for the UAMI."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Tags applied to the UAMI."
+              }
+            },
+            "azureMonitorWorkspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Azure Monitor Workspace used as both the SLI source and destination."
+              }
+            }
+          },
+          "variables": {
+            "amwName": "[last(split(parameters('azureMonitorWorkspaceId'), '/'))]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[parameters('uamiName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Monitor/accounts/{0}', variables('amwName'))]",
+              "name": "[guid(resourceId('Microsoft.Monitor/accounts', variables('amwName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('uamiName')), '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('uamiName')), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('uamiName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Monitor/accounts/{0}', variables('amwName'))]",
+              "name": "[guid(resourceId('Microsoft.Monitor/accounts', variables('amwName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('uamiName')), '3913510d-42f4-4e42-8a64-420c390055eb')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '3913510d-42f4-4e42-8a64-420c390055eb')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('uamiName')), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('uamiName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "uamiName": {
+              "type": "string",
+              "value": "[parameters('uamiName')]"
+            },
+            "uamiId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('uamiName'))]"
+            },
+            "uamiPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('uamiName')), '2023-01-31').principalId]"
+            },
+            "uamiClientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('uamiName')), '2023-01-31').clientId]"
+            },
+            "amwId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Monitor/accounts', variables('amwName'))]"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

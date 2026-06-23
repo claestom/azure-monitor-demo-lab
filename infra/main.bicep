@@ -1,0 +1,873 @@
+// =====================================================================================
+// Azure Monitor Demo Lab - main template (Resource Group scope)
+// Deploys: 2x Log Analytics workspaces, App Insights, VNet, Linux+Windows VMs with VM
+// Insights, AKS with Container Insights + Managed Prometheus + Managed Grafana,
+// App Service with .NET sample app + auto-instrumented App Insights, Action Group,
+// Metric Alerts, Service/Resource Health alerts, custom diagnostics policy,
+// saved KQL queries, traffic-lights Workbook.
+// =====================================================================================
+targetScope = 'resourceGroup'
+
+@description('Azure region for all resources.')
+param location string = resourceGroup().location
+
+@description('Short prefix used to build resource names. Lowercase, 3-8 chars.')
+@minLength(3)
+@maxLength(8)
+param namePrefix string = 'amlab'
+
+@description('Email address that receives Action Group notifications.')
+param alertEmail string
+
+@description('Admin username for the demo VMs.')
+param vmAdminUsername string = 'azureuser'
+
+@description('Admin password for the demo VMs. Must meet Azure complexity rules.')
+@secure()
+param vmAdminPassword string
+
+@description('Deploy the Windows Server 2022 demo VM.')
+param deployWindowsVm bool = true
+
+@description('Deploy the Ubuntu 22.04 demo VM.')
+param deployLinuxVm bool = true
+
+@description('Daily ingestion cap (GB) on the central Log Analytics workspace. Set to -1 to disable.')
+param dailyCapGb int = 1
+
+@description('VM size (kept small for a demo lab).')
+param vmSize string = 'Standard_B2s'
+
+@description('AKS node VM size.')
+param aksNodeVmSize string = 'Standard_B2s'
+
+@description('AKS node count.')
+param aksNodeCount int = 1
+
+@description('Public GitHub repo deployed to the App Service (Microsoft .NET hello world sample).')
+param appServiceRepoUrl string = 'https://github.com/Azure-Samples/dotnetcore-docs-hello-world-linux'
+
+@description('Tag every resource with this owner.')
+param ownerTag string = 'demo-lab'
+
+@description('Enable LAW cross-region replication (doubles ingestion cost). Default off.')
+param enableLawReplication bool = false
+
+@description('Secondary region for LAW replication (must be a paired region of the primary). Required when enableLawReplication = true.')
+param lawReplicationLocation string = ''
+
+@description('Optional secondary SIEM/Teams webhook URL added to the Action Group. Empty = skip.')
+@secure()
+param siemWebhookUrl string = ''
+
+@description('Enable Microsoft Sentinel on the central workspace. Default true.')
+param enableSentinel bool = true
+
+// ---------------------------------------------------------------------------------
+// Naming
+// ---------------------------------------------------------------------------------
+var suffix              = uniqueString(resourceGroup().id)
+var lawCentralName      = 'law-${namePrefix}-central'
+var lawAppInsightsName  = 'law-${namePrefix}-appinsights'
+var appInsightsName     = 'appi-${namePrefix}'
+var amwName             = 'amw-${namePrefix}'
+var grafanaName         = 'amg-${namePrefix}-${take(suffix, 4)}'
+var vnetName            = 'vnet-${namePrefix}'
+var nsgName             = 'nsg-${namePrefix}'
+var linuxVmName         = 'vm-${namePrefix}-lin'
+var windowsVmName       = 'vmwin${take(suffix, 4)}'
+var aksName             = 'aks-${namePrefix}'
+var aksDnsPrefix        = '${namePrefix}-${take(suffix, 6)}'
+var appPlanName         = 'plan-${namePrefix}'
+var webAppName          = 'app-${namePrefix}-${take(suffix, 5)}'
+var actionGroupName     = 'ag-${namePrefix}-email'
+var workbookName        = 'wb-${namePrefix}-trafficlights'
+var dcrVmInsightsName   = 'dcr-${namePrefix}-vminsights'
+var dcrPrometheusName   = 'dcr-${namePrefix}-prometheus'
+var dceName             = 'dce-${namePrefix}'
+var vmssName            = 'vmss-${namePrefix}'
+var storageAccountName  = 'st${namePrefix}${take(suffix, 8)}'
+var eventHubNsName      = 'evhns-${namePrefix}-${take(suffix, 5)}'
+var keyVaultName        = 'kv-${namePrefix}-${take(suffix, 5)}'
+var costWorkbookName    = 'wb-${namePrefix}-cost'
+var securityWorkbookName = 'wb-${namePrefix}-security'
+var sliUamiName         = 'id-sli-${namePrefix}'
+
+var commonTags = {
+  owner: ownerTag
+  purpose: 'azure-monitor-demo-lab'
+  costCenter: 'demo'
+}
+
+// ---------------------------------------------------------------------------------
+// Log Analytics workspaces
+// ---------------------------------------------------------------------------------
+module lawCentral 'modules/law.bicep' = {
+  name: 'law-central'
+  params: {
+    name: lawCentralName
+    location: location
+    dailyQuotaGb: dailyCapGb
+    tags: commonTags
+    solutions: [ 'VMInsights', 'ContainerInsights' ]
+    enableReplication: enableLawReplication
+    replicationLocation: lawReplicationLocation
+  }
+}
+
+module lawAppInsights 'modules/law.bicep' = {
+  name: 'law-appinsights'
+  params: {
+    name: lawAppInsightsName
+    location: location
+    dailyQuotaGb: dailyCapGb
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Application Insights (workspace-based, points to dedicated LAW)
+// ---------------------------------------------------------------------------------
+module appInsights 'modules/appinsights.bicep' = {
+  name: 'appi'
+  params: {
+    name: appInsightsName
+    location: location
+    workspaceId: lawAppInsights.outputs.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Azure Monitor Workspace (Managed Prometheus) + Data Collection Endpoint
+// ---------------------------------------------------------------------------------
+module amw 'modules/azure-monitor-workspace.bicep' = {
+  name: 'amw'
+  params: {
+    name: amwName
+    location: location
+    tags: commonTags
+  }
+}
+
+resource dce 'Microsoft.Insights/dataCollectionEndpoints@2023-03-11' = {
+  name: dceName
+  location: location
+  tags: commonTags
+  kind: 'Linux'
+  properties: {
+    networkAcls: {
+      publicNetworkAccess: 'Enabled'
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Networking
+// ---------------------------------------------------------------------------------
+module network 'modules/network.bicep' = {
+  name: 'network'
+  params: {
+    vnetName: vnetName
+    nsgName: nsgName
+    location: location
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// FEATURE — Shared multi-purpose Storage Account (diag archive + flow logs +
+// data export target + Storage Insights demo subject).
+// ---------------------------------------------------------------------------------
+module storageAccount 'modules/storage-account.bicep' = {
+  name: 'storage-account'
+  params: {
+    name: storageAccountName
+    location: location
+    centralLawId: lawCentral.outputs.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// FEATURE — Event Hub Namespace (diag fan-out destination + data-export option).
+// ---------------------------------------------------------------------------------
+module eventHub 'modules/eventhub.bicep' = {
+  name: 'eventhub'
+  params: {
+    namespaceName: eventHubNsName
+    location: location
+    centralLawId: lawCentral.outputs.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// FEATURE — Key Vault (Key Vault Insights demo subject).
+// ---------------------------------------------------------------------------------
+module keyVault 'modules/keyvault.bicep' = {
+  name: 'keyvault'
+  params: {
+    name: keyVaultName
+    location: location
+    centralLawId: lawCentral.outputs.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Diagnostic settings on the VNet itself -> central LAW
+// (VM/Service diag settings are in their own modules.)
+// ---------------------------------------------------------------------------------
+resource vnetExisting 'Microsoft.Network/virtualNetworks@2023-09-01' existing = {
+  name: vnetName
+  dependsOn: [ network ]
+}
+
+resource diagVnet 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  scope: vnetExisting
+  name: 'send-to-central-law'
+  properties: {
+    workspaceId: lawCentral.outputs.id
+    logAnalyticsDestinationType: 'Dedicated'
+    logs: [
+      {
+        categoryGroup: 'allLogs'
+        enabled: true
+      }
+    ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+      }
+    ]
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Data Collection Rule for VM Insights (Performance + Map data) -> central LAW
+// Depends on the VMInsights solution being installed on the LAW first.
+// ---------------------------------------------------------------------------------
+resource dcrVmInsights 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
+  name: dcrVmInsightsName
+  location: location
+  tags: commonTags
+  kind: 'Linux'
+  properties: {
+    dataSources: {
+      performanceCounters: [
+        {
+          name: 'VMInsightsPerfCounters'
+          streams: [ 'Microsoft-InsightsMetrics' ]
+          samplingFrequencyInSeconds: 60
+          counterSpecifiers: [ '\\VmInsights\\DetailedMetrics' ]
+        }
+      ]
+      extensions: [
+        {
+          name: 'DependencyAgentDataSource'
+          streams: [ 'Microsoft-ServiceMap' ]
+          extensionName: 'DependencyAgent'
+        }
+      ]
+    }
+    destinations: {
+      logAnalytics: [
+        {
+          workspaceResourceId: lawCentral.outputs.id
+          name: 'centralLaw'
+        }
+      ]
+    }
+    dataFlows: [
+      {
+        streams: [ 'Microsoft-InsightsMetrics' ]
+        destinations: [ 'centralLaw' ]
+      }
+      {
+        streams: [ 'Microsoft-ServiceMap' ]
+        destinations: [ 'centralLaw' ]
+      }
+    ]
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// FEATURE 1 — Workspace Transformation DCR on AzureActivity (cost-control demo).
+// Uses real activity-log data already flowing to the central LAW. Filters out
+// noisy "/read" operations + enriches the Properties dynamic column.
+// ---------------------------------------------------------------------------------
+module workspaceTransforms 'modules/dcr-workspace-transforms.bicep' = {
+  name: 'workspace-transforms'
+  params: {
+    name: 'dcr-${namePrefix}-workspace-transforms'
+    location: location
+    centralLawId: lawCentral.outputs.id
+    centralLawName: lawCentral.outputs.name
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Linux VM (Ubuntu 22.04) with AMA + Dependency Agent + DCR association
+// ---------------------------------------------------------------------------------
+module vmLinux 'modules/vm-linux.bicep' = if (deployLinuxVm) {
+  name: 'vm-linux'
+  params: {
+    vmName: linuxVmName
+    location: location
+    vmSize: vmSize
+    adminUsername: vmAdminUsername
+    adminPassword: vmAdminPassword
+    subnetId: network.outputs.workloadSubnetId
+    dcrId: dcrVmInsights.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Windows VM (Windows Server 2022) with AMA + Dependency Agent + DCR association
+// ---------------------------------------------------------------------------------
+module vmWindows 'modules/vm-windows.bicep' = if (deployWindowsVm) {
+  name: 'vm-windows'
+  params: {
+    vmName: windowsVmName
+    location: location
+    vmSize: vmSize
+    adminUsername: vmAdminUsername
+    adminPassword: vmAdminPassword
+    subnetId: network.outputs.workloadSubnetId
+    dcrId: dcrVmInsights.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// AKS with Container Insights + Managed Prometheus + diag settings -> central LAW
+// ---------------------------------------------------------------------------------
+module aks 'modules/aks.bicep' = {
+  name: 'aks'
+  params: {
+    name: aksName
+    dnsPrefix: aksDnsPrefix
+    location: location
+    nodeVmSize: aksNodeVmSize
+    nodeCount: aksNodeCount
+    centralLawId: lawCentral.outputs.id
+    azureMonitorWorkspaceId: amw.outputs.id
+    dataCollectionEndpointId: dce.id
+    dcrPrometheusName: dcrPrometheusName
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Azure Managed Grafana, linked to the Azure Monitor Workspace + LAW
+// ---------------------------------------------------------------------------------
+module grafana 'modules/grafana.bicep' = {
+  name: 'grafana'
+  params: {
+    name: grafanaName
+    location: location
+    azureMonitorWorkspaceId: amw.outputs.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// App Service (Linux .NET 8) + auto-instrumented App Insights + sample app
+// ---------------------------------------------------------------------------------
+module appService 'modules/appservice.bicep' = {
+  name: 'appservice'
+  params: {
+    planName: appPlanName
+    webAppName: webAppName
+    location: location
+    appInsightsConnectionString: appInsights.outputs.connectionString
+    appInsightsInstrumentationKey: appInsights.outputs.instrumentationKey
+    centralLawId: lawCentral.outputs.id
+    // FEATURE — multi-destination diagnostic settings fan-out
+    diagStorageAccountId: storageAccount.outputs.id
+    diagEventHubAuthRuleId: eventHub.outputs.sendRuleId
+    diagEventHubName: eventHub.outputs.hubName
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Action Group + Alerts (CPU, failed requests, pod restarts, service health)
+// ---------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------
+// FEATURE 5 — Auto-mitigation Logic App (must exist before Action Group so we can
+// pass its callback URL as the webhook receiver).
+// ---------------------------------------------------------------------------------
+module automitigation 'modules/automitigation-logicapp.bicep' = {
+  name: 'automitigation'
+  params: {
+    name: 'la-${namePrefix}-automitigation'
+    location: location
+    tags: commonTags
+  }
+}
+
+module actionGroup 'modules/actiongroup.bicep' = {
+  name: 'actiongroup'
+  params: {
+    name: actionGroupName
+    email: alertEmail
+    webhookUrl: automitigation.outputs.callbackUrl
+    siemWebhookUrl: siemWebhookUrl
+    tags: commonTags
+  }
+}
+
+module alerts 'modules/alerts.bicep' = {
+  name: 'alerts'
+  params: {
+    location: location
+    actionGroupId: actionGroup.outputs.id
+    aksId: aks.outputs.id
+    webAppId: appService.outputs.webAppId
+    appInsightsId: appInsights.outputs.id
+    linuxVmId: deployLinuxVm ? vmLinux!.outputs.vmId : ''
+    windowsVmId: deployWindowsVm ? vmWindows!.outputs.vmId : ''
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// FEATURE 2 — AMBA-aligned baseline alerts (VM, App Service, AKS).
+// ---------------------------------------------------------------------------------
+module amba 'modules/amba.bicep' = {
+  name: 'amba'
+  params: {
+    location: location
+    actionGroupId: actionGroup.outputs.id
+    vmIds: filter([
+      deployLinuxVm ? vmLinux!.outputs.vmId : ''
+      deployWindowsVm ? vmWindows!.outputs.vmId : ''
+    ], id => !empty(id))
+    webAppId: appService.outputs.webAppId
+    aksId: aks.outputs.id
+    appPlanId: appService.outputs.planId
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Service Health + Resource Health alerts (subscription / RG scope)
+// ---------------------------------------------------------------------------------
+module healthAlerts 'modules/health-alerts.bicep' = {
+  name: 'health-alerts'
+  params: {
+    actionGroupId: actionGroup.outputs.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Custom Azure Policy: DeployIfNotExists diag settings for App Services -> central LAW
+// (Showcases the pattern from
+//  https://learn.microsoft.com/en-us/azure/azure-monitor/platform/diagnostic-settings-policy)
+// ---------------------------------------------------------------------------------
+module diagPolicy 'modules/policy-diagnostics.bicep' = {
+  name: 'policy-diagnostics'
+  params: {
+    centralLawId: lawCentral.outputs.id
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Saved KQL queries in central LAW (single & cross-workspace) for the demo
+// ---------------------------------------------------------------------------------
+module savedQueries 'modules/saved-queries.bicep' = {
+  name: 'saved-queries'
+  params: {
+    centralLawName: lawCentral.outputs.name
+    appInsightsLawName: lawAppInsights.outputs.name
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Traffic-Lights Workbook
+// ---------------------------------------------------------------------------------
+module workbook 'modules/workbook.bicep' = {
+  name: 'workbook'
+  params: {
+    name: guid(resourceGroup().id, workbookName)
+    location: location
+    centralLawId: lawCentral.outputs.id
+    appInsightsLawName: lawAppInsights.outputs.name
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// VMSS with predictive autoscale (scenario 19 — AI-powered pre-scaling demo)
+// ---------------------------------------------------------------------------------
+module vmss 'modules/vmss.bicep' = {
+  name: 'vmss'
+  params: {
+    name: vmssName
+    location: location
+    vmSize: 'Standard_B1s'
+    adminUsername: vmAdminUsername
+    adminPassword: vmAdminPassword
+    subnetId: network.outputs.workloadSubnetId
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Dynamic threshold alert on VM CPU (scenario 17 — ML-learned baselines demo)
+// ---------------------------------------------------------------------------------
+resource alertVmCpuDynamic 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: 'alert-vm-cpu-dynamic'
+  location: 'global'
+  tags: commonTags
+  properties: {
+    description: 'Lab VM CPU anomaly detected by ML-learned dynamic thresholds (medium sensitivity)'
+    severity: 3
+    enabled: true
+    scopes: filter([
+      deployLinuxVm ? vmLinux!.outputs.vmId : ''
+      deployWindowsVm ? vmWindows!.outputs.vmId : ''
+    ], id => !empty(id))
+    targetResourceType: 'Microsoft.Compute/virtualMachines'
+    targetResourceRegion: location
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT10M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          name: 'CpuDynamic'
+          metricNamespace: 'Microsoft.Compute/virtualMachines'
+          metricName: 'Percentage CPU'
+          operator: 'GreaterOrLessThan'
+          timeAggregation: 'Average'
+          criterionType: 'DynamicThresholdCriterion'
+          alertSensitivity: 'Medium'
+          failingPeriods: {
+            numberOfEvaluationPeriods: 4
+            minFailingPeriodsToAlert: 3
+          }
+        }
+      ]
+    }
+    actions: [
+      { actionGroupId: actionGroup.outputs.id }
+    ]
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// FEATURE 6 — Availability Test (standard URL ping from 5 global locations)
+// ---------------------------------------------------------------------------------
+module availabilityTest 'modules/availability-test.bicep' = {
+  name: 'availability-test'
+  params: {
+    name: 'avail-${namePrefix}-appservice'
+    location: location
+    appInsightsId: appInsights.outputs.id
+    testUrl: 'https://${appService.outputs.defaultHost}/'
+    actionGroupId: actionGroup.outputs.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// FEATURE 7 — Alert Processing Rules (maintenance window + severity suppression)
+// ---------------------------------------------------------------------------------
+module alertProcessingRules 'modules/alert-processing-rules.bicep' = {
+  name: 'alert-processing-rules'
+  params: {
+    namePrefix: namePrefix
+    primaryActionGroupId: actionGroup.outputs.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// FEATURE 8 — Custom Logs via Logs Ingestion API (DCE + DCR + SecurityAudit_CL)
+// ---------------------------------------------------------------------------------
+module customLogs 'modules/custom-logs.bicep' = {
+  name: 'custom-logs'
+  params: {
+    namePrefix: namePrefix
+    location: location
+    centralLawId: lawCentral.outputs.id
+    centralLawName: lawCentral.outputs.name
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// FEATURE 9 — KQL Functions (reusable saved functions: vmHealth, aksHealth, envHealth)
+// ---------------------------------------------------------------------------------
+module kqlFunctions 'modules/kql-functions.bicep' = {
+  name: 'kql-functions'
+  params: {
+    centralLawName: lawCentral.outputs.name
+    appInsightsLawName: lawAppInsights.outputs.name
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// FEATURE 10 — Summary Rules (hourly Perf aggregation into Perf_Hourly_CL)
+// ---------------------------------------------------------------------------------
+module summaryRules 'modules/summary-rules.bicep' = {
+  name: 'summary-rules'
+  params: {
+    centralLawName: lawCentral.outputs.name
+    centralLawId: lawCentral.outputs.id
+    location: location
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// FEATURE 11 — Log Analytics RBAC (workspace-level, table-level, row-level)
+// ---------------------------------------------------------------------------------
+module lawRbac 'modules/law-rbac.bicep' = {
+  name: 'law-rbac'
+  params: {
+    centralLawId: lawCentral.outputs.id
+    centralLawName: lawCentral.outputs.name
+    location: location
+    tags: commonTags
+  }
+}
+
+// =================================================================================
+// NEW FEATURES — Network observability, Sentinel, Prom rules, Cost workbook, etc.
+// =================================================================================
+
+// ---------------------------------------------------------------------------------
+// Network Watcher + Connection Monitor (VMs -> App Service HTTPS)
+// Deployed at NetworkWatcherRG scope to live alongside the singleton NW that
+// Azure auto-creates per region per subscription.
+// ---------------------------------------------------------------------------------
+module connectionMonitor 'modules/connection-monitor.bicep' = {
+  name: 'connection-monitor'
+  scope: resourceGroup('NetworkWatcherRG')
+  params: {
+    location: location
+    centralLawId: lawCentral.outputs.id
+    linuxVmId:   deployLinuxVm   ? vmLinux!.outputs.vmId   : ''
+    windowsVmId: deployWindowsVm ? vmWindows!.outputs.vmId : ''
+    appServiceHost: appService.outputs.defaultHost
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// VNet Flow Logs + Traffic Analytics (raw to storage, enriched to central LAW)
+// Flow logs are children of the Network Watcher, so this also deploys to NetworkWatcherRG.
+// ---------------------------------------------------------------------------------
+resource lawCentralExisting 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+  name: lawCentralName
+}
+
+module flowLogs 'modules/flow-logs.bicep' = {
+  name: 'flow-logs'
+  scope: resourceGroup('NetworkWatcherRG')
+  params: {
+    name: 'fl-${namePrefix}-vnet'
+    location: location
+    targetVnetId: network.outputs.vnetId
+    networkWatcherId: connectionMonitor.outputs.networkWatcherId
+    storageAccountId: storageAccount.outputs.id
+    centralLawId: lawCentral.outputs.id
+    centralLawRegion: location
+    centralLawCustomerId: lawCentralExisting.properties.customerId
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// LAW continuous Data Export rule (Heartbeat -> storage account "law-export" container)
+// ---------------------------------------------------------------------------------
+module dataExport 'modules/data-export.bicep' = {
+  name: 'data-export'
+  params: {
+    name: 'dx-${namePrefix}-heartbeat'
+    workspaceName: lawCentral.outputs.name
+    storageAccountId: storageAccount.outputs.id
+    tables: [ 'Heartbeat' ]
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Microsoft Sentinel — onboard the central LAW + 1 analytics rule
+// ---------------------------------------------------------------------------------
+module sentinel 'modules/sentinel.bicep' = if (enableSentinel) {
+  name: 'sentinel'
+  params: {
+    workspaceName: lawCentral.outputs.name
+    workspaceId: lawCentral.outputs.id
+    location: location
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Managed Prometheus Rule Group (recording + alerting rules on AMW)
+// ---------------------------------------------------------------------------------
+module promRules 'modules/prometheus-rules.bicep' = {
+  name: 'prom-rules'
+  params: {
+    name: 'amlab-prom-rules'
+    location: location
+    azureMonitorWorkspaceId: amw.outputs.id
+    aksClusterId: aks.outputs.id
+    actionGroupId: actionGroup.outputs.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Cost-of-monitoring Workbook
+// ---------------------------------------------------------------------------------
+module costWorkbook 'modules/cost-workbook.bicep' = {
+  name: 'cost-workbook'
+  params: {
+    name: guid(resourceGroup().id, costWorkbookName)
+    location: location
+    centralLawId: lawCentral.outputs.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Security operations Workbook
+//   Single security pane-of-glass covering identity, control-plane CRUD, privilege
+//   escalation, network exfil, lifecycle churn, and sensitive data-plane events.
+//   Pulls from AzureActivity, SigninLogs (if forwarded), NTANetAnalytics,
+//   AzureDiagnostics. Backing alerts: scenarios 47, 48, 49.
+// ---------------------------------------------------------------------------------
+module securityWorkbook 'modules/security-workbook.bicep' = {
+  name: 'security-workbook'
+  params: {
+    name: guid(resourceGroup().id, securityWorkbookName)
+    location: location
+    centralLawId: lawCentral.outputs.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Azure Monitor Health Model (preview) -- scenario 45
+//
+// Builds a 3-tier model rolling up to a single root: frontend (webapp +
+// App Insights), compute (VMs + VMSS + AKS), platform (KV + Storage), each
+// with realistic demo-friendly signal thresholds. See scenario 45 in
+// DEMO-SCENARIOS.md for the click-through.
+// ---------------------------------------------------------------------------------
+module healthModel 'modules/health-model.bicep' = {
+  name: 'health-model'
+  params: {
+    healthModelName: 'hm-${namePrefix}-workload'
+    location: location
+    tags: commonTags
+    webAppId: appService.outputs.webAppId
+    appInsightsId: appInsights.outputs.id
+    aksId: aks.outputs.id
+    linuxVmId: deployLinuxVm ? vmLinux.outputs.vmId : ''
+    windowsVmId: deployWindowsVm ? vmWindows.outputs.vmId : ''
+    vmssId: vmss.outputs.vmssId
+    keyVaultId: keyVault.outputs.id
+    storageAccountId: storageAccount.outputs.id
+    actionGroupId: actionGroup.outputs.id
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// SLI prerequisites (preview) -- scenario 46
+//
+// Provisions the User-Assigned MI + RBAC required by Microsoft.Monitor/slis. The
+// SLI resources themselves are extensions on a tenant-scoped service group and
+// are PUT by scripts/setup-slis.ps1 (the service group itself is created by
+// scripts/setup-health-model.ps1, both called from deploy.ps1).
+// ---------------------------------------------------------------------------------
+module sliIdentity 'modules/sli-identity.bicep' = {
+  name: 'sli-identity'
+  params: {
+    uamiName: sliUamiName
+    location: location
+    tags: commonTags
+    azureMonitorWorkspaceId: amw.outputs.id
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Outputs (consumed by post-deploy scripts)
+// ---------------------------------------------------------------------------------
+output centralLawId string         = lawCentral.outputs.id
+output centralLawName string       = lawCentral.outputs.name
+output appInsightsLawName string   = lawAppInsights.outputs.name
+output appInsightsName string      = appInsightsName
+output appInsightsConnString string = appInsights.outputs.connectionString
+output aksName string              = aks.outputs.name
+output webAppName string           = webAppName
+output webAppDefaultHost string    = appService.outputs.defaultHost
+output grafanaEndpoint string      = grafana.outputs.endpoint
+output workbookId string           = workbook.outputs.id
+output linuxVmNameOut string       = deployLinuxVm ? linuxVmName : ''
+output windowsVmNameOut string     = deployWindowsVm ? windowsVmName : ''
+output autoMitigationLogicAppName string = automitigation.outputs.name
+
+// FEATURE 1 — Workspace Transformation DCR
+output workspaceTransformDcrName string = workspaceTransforms.outputs.dcrName
+output appServiceRepoUrl string    = appServiceRepoUrl
+output vmssName string             = vmss.outputs.vmssName
+output vmssAutoscaleName string    = vmss.outputs.autoscaleSettingName
+
+// FEATURE 6 — Availability Test
+output availabilityTestName string = availabilityTest.outputs.testName
+
+// FEATURE 7 — Alert Processing Rules
+output maintenanceRuleName string  = alertProcessingRules.outputs.maintenanceRuleName
+
+// FEATURE 8 — Custom Logs
+output customLogsDceEndpoint string = customLogs.outputs.dceEndpoint
+output customLogsDcrImmutableId string = customLogs.outputs.dcrImmutableId
+
+// FEATURE 10 — Summary Rules
+output summaryTableName string     = summaryRules.outputs.tableName
+
+// FEATURE 11 — RBAC
+output rbacSummary string          = lawRbac.outputs.rbacSummary
+
+// NEW — Network observability
+output networkWatcherId string         = connectionMonitor.outputs.networkWatcherId
+output connectionMonitorName string    = connectionMonitor.outputs.connectionMonitorName
+output flowLogName string              = flowLogs.outputs.name
+
+// NEW — Shared infra
+output storageAccountName string       = storageAccount.outputs.name
+output eventHubNamespaceName string    = eventHub.outputs.namespaceName
+output keyVaultName string             = keyVault.outputs.name
+
+// NEW — Data Export / Sentinel / Prom / Cost
+output dataExportRuleName string       = dataExport.outputs.name
+output sentinelEnabled bool            = enableSentinel
+output prometheusRuleGroupName string  = promRules.outputs.name
+output costWorkbookId string           = costWorkbook.outputs.id
+output securityWorkbookId string       = securityWorkbook.outputs.id
+// NEW — Health Model (scenario 45)
+output healthModelName string          = healthModel.outputs.healthModelName
+output healthModelId string            = healthModel.outputs.healthModelId
+output healthModelPrincipalId string   = healthModel.outputs.healthModelPrincipalId
+
+// NEW — Alert Processing Rules nightly window
+output nightlyMaintenanceRuleName string = alertProcessingRules.outputs.nightlyMaintenanceRuleName
+
+// NEW — SLI prerequisites (scenario 46)
+output sliUamiName string        = sliIdentity.outputs.uamiName
+output sliUamiId string          = sliIdentity.outputs.uamiId
+output sliUamiPrincipalId string = sliIdentity.outputs.uamiPrincipalId
+output sliUamiClientId string    = sliIdentity.outputs.uamiClientId
+output amwId string              = amw.outputs.id
+output amwName string            = amw.outputs.name

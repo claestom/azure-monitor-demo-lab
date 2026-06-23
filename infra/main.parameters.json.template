@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": { "value": "swedencentral" },
+    "namePrefix": { "value": "amlab" },
+    "alertEmail": { "value": "<YOUR-EMAIL>" },
+    "vmAdminUsername": { "value": "azureuser" },
+    "vmAdminPassword": { "value": "<STRONG-PASSWORD>" },
+    "deployWindowsVm": { "value": true },
+    "deployLinuxVm": { "value": true },
+    "dailyCapGb": { "value": 1 },
+    "aksNodeCount": { "value": 2 }
+  }
+}

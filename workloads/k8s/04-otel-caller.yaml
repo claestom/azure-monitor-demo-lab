@@ -1,0 +1,170 @@
+# FEATURE 4 — OpenTelemetry distributed tracing demo (AKS → App Service)
+#
+# A tiny Python Flask service that, every few seconds, calls the App Service.
+# Auto-instrumented via `azure-monitor-opentelemetry` → traces, dependencies, logs
+# all flow to the SAME App Insights instance as the App Service, so the Application
+# Map shows a real distributed trace: AKS pod → App Service → outbound dependency.
+#
+# Replace __APP_SERVICE_URL__ and __APPI_CONN_STR__ at deploy time
+# (scripts/post-deploy.ps1 does this).
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-caller-app
+  namespace: demo
+data:
+  requirements.txt: |
+    flask==3.0.3
+    requests==2.32.3
+    azure-monitor-opentelemetry==1.6.4
+  app.py: |
+    import logging
+    import os
+    import random
+    import threading
+    import time
+
+    from azure.monitor.opentelemetry import configure_azure_monitor
+    from flask import Flask, jsonify
+    import requests
+
+    # Tag traces so they're easy to find in App Insights Application Map.
+    os.environ.setdefault(
+        "OTEL_RESOURCE_ATTRIBUTES",
+        "service.name=otel-caller-aks,service.namespace=demo,deployment.environment=lab",
+    )
+
+    # Initialise Azure Monitor OpenTelemetry exporter (auto-instruments requests,
+    # urllib3, logging, flask). Connection string read from env.
+    configure_azure_monitor(
+        connection_string=os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"],
+        logger_name="otel-caller",
+    )
+
+    log = logging.getLogger("otel-caller")
+    log.setLevel(logging.INFO)
+
+    TARGET = os.environ["APP_SERVICE_URL"].rstrip("/")
+    PATHS = [
+        ("/",            0.55, "GET root"),
+        ("/api/slow",    0.20, "GET slow"),
+        ("/api/dep",     0.15, "GET outbound dependency"),
+        ("/api/explode", 0.10, "GET intentional failure"),
+    ]
+
+
+    def background_caller() -> None:
+        log.info("Background caller started against %s", TARGET)
+        while True:
+            r = random.random()
+            cum = 0.0
+            chosen_path, _, label = PATHS[0]
+            for path, weight, lbl in PATHS:
+                cum += weight
+                if r <= cum:
+                    chosen_path, label = path, lbl
+                    break
+            url = TARGET + chosen_path
+            try:
+                resp = requests.get(url, timeout=15)
+                log.info("call %s -> %s (%s)", url, resp.status_code, label)
+            except Exception as exc:
+                log.warning("call %s failed: %s", url, exc)
+            time.sleep(random.uniform(2.5, 5.5))
+
+
+    app = Flask(__name__)
+
+
+    @app.get("/")
+    def root():
+        return jsonify(
+            service="otel-caller-aks",
+            target=TARGET,
+            note="Distributed tracing demo — every request creates a trace in App Insights.",
+        )
+
+
+    @app.get("/call")
+    def call_once():
+        path = random.choice([p[0] for p in PATHS])
+        url = TARGET + path
+        resp = requests.get(url, timeout=15)
+        log.info("manual call %s -> %s", url, resp.status_code)
+        return jsonify(target=url, status=resp.status_code)
+
+
+    @app.get("/healthz")
+    def healthz():
+        return "OK", 200
+
+
+    if __name__ == "__main__":
+        threading.Thread(target=background_caller, daemon=True).start()
+        app.run(host="0.0.0.0", port=8080)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-caller
+  namespace: demo
+  labels:
+    app: otel-caller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-caller
+  template:
+    metadata:
+      labels:
+        app: otel-caller
+    spec:
+      containers:
+        - name: caller
+          image: python:3.11-slim
+          workingDir: /app
+          command:
+            - sh
+            - -c
+            - "cp /src/* /app/ && pip install --no-cache-dir -q -r /app/requirements.txt && python /app/app.py"
+          env:
+            - name: APP_SERVICE_URL
+              value: "__APP_SERVICE_URL__"
+            - name: APPLICATIONINSIGHTS_CONNECTION_STRING
+              value: "__APPI_CONN_STR__"
+            - name: OTEL_TRACES_SAMPLER
+              value: "parentbased_traceidratio"
+            - name: OTEL_TRACES_SAMPLER_ARG
+              value: "1.0"
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: src
+              mountPath: /src
+          resources:
+            requests: { cpu: "100m", memory: "192Mi" }
+            limits:   { cpu: "500m", memory: "512Mi" }
+          readinessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            failureThreshold: 30
+      volumes:
+        - name: src
+          configMap:
+            name: otel-caller-app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-caller
+  namespace: demo
+spec:
+  type: ClusterIP
+  selector:
+    app: otel-caller
+  ports:
+    - port: 80
+      targetPort: 8080

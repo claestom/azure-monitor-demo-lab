@@ -1,0 +1,155 @@
+@description('Windows VM name (computer name max 15 chars).')
+@maxLength(15)
+param vmName string
+
+@description('Region.')
+param location string
+
+@description('VM SKU.')
+param vmSize string = 'Standard_B2s'
+
+@description('Admin username.')
+param adminUsername string
+
+@description('Admin password.')
+@secure()
+param adminPassword string
+
+@description('Subnet resource ID.')
+param subnetId string
+
+@description('Data Collection Rule for VM Insights.')
+param dcrId string
+
+@description('Resource tags.')
+param tags object = {}
+
+resource pip 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
+  name: 'pip-${vmName}'
+  location: location
+  tags: tags
+  sku: { name: 'Standard' }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+    publicIPAddressVersion: 'IPv4'
+  }
+}
+
+resource nic 'Microsoft.Network/networkInterfaces@2023-09-01' = {
+  name: 'nic-${vmName}'
+  location: location
+  tags: tags
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          privateIPAllocationMethod: 'Dynamic'
+          subnet: { id: subnetId }
+          publicIPAddress: { id: pip.id }
+        }
+      }
+    ]
+  }
+}
+
+resource vm 'Microsoft.Compute/virtualMachines@2024-03-01' = {
+  name: vmName
+  location: location
+  tags: tags
+  identity: { type: 'SystemAssigned' }
+  properties: {
+    hardwareProfile: { vmSize: vmSize }
+    osProfile: {
+      computerName: vmName
+      adminUsername: adminUsername
+      adminPassword: adminPassword
+      windowsConfiguration: {
+        provisionVMAgent: true
+        enableAutomaticUpdates: true
+        patchSettings: {
+          patchMode: 'AutomaticByOS'
+        }
+      }
+    }
+    storageProfile: {
+      imageReference: {
+        publisher: 'MicrosoftWindowsServer'
+        offer: 'WindowsServer'
+        sku: '2022-datacenter-azure-edition'
+        version: 'latest'
+      }
+      osDisk: {
+        createOption: 'FromImage'
+        managedDisk: { storageAccountType: 'Standard_LRS' }
+      }
+    }
+    networkProfile: {
+      networkInterfaces: [ { id: nic.id } ]
+    }
+    diagnosticsProfile: {
+      bootDiagnostics: { enabled: true }
+    }
+  }
+}
+
+// Azure Monitor Agent
+resource ama 'Microsoft.Compute/virtualMachines/extensions@2024-03-01' = {
+  parent: vm
+  name: 'AzureMonitorWindowsAgent'
+  location: location
+  properties: {
+    publisher: 'Microsoft.Azure.Monitor'
+    type: 'AzureMonitorWindowsAgent'
+    typeHandlerVersion: '1.21'
+    autoUpgradeMinorVersion: true
+    enableAutomaticUpgrade: true
+  }
+}
+
+// Network Watcher Agent — required by Connection Monitor probes from this VM.
+resource nwAgent 'Microsoft.Compute/virtualMachines/extensions@2024-03-01' = {
+  parent: vm
+  name: 'NetworkWatcherAgentWindows'
+  location: location
+  properties: {
+    publisher: 'Microsoft.Azure.NetworkWatcher'
+    type: 'NetworkWatcherAgentWindows'
+    typeHandlerVersion: '1.4'
+    autoUpgradeMinorVersion: true
+  }
+  dependsOn: [ ama ]
+}
+
+// Dependency Agent for VM Insights Map
+resource depAgent 'Microsoft.Compute/virtualMachines/extensions@2024-03-01' = {
+  parent: vm
+  name: 'DependencyAgentWindows'
+  location: location
+  properties: {
+    publisher: 'Microsoft.Azure.Monitoring.DependencyAgent'
+    type: 'DependencyAgentWindows'
+    typeHandlerVersion: '9.10'
+    autoUpgradeMinorVersion: true
+    enableAutomaticUpgrade: true
+    settings: {
+      enableAMA: 'true'
+    }
+  }
+  dependsOn: [ ama ]
+}
+
+// Associate the DCR with the VM
+resource dcra 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = {
+  scope: vm
+  name: 'vminsights-association'
+  properties: {
+    dataCollectionRuleId: dcrId
+    description: 'Associate VM Insights DCR'
+  }
+  dependsOn: [ ama ]
+}
+
+output vmId string = vm.id
+output vmName string = vm.name
+output publicIp string = pip.properties.ipAddress

@@ -1,0 +1,2456 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "10735443741671823532"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for all resources."
+      }
+    },
+    "namePrefix": {
+      "type": "string",
+      "defaultValue": "amlab",
+      "minLength": 3,
+      "maxLength": 8,
+      "metadata": {
+        "description": "Short prefix used to build resource names."
+      }
+    },
+    "dailyCapGb": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Daily ingestion cap (GB) on the central Log Analytics workspace. Set to -1 to disable."
+      }
+    },
+    "ownerTag": {
+      "type": "string",
+      "defaultValue": "demo-lab",
+      "metadata": {
+        "description": "Tag every resource with this owner."
+      }
+    },
+    "enableLawReplication": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable LAW cross-region replication."
+      }
+    },
+    "lawReplicationLocation": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Secondary region for LAW replication."
+      }
+    }
+  },
+  "variables": {
+    "suffix": "[uniqueString(resourceGroup().id)]",
+    "lawCentralName": "[format('law-{0}-central-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "lawAppInsightsName": "[format('law-{0}-appinsights-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "appInsightsName": "[format('appi-{0}', parameters('namePrefix'))]",
+    "amwName": "[format('amw-{0}', parameters('namePrefix'))]",
+    "vnetName": "[format('vnet-{0}', parameters('namePrefix'))]",
+    "nsgName": "[format('nsg-{0}', parameters('namePrefix'))]",
+    "workbookName": "[format('wb-{0}-trafficlights', parameters('namePrefix'))]",
+    "dcrVmInsightsName": "[format('dcr-{0}-vminsights', parameters('namePrefix'))]",
+    "dceName": "[format('dce-{0}', parameters('namePrefix'))]",
+    "storageAccountName": "[format('st{0}{1}', parameters('namePrefix'), take(variables('suffix'), 8))]",
+    "eventHubNsName": "[format('evhns-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "keyVaultName": "[format('kv-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "costWorkbookName": "[format('wb-{0}-cost', parameters('namePrefix'))]",
+    "commonTags": {
+      "owner": "[parameters('ownerTag')]",
+      "purpose": "azure-monitor-demo-lab",
+      "costCenter": "demo"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/dataCollectionEndpoints",
+      "apiVersion": "2023-03-11",
+      "name": "[variables('dceName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "kind": "Linux",
+      "properties": {
+        "networkAcls": {
+          "publicNetworkAccess": "Enabled"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Insights/dataCollectionRules",
+      "apiVersion": "2023-03-11",
+      "name": "[variables('dcrVmInsightsName')]",
+      "location": "[parameters('location')]",
+      "tags": "[variables('commonTags')]",
+      "kind": "Linux",
+      "properties": {
+        "dataSources": {
+          "performanceCounters": [
+            {
+              "name": "VMInsightsPerfCounters",
+              "streams": [
+                "Microsoft-InsightsMetrics"
+              ],
+              "samplingFrequencyInSeconds": 60,
+              "counterSpecifiers": [
+                "\\VmInsights\\DetailedMetrics"
+              ]
+            }
+          ],
+          "extensions": [
+            {
+              "name": "DependencyAgentDataSource",
+              "streams": [
+                "Microsoft-ServiceMap"
+              ],
+              "extensionName": "DependencyAgent"
+            }
+          ]
+        },
+        "destinations": {
+          "logAnalytics": [
+            {
+              "workspaceResourceId": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]",
+              "name": "centralLaw"
+            }
+          ]
+        },
+        "dataFlows": [
+          {
+            "streams": [
+              "Microsoft-InsightsMetrics"
+            ],
+            "destinations": [
+              "centralLaw"
+            ]
+          },
+          {
+            "streams": [
+              "Microsoft-ServiceMap"
+            ],
+            "destinations": [
+              "centralLaw"
+            ]
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "law-central",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('lawCentralName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "dailyQuotaGb": {
+            "value": "[parameters('dailyCapGb')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          },
+          "enableReplication": {
+            "value": "[parameters('enableLawReplication')]"
+          },
+          "replicationLocation": {
+            "value": "[parameters('lawReplicationLocation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "9496364909992977379"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "dailyQuotaGb": {
+              "type": "int",
+              "defaultValue": -1,
+              "metadata": {
+                "description": "Daily ingestion cap in GB. Set to -1 to disable."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            },
+            "solutions": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "OperationsManagement solutions to install on this workspace (e.g. VMInsights, ContainerInsights)."
+              }
+            },
+            "enableReplication": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Enable LAW cross-region replication. Doubles ingestion cost — default OFF."
+              }
+            },
+            "replicationLocation": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Secondary region for replication (must be a paired region). Required when enableReplication = true."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2025-02-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": 30,
+                "workspaceCapping": {
+                  "dailyQuotaGb": "[if(equals(parameters('dailyQuotaGb'), -1), json('-1'), parameters('dailyQuotaGb'))]"
+                },
+                "features": {
+                  "enableLogAccessUsingOnlyResourcePermissions": false
+                },
+                "replication": "[if(parameters('enableReplication'), createObject('enabled', true(), 'location', parameters('replicationLocation')), null())]"
+              }
+            },
+            {
+              "copy": {
+                "name": "sols",
+                "count": "[length(parameters('solutions'))]"
+              },
+              "type": "Microsoft.OperationsManagement/solutions",
+              "apiVersion": "2015-11-01-preview",
+              "name": "[format('{0}({1})', parameters('solutions')[copyIndex()], parameters('name'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('name'))]"
+              },
+              "plan": {
+                "name": "[format('{0}({1})', parameters('solutions')[copyIndex()], parameters('name'))]",
+                "promotionCode": "",
+                "product": "[format('OMSGallery/{0}', parameters('solutions')[copyIndex()])]",
+                "publisher": "Microsoft"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "customerId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('name')), '2025-02-01').customerId]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "law-appinsights",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('lawAppInsightsName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "dailyQuotaGb": {
+            "value": "[parameters('dailyCapGb')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "9496364909992977379"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "dailyQuotaGb": {
+              "type": "int",
+              "defaultValue": -1,
+              "metadata": {
+                "description": "Daily ingestion cap in GB. Set to -1 to disable."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            },
+            "solutions": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "OperationsManagement solutions to install on this workspace (e.g. VMInsights, ContainerInsights)."
+              }
+            },
+            "enableReplication": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Enable LAW cross-region replication. Doubles ingestion cost — default OFF."
+              }
+            },
+            "replicationLocation": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Secondary region for replication (must be a paired region). Required when enableReplication = true."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2025-02-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "name": "PerGB2018"
+                },
+                "retentionInDays": 30,
+                "workspaceCapping": {
+                  "dailyQuotaGb": "[if(equals(parameters('dailyQuotaGb'), -1), json('-1'), parameters('dailyQuotaGb'))]"
+                },
+                "features": {
+                  "enableLogAccessUsingOnlyResourcePermissions": false
+                },
+                "replication": "[if(parameters('enableReplication'), createObject('enabled', true(), 'location', parameters('replicationLocation')), null())]"
+              }
+            },
+            {
+              "copy": {
+                "name": "sols",
+                "count": "[length(parameters('solutions'))]"
+              },
+              "type": "Microsoft.OperationsManagement/solutions",
+              "apiVersion": "2015-11-01-preview",
+              "name": "[format('{0}({1})', parameters('solutions')[copyIndex()], parameters('name'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('name'))]"
+              },
+              "plan": {
+                "name": "[format('{0}({1})', parameters('solutions')[copyIndex()], parameters('name'))]",
+                "promotionCode": "",
+                "product": "[format('OMSGallery/{0}', parameters('solutions')[copyIndex()])]",
+                "publisher": "Microsoft"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "customerId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('name')), '2025-02-01').customerId]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "appi",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('appInsightsName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "workspaceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-appinsights'), '2022-09-01').outputs.id.value]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "8128719559614570963"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights resource name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "workspaceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the Log Analytics workspace that backs this App Insights."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[parameters('workspaceId')]",
+                "IngestionMode": "LogAnalytics",
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled"
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/components', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "instrumentationKey": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').InstrumentationKey]"
+            },
+            "connectionString": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').ConnectionString]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'law-appinsights')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "amw",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('amwName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "8759512149156288841"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure Monitor Workspace name (used for Managed Prometheus)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Monitor/accounts",
+              "apiVersion": "2023-04-03",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {}
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Monitor/accounts', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "prometheusQueryEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Monitor/accounts', parameters('name')), '2023-04-03').metrics.prometheusQueryEndpoint]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "network",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "vnetName": {
+            "value": "[variables('vnetName')]"
+          },
+          "nsgName": {
+            "value": "[variables('nsgName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "14688512643480330215"
+            }
+          },
+          "parameters": {
+            "vnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet name."
+              }
+            },
+            "nsgName": {
+              "type": "string",
+              "metadata": {
+                "description": "NSG name applied to the workload subnet."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "variables": {
+            "addressSpace": "10.50.0.0/16",
+            "workloadSubnet": "10.50.1.0/24",
+            "aksSubnet": "10.50.2.0/23",
+            "bastionSubnet": "10.50.10.0/26"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-09-01",
+              "name": "[parameters('nsgName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "securityRules": [
+                  {
+                    "name": "Allow-SSH-From-Internet",
+                    "properties": {
+                      "priority": 1000,
+                      "access": "Allow",
+                      "direction": "Inbound",
+                      "protocol": "Tcp",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "22",
+                      "sourceAddressPrefix": "Internet",
+                      "destinationAddressPrefix": "*"
+                    }
+                  },
+                  {
+                    "name": "Allow-RDP-From-Internet",
+                    "properties": {
+                      "priority": 1010,
+                      "access": "Allow",
+                      "direction": "Inbound",
+                      "protocol": "Tcp",
+                      "sourcePortRange": "*",
+                      "destinationPortRange": "3389",
+                      "sourceAddressPrefix": "Internet",
+                      "destinationAddressPrefix": "*"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-09-01",
+              "name": "[parameters('vnetName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[variables('addressSpace')]"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "snet-workload",
+                    "properties": {
+                      "addressPrefix": "[variables('workloadSubnet')]",
+                      "networkSecurityGroup": {
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
+                      }
+                    }
+                  },
+                  {
+                    "name": "snet-aks",
+                    "properties": {
+                      "addressPrefix": "[variables('aksSubnet')]"
+                    }
+                  },
+                  {
+                    "name": "AzureBastionSubnet",
+                    "properties": {
+                      "addressPrefix": "[variables('bastionSubnet')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            },
+            "workloadSubnetId": {
+              "type": "string",
+              "value": "[format('{0}/subnets/snet-workload', resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')))]"
+            },
+            "aksSubnetId": {
+              "type": "string",
+              "value": "[format('{0}/subnets/snet-aks', resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "storage-account",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('storageAccountName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "centralLawId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "8258136283443655457"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account name (must be globally unique, 3-24 lowercase)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID — used so the SA itself reports to LAW for Storage Insights."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2024-01-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "accessTier": "Hot",
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true,
+                "publicNetworkAccess": "Enabled",
+                "networkAcls": {
+                  "defaultAction": "Allow",
+                  "bypass": "AzureServices, Logging, Metrics"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', 'law-export')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('name'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', 'diag-archive')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('name'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('name'))]",
+              "name": "send-to-central-law",
+              "properties": {
+                "workspaceId": "[parameters('centralLawId')]",
+                "metrics": [
+                  {
+                    "category": "Transaction",
+                    "enabled": true
+                  },
+                  {
+                    "category": "Capacity",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}/blobServices/{1}', parameters('name'), 'default')]",
+              "name": "send-to-central-law",
+              "properties": {
+                "workspaceId": "[parameters('centralLawId')]",
+                "logs": [
+                  {
+                    "categoryGroup": "audit",
+                    "enabled": true
+                  },
+                  {
+                    "categoryGroup": "allLogs",
+                    "enabled": false
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "Transaction",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('name'), 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "exportContainerName": {
+              "type": "string",
+              "value": "law-export"
+            },
+            "archiveContainerName": {
+              "type": "string",
+              "value": "diag-archive"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "eventhub",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "namespaceName": {
+            "value": "[variables('eventHubNsName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "centralLawId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "17713457183335564880"
+            }
+          },
+          "parameters": {
+            "namespaceName": {
+              "type": "string",
+              "metadata": {
+                "description": "Event Hub Namespace name (globally unique, 6-50 chars)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID — diag settings on the namespace itself."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.EventHub/namespaces",
+              "apiVersion": "2024-01-01",
+              "name": "[parameters('namespaceName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Basic",
+                "tier": "Basic",
+                "capacity": 1
+              },
+              "properties": {
+                "isAutoInflateEnabled": false,
+                "publicNetworkAccess": "Enabled",
+                "minimumTlsVersion": "1.2"
+              }
+            },
+            {
+              "type": "Microsoft.EventHub/namespaces/eventhubs",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('namespaceName'), 'diagnostics')]",
+              "properties": {
+                "messageRetentionInDays": 1,
+                "partitionCount": 1
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaceName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.EventHub/namespaces/authorizationRules",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('namespaceName'), 'diagnostics-send')]",
+              "properties": {
+                "rights": [
+                  "Send"
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaceName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.EventHub/namespaces/{0}', parameters('namespaceName'))]",
+              "name": "send-to-central-law",
+              "properties": {
+                "workspaceId": "[parameters('centralLawId')]",
+                "logs": [
+                  {
+                    "categoryGroup": "allLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaceName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "namespaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaceName'))]"
+            },
+            "namespaceName": {
+              "type": "string",
+              "value": "[parameters('namespaceName')]"
+            },
+            "hubName": {
+              "type": "string",
+              "value": "diagnostics"
+            },
+            "sendRuleId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.EventHub/namespaces/authorizationRules', parameters('namespaceName'), 'diagnostics-send')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "keyvault",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('keyVaultName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "centralLawId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "2064074590174087386"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Key Vault name (globally unique, 3-24 chars)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID for diagnostic settings."
+              }
+            },
+            "tenantId": {
+              "type": "string",
+              "defaultValue": "[subscription().tenantId]",
+              "metadata": {
+                "description": "AAD tenant ID (defaults to the deploying tenant)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2024-04-01-preview",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "tenantId": "[parameters('tenantId')]",
+                "enableRbacAuthorization": true,
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": 7,
+                "enablePurgeProtection": null,
+                "publicNetworkAccess": "Enabled",
+                "networkAcls": {
+                  "bypass": "AzureServices",
+                  "defaultAction": "Allow"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2024-04-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'amlab-demo-secret')]",
+              "properties": {
+                "value": "amlab-demo-value",
+                "contentType": "text/plain"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('name'))]",
+              "name": "send-to-central-law",
+              "properties": {
+                "workspaceId": "[parameters('centralLawId')]",
+                "logs": [
+                  {
+                    "categoryGroup": "audit",
+                    "enabled": true
+                  },
+                  {
+                    "categoryGroup": "allLogs",
+                    "enabled": true
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "AllMetrics",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "uri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', parameters('name')), '2024-04-01-preview').vaultUri]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "workspace-transforms",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[format('dcr-{0}-workspace-transforms-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "centralLawId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
+          },
+          "centralLawName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "13822448701205026503"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Workspace-transform DCR name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID (data path target + DCRA scope)."
+              }
+            },
+            "centralLawName": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW name (needed for the DCRA child resource)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/dataCollectionRules",
+              "apiVersion": "2023-03-11",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "WorkspaceTransforms",
+              "properties": {
+                "destinations": {
+                  "logAnalytics": [
+                    {
+                      "workspaceResourceId": "[parameters('centralLawId')]",
+                      "name": "centralLaw"
+                    }
+                  ]
+                },
+                "dataFlows": [
+                  {
+                    "streams": [
+                      "Microsoft-Table-AzureActivity"
+                    ],
+                    "destinations": [
+                      "centralLaw"
+                    ],
+                    "transformKql": "source\n| where tolower(OperationNameValue) !endswith \"/read\"\n| extend Properties = bag_merge(parse_json(Properties), pack(\"FilteredBy\",\"amlab-workspace-transform\",\"FilteredAt\", tostring(now())))"
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/dataCollectionRuleAssociations",
+              "apiVersion": "2023-03-11",
+              "scope": "[format('Microsoft.OperationalInsights/workspaces/{0}', parameters('centralLawName'))]",
+              "name": "microsoft-default",
+              "properties": {
+                "dataCollectionRuleId": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('name'))]",
+                "description": "Workspace transformation DCR (FEATURE 1 cost-control demo)."
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "dcrId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('name'))]"
+            },
+            "dcrName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "policy-diagnostics",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "centralLawId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "17644930876565706887"
+            }
+          },
+          "parameters": {
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the central Log Analytics workspace destination."
+              }
+            }
+          },
+          "variables": {
+            "policies": [
+              {
+                "key": "appservice",
+                "displayName": "Diag → Central LAW for App Services",
+                "builtInId": "/providers/Microsoft.Authorization/policyDefinitions/c0d8e23a-47be-4032-961f-8b0ff3957061",
+                "hasCategoryGroup": false
+              },
+              {
+                "key": "vnet",
+                "displayName": "Diag → Central LAW for Virtual Networks",
+                "builtInId": "/providers/Microsoft.Authorization/policyDefinitions/3234ff41-8bec-40a3-b5cb-109c95f1c8ce",
+                "hasCategoryGroup": true
+              },
+              {
+                "key": "nsg",
+                "displayName": "Diag → Central LAW for Network Security Groups",
+                "builtInId": "/providers/Microsoft.Authorization/policyDefinitions/baa4c6de-b7cf-4b12-b436-6e40ef44c8cb",
+                "hasCategoryGroup": true
+              },
+              {
+                "key": "pip",
+                "displayName": "Diag → Central LAW for Public IP Addresses",
+                "builtInId": "/providers/Microsoft.Authorization/policyDefinitions/1513498c-3091-461a-b321-e9b433218d28",
+                "hasCategoryGroup": true
+              }
+            ],
+            "baseParams": {
+              "effect": {
+                "value": "DeployIfNotExists"
+              },
+              "diagnosticSettingName": {
+                "value": "setByPolicy-LogAnalytics"
+              },
+              "logAnalytics": {
+                "value": "[parameters('centralLawId')]"
+              }
+            },
+            "withCategoryGroup": "[union(variables('baseParams'), createObject('categoryGroup', createObject('value', 'allLogs')))]",
+            "roleIds": [
+              "92aaf0da-9dab-42b6-94a3-d43ce8d16293",
+              "749f88d5-cbae-40b8-bcfc-e573ddc772fa"
+            ]
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "assignments",
+                "count": "[length(variables('policies'))]"
+              },
+              "type": "Microsoft.Authorization/policyAssignments",
+              "apiVersion": "2024-04-01",
+              "name": "[format('amlab-diag-{0}', variables('policies')[copyIndex()].key)]",
+              "location": "[resourceGroup().location]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "displayName": "[variables('policies')[copyIndex()].displayName]",
+                "description": "[format('Demo lab: ensure diagnostic settings exist on {0} resources, sending allLogs to the central LAW.', variables('policies')[copyIndex()].key)]",
+                "policyDefinitionId": "[variables('policies')[copyIndex()].builtInId]",
+                "parameters": "[if(variables('policies')[copyIndex()].hasCategoryGroup, variables('withCategoryGroup'), variables('baseParams'))]",
+                "enforcementMode": "Default"
+              }
+            },
+            {
+              "copy": {
+                "name": "roleAssignments",
+                "count": "[length(range(0, mul(length(variables('policies')), length(variables('roleIds')))))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, variables('policies')[div(range(0, mul(length(variables('policies')), length(variables('roleIds'))))[copyIndex()], length(variables('roleIds')))].key, variables('roleIds')[mod(range(0, mul(length(variables('policies')), length(variables('roleIds'))))[copyIndex()], length(variables('roleIds')))])]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.Authorization/policyAssignments', format('amlab-diag-{0}', variables('policies')[div(range(0, mul(length(variables('policies')), length(variables('roleIds'))))[copyIndex()], length(variables('roleIds')))].key)), '2024-04-01', 'full').identity.principalId]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('roleIds')[mod(range(0, mul(length(variables('policies')), length(variables('roleIds'))))[copyIndex()], length(variables('roleIds')))])]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Authorization/policyAssignments', format('amlab-diag-{0}', variables('policies')[div(range(0, mul(length(variables('policies')), length(variables('roleIds'))))[copyIndex()], length(variables('roleIds')))].key))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "assignmentIds": {
+              "type": "array",
+              "copy": {
+                "count": "[length(variables('policies'))]",
+                "input": "[resourceId('Microsoft.Authorization/policyAssignments', format('amlab-diag-{0}', variables('policies')[copyIndex()].key))]"
+              }
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "saved-queries",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "centralLawName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
+          },
+          "appInsightsLawName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-appinsights'), '2022-09-01').outputs.name.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "2700006178681996112"
+            }
+          },
+          "parameters": {
+            "centralLawName": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW name."
+              }
+            },
+            "appInsightsLawName": {
+              "type": "string",
+              "metadata": {
+                "description": "App Insights LAW name (used in cross-workspace queries)."
+              }
+            }
+          },
+          "variables": {
+            "category": "AzureMonitorDemoLab",
+            "queries": [
+              {
+                "name": "vminsights-cpu-top10",
+                "displayName": "01 — VM Insights · Top 10 VMs by CPU (last 1h)",
+                "query": "// Top 10 VMs ranked by average CPU utilization over the last hour.\n// Source: VM Insights \"InsightsMetrics\" table (Azure Monitor Agent + VM Insights DCR).\n// Use for: quickly spotting hot VMs.\nInsightsMetrics\n| where TimeGenerated > ago(1h)\n| where Namespace == \"Processor\" and Name == \"UtilizationPercentage\"\n| summarize CpuPct = avg(Val) by Computer\n| top 10 by CpuPct desc"
+              },
+              {
+                "name": "vminsights-memory",
+                "displayName": "02 — VM Insights · Available memory % per VM (last 1h)",
+                "query": "// Available memory (MB) per VM over the last hour, bucketed in 5-minute bins.\n// Source: VM Insights \"InsightsMetrics\".\n// Use for: spotting memory pressure trends and saw-tooth patterns.\nInsightsMetrics\n| where TimeGenerated > ago(1h)\n| where Namespace == \"Memory\" and Name == \"AvailableMB\"\n| summarize avg(Val) by Computer, bin(TimeGenerated, 5m)\n| render timechart"
+              },
+              {
+                "name": "vm-heartbeat",
+                "displayName": "03 — VM Heartbeat · which VMs are alive?",
+                "query": "// Last heartbeat per VM with \"minutes since\" — useful liveness check.\n// Source: \"Heartbeat\" table, written by AMA on every VM.\n// Use for: detecting stopped / unreachable VMs (anything > 5 min is suspicious).\nHeartbeat\n| summarize LastHeartbeat = max(TimeGenerated) by Computer, OSType\n| extend MinutesSince = datetime_diff(\"minute\", now(), LastHeartbeat)\n| order by MinutesSince desc"
+              },
+              {
+                "name": "aks-pod-restarts",
+                "displayName": "04 — AKS · Pod restarts in last 24h",
+                "query": "// Total container restarts per pod over the last 24 hours.\n// Source: Container Insights \"KubePodInventory\".\n// Use for: catching crashloops and unstable workloads.\nKubePodInventory\n| where TimeGenerated > ago(24h)\n| summarize Restarts = sum(toint(ContainerRestartCount)) by Namespace, ControllerName, Name\n| where Restarts > 0\n| order by Restarts desc"
+              },
+              {
+                "name": "aks-container-logs-errors",
+                "displayName": "05 — AKS · Container log errors (last 1h)",
+                "query": "// stdout/stderr lines from any AKS container that contain error-like keywords.\n// Source: Container Insights \"ContainerLogV2\" (new high-perf log table).\n// Use for: triaging app-level errors without kubectl logs.\nContainerLogV2\n| where TimeGenerated > ago(1h)\n| where LogMessage has_any (\"error\",\"exception\",\"fatal\",\"panic\")\n| project TimeGenerated, Computer, PodName, ContainerName, LogMessage\n| order by TimeGenerated desc\n| take 100"
+              },
+              {
+                "name": "aks-node-cpu-mem",
+                "displayName": "06 — AKS · Node CPU & Memory (last 1h)",
+                "query": "// AKS node-level CPU and memory perf counters over the last hour.\n// Source: Container Insights \"Perf\" table (cluster-level counters).\n// Use for: correlating noisy-neighbor workloads with node pressure.\nPerf\n| where TimeGenerated > ago(1h)\n| where ObjectName in (\"K8SNode\",\"Memory\",\"Processor\")\n| where CounterName in (\"cpuUsageNanoCores\",\"memoryWorkingSetBytes\",\"% Processor Time\")\n| summarize avg(CounterValue) by Computer, CounterName, bin(TimeGenerated, 5m)\n| render timechart"
+              },
+              {
+                "name": "webapp-http-codes",
+                "displayName": "07 — App Service · HTTP status code distribution (last 1h)",
+                "query": "// Stacked column chart of HTTP status codes returned by App Services in this RG.\n// Source: \"AppServiceHTTPLogs\" diagnostic logs (sent to LAW via policy).\n// Use for: visualising 2xx/4xx/5xx mix during incidents or load tests.\nAppServiceHTTPLogs\n| where TimeGenerated > ago(1h)\n| summarize Hits = count() by ScStatus, bin(TimeGenerated, 5m)\n| render columnchart"
+              },
+              {
+                "name": "webapp-slow-requests",
+                "displayName": "08 — App Service · Slowest requests (last 1h)",
+                "query": "// Top 50 slowest App Service requests in the last hour by TimeTaken (ms).\n// Source: \"AppServiceHTTPLogs\".\n// Use for: latency hunting before drilling into App Insights traces.\nAppServiceHTTPLogs\n| where TimeGenerated > ago(1h)\n| project TimeGenerated, CsHost, CsUriStem, ScStatus, TimeTaken\n| top 50 by TimeTaken desc"
+              },
+              {
+                "name": "activity-changes",
+                "displayName": "09 — Activity log · Who changed what in this RG (last 24h)",
+                "query": "// Recent successful write/delete/action operations against resources in this RG.\n// Source: \"AzureActivity\" (subscription activity log streamed to LAW).\n// Use for: change-correlation during incident response (\"what changed before this broke?\").\nAzureActivity\n| where TimeGenerated > ago(24h)\n| where OperationNameValue has_any (\"write\",\"delete\",\"action\")\n| where ActivityStatusValue == \"Success\"\n| project TimeGenerated, Caller, OperationNameValue, ResourceProviderValue, _ResourceId\n| order by TimeGenerated desc"
+              },
+              {
+                "name": "cross-ws-failed-vs-cpu",
+                "displayName": "10 — CROSS-WS · App Insights failed requests vs central LAW VM CPU (normalized 0–100)",
+                "query": "[format('// CROSS-WORKSPACE: correlate App Insights failed-request count with VM CPU%.\n// Sources: workspace(\"{0}\").AppRequests  +  central LAW InsightsMetrics.\n// Both series are normalised to 0–100 (% of their own peak) so they fit one Y-axis.\n// Use for: cross-team incident review (devs + ops on one chart).\nlet appiFailed = workspace(\"{1}\").AppRequests\n  | where TimeGenerated > ago(1h) and Success == false\n  | summarize Failed = todouble(count()) by bin(TimeGenerated, 5m);\nlet vmCpu = InsightsMetrics\n  | where TimeGenerated > ago(1h)\n  | where Namespace == \"Processor\" and Name == \"UtilizationPercentage\"\n  | summarize CpuPct = todouble(avg(Val)) by bin(TimeGenerated, 5m);\nlet joined = appiFailed\n  | join kind=fullouter vmCpu on TimeGenerated\n  | project TimeGenerated = coalesce(TimeGenerated, TimeGenerated1),\n            Failed = coalesce(Failed, todouble(0)),\n            CpuPct = coalesce(CpuPct, todouble(0));\nlet maxFailed = toscalar(joined | summarize max(Failed));\nlet maxCpu    = toscalar(joined | summarize max(CpuPct));\njoined\n| extend FailedNorm = iff(maxFailed > 0, 100.0 * Failed / maxFailed, todouble(0)),\n         CpuNorm    = iff(maxCpu    > 0, 100.0 * CpuPct    / maxCpu,    todouble(0))\n| project TimeGenerated,\n          [\"Failed requests (% of peak)\"] = FailedNorm,\n          [\"VM CPU (% of peak)\"]          = CpuNorm\n| order by TimeGenerated asc\n| render timechart with (ytitle=\"% of peak\")', parameters('appInsightsLawName'), parameters('appInsightsLawName'))]"
+              },
+              {
+                "name": "cross-ws-end-to-end",
+                "displayName": "11 — CROSS-WS · End-to-end story (HTTP → AppI request → AKS pod logs)",
+                "query": "[format('// CROSS-WORKSPACE: unify three signals into one chronological feed:\n//   1) App Service HTTP layer  (AppServiceHTTPLogs in this LAW)\n//   2) App Insights request    (AppRequests in the AppI LAW via workspace())\n//   3) AKS load-gen pod logs   (ContainerLogV2 in this LAW)\n// Use for: storytelling during a demo or post-mortem — show the same event from 3 angles.\nunion\n  (AppServiceHTTPLogs | where TimeGenerated > ago(1h) | project TimeGenerated, Source = \"AppServiceHTTPLogs\", Detail = strcat(CsMethod, \" \", CsUriStem, \" -> \", ScStatus)),\n  (workspace(\"{0}\").AppRequests | where TimeGenerated > ago(1h) | project TimeGenerated, Source = \"AppI.AppRequests\", Detail = strcat(Name, \" | success=\", Success, \" | duration_ms=\", DurationMs)),\n  (ContainerLogV2 | where TimeGenerated > ago(1h) | where PodName has \"loadgen\" | project TimeGenerated, Source = \"AKS.ContainerLogV2\", Detail = LogMessage)\n| order by TimeGenerated desc\n| take 200', parameters('appInsightsLawName'))]"
+              },
+              {
+                "name": "appi-failures-by-operation",
+                "displayName": "12 — CROSS-WS · App Insights failures grouped by operation",
+                "query": "[format('// CROSS-WORKSPACE: which App Insights operations are failing and how slow are they?\n// Source: workspace(\"{0}\").AppRequests.\n// Use for: a 10-second view of \"which endpoints to fix first\".\nworkspace(\"{1}\").AppRequests\n| where TimeGenerated > ago(1h)\n| where Success == false\n| summarize Failures = count(), AvgDurationMs = avg(DurationMs) by Name\n| order by Failures desc', parameters('appInsightsLawName'), parameters('appInsightsLawName'))]"
+              },
+              {
+                "name": "cost-ingestion-per-table",
+                "displayName": "13 — Cost · Daily ingestion (GB) per table (last 7d)",
+                "query": "// Ingestion volume in GB per table for the last 7 days.\n// Source: \"Usage\" — built-in billing-meter table in every LAW.\n// Use for: cost reviews, picking candidates for DCR transformations or Basic Logs.\nUsage\n| where TimeGenerated > ago(7d)\n| where IsBillable == true\n| summarize GB = sum(Quantity) / 1024 by DataType, bin(TimeGenerated, 1d)\n| order by TimeGenerated desc, GB desc\n| render columnchart kind=stacked"
+              },
+              {
+                "name": "cost-transformation-effect",
+                "displayName": "14 — Cost · Workspace Transformation effect on AzureActivity (proof)",
+                "query": "// Proves the FEATURE 1 workspace transformation on AzureActivity.\n// The DCR (dcr-amlab-workspace-transforms) does TWO things to every row:\n//   (a) FILTER:  drops \"/read\" operations (Get / List / Read)   <- saves $$ at ingest.\n//   (b) ENRICH:  adds a \"FilteredBy\" key to the dynamic Properties column.\n//\n// EXPECTED RESULT (single row), after the transform has been active for >= 1 min:\n//   RowsTotal                = the number of AzureActivity rows in last 1h\n//   RowsWithReadOperation    = 0     (filter dropped them at ingest)\n//   RowsWithFilteredBy       = RowsTotal  (the enrich marker is on EVERY kept row)\n//   DistinctOperations       = a short list of non-/read operations\nAzureActivity\n| where TimeGenerated > ago(1h)\n| extend FilteredBy = tostring(parse_json(Properties).FilteredBy)\n| summarize\n    RowsTotal             = count(),\n    RowsWithReadOperation = countif(tolower(OperationNameValue) endswith \"/read\"),\n    RowsWithFilteredBy    = countif(FilteredBy == \"amlab-workspace-transform\"),\n    DistinctOperations    = strcat_array(make_set(OperationNameValue, 10), \", \")"
+              },
+              {
+                "name": "cost-transformation-sample",
+                "displayName": "15 — Cost · Workspace Transformation sample rows (AzureActivity)",
+                "query": "// 20 most recent AzureActivity rows showing the FEATURE 1 transform in action.\n// You should see EVERY row with:\n//   - OperationNameValue does NOT end with \"/read\"    (filter passed)\n//   - Properties.FilteredBy == \"amlab-workspace-transform\"  (enrich ran)\n//   - Properties.FilteredAt is a recent timestamp     (enrich ran, second prop)\nAzureActivity\n| where TimeGenerated > ago(1h)\n| extend FilteredBy = tostring(parse_json(Properties).FilteredBy),\n         FilteredAt = tostring(parse_json(Properties).FilteredAt)\n| project TimeGenerated, Caller, OperationNameValue, ActivityStatusValue, FilteredBy, FilteredAt\n| order by TimeGenerated desc\n| take 20"
+              },
+              {
+                "name": "custom-logs-security-audit",
+                "displayName": "16 — Custom Logs · SecurityAudit_CL events (last 1h)",
+                "query": "// Custom log data sent via the Logs Ingestion API (scripts/send-custom-logs.ps1).\n// Source: \"SecurityAudit_CL\" — a custom table in this workspace.\n// Use for: proving external systems can push data into Log Analytics.\nSecurityAudit_CL\n| where TimeGenerated > ago(1h)\n| project TimeGenerated, EventType, Severity, UserPrincipal, SourceIP, Action, Result, Details\n| order by TimeGenerated desc"
+              },
+              {
+                "name": "custom-logs-summary",
+                "displayName": "17 — Custom Logs · Security event breakdown",
+                "query": "// Aggregated view of custom security audit events by type and severity.\n// Source: \"SecurityAudit_CL\".\n// Use for: showing KQL analytics on custom ingested data.\nSecurityAudit_CL\n| where TimeGenerated > ago(24h)\n| summarize EventCount = count(), DistinctUsers = dcount(UserPrincipal) by EventType, Severity\n| order by EventCount desc"
+              },
+              {
+                "name": "summary-rule-comparison",
+                "displayName": "18 — Cost · Summary Rule: raw Perf vs aggregated Perf_Hourly_CL",
+                "query": "// Compare raw Perf data volume vs the pre-aggregated Perf_Hourly_CL summary.\n// Shows the cost win: same answer from orders-of-magnitude fewer rows.\n// Source: \"Perf\" (raw) + \"Perf_Hourly_CL\" (summary).\nlet rawStats = Perf\n  | where TimeGenerated > ago(24h)\n  | where ObjectName in (\"Processor\",\"Memory\",\"LogicalDisk\")\n  | summarize RawRowCount = count(), RawDistinctComputers = dcount(Computer);\nlet summaryStats = Perf_Hourly_CL\n  | where TimeGenerated > ago(24h)\n  | summarize SummaryRowCount = count(), SummaryDistinctComputers = dcount(Computer);\nrawStats | extend placeholder = 1\n| join kind=inner (summaryStats | extend placeholder = 1) on placeholder\n| project RawRowCount, SummaryRowCount,\n          CompressionRatio = strcat(\"1:\", tolong(RawRowCount / max_of(SummaryRowCount, 1))),\n          RawDistinctComputers, SummaryDistinctComputers"
+              },
+              {
+                "name": "kql-function-vmhealth",
+                "displayName": "19 — Functions · vmHealth() — call the saved function",
+                "query": "// Call the vmHealth() saved function to get traffic-light status for all VMs.\n// This function is defined in kql-functions.bicep and stored in the workspace.\n// Use for: showing reusable KQL abstractions.\nvmHealth()\n| order by case(Status == \"Red\", 0, Status == \"Orange\", 1, 2) asc"
+              },
+              {
+                "name": "kql-function-envhealth",
+                "displayName": "20 — Functions · envHealth() — combined environment health",
+                "query": "// Call the envHealth() function for a combined traffic-light view across\n// VMs, AKS pods, and App Insights. Cross-workspace, single function call.\n// Use for: showing how functions compose and abstract complexity.\nenvHealth()"
+              },
+              {
+                "name": "rbac-granular-proof",
+                "displayName": "21 — RBAC · Granular RBAC proof (ABAC conditions)",
+                "query": "// Granular RBAC demo: run this query to see SecurityAudit_CL events.\n// With full access: all rows visible (all severities).\n// With table-level ABAC: only SecurityAudit_CL is queryable.\n// With row-level ABAC (Severity==Critical): only Critical rows appear.\n// Use for: proving ABAC table/row-level filtering.\nSecurityAudit_CL\n| where TimeGenerated > ago(24h)\n| summarize EventCount = count() by Severity, EventType\n| order by Severity asc, EventType asc"
+              },
+              {
+                "name": "availability-test-results",
+                "displayName": "22 — Availability · Global test results (last 1h)",
+                "query": "[replace('__APPI_LAW__', parameters('appInsightsLawName'), '// Availability test results from 5 global locations.\n// Source: workspace(\"__APPI_LAW__\").AppAvailabilityResults.\nworkspace(\"__APPI_LAW__\").AppAvailabilityResults\n| where TimeGenerated > ago(1h)\n| summarize SuccessCount = countif(Success == 1),\n            FailCount = countif(Success == 0),\n            AvgDurationMs = avg(DurationMs)\n            by Name, Location\n| extend Status = iff(FailCount > 0, \"FAIL\", \"PASS\")\n| order by Name asc, Location asc')]"
+              },
+              {
+                "name": "connection-monitor-results",
+                "displayName": "23 — Network · Connection Monitor results (VMs → App Service)",
+                "query": "// Hop-by-hop network health from each lab VM to the App Service HTTPS endpoint.\n// Source: \"NWConnectionMonitorTestResult\" — written by Network Watcher Connection Monitor.\n// Use for: spotting transient or geographic packet-loss / latency issues.\nNWConnectionMonitorTestResult\n| where TimeGenerated > ago(1h)\n| summarize ChecksFailedPct = round(100.0 * countif(TestResult != \"Pass\") / count(), 2),\n            AvgRttMs = round(avg(AvgRoundTripTimeMs), 1)\n          by SourceName, DestinationName, bin(TimeGenerated, 5m)\n| order by TimeGenerated desc, SourceName asc"
+              },
+              {
+                "name": "traffic-analytics-top-talkers",
+                "displayName": "24 — Network · Traffic Analytics top-talkers (Flow Logs)",
+                "query": "// Top inbound/outbound IP conversations enriched by Traffic Analytics.\n// Source: \"NTANetAnalytics\" — VNet flow logs + Traffic Analytics geo/topology enrichment.\n// Use for: surfacing unexpected egress destinations or noisy chatty peers.\nNTANetAnalytics\n| where TimeGenerated > ago(1h)\n| where SubType == \"FlowLog\"\n| where FlowDirection in (\"I\", \"O\")\n| extend Direction = iff(FlowDirection == \"I\", \"Inbound\", \"Outbound\")\n| summarize Flows = count(), BytesSrcToDest = sum(BytesSrcToDest), BytesDestToSrc = sum(BytesDestToSrc)\n          by Direction, SrcIp, DestIp, L4Protocol\n| top 20 by Flows desc"
+              },
+              {
+                "name": "kv-insights-operations",
+                "displayName": "25 — Key Vault · AuditEvent operations (last 1h)",
+                "query": "// Every key-vault data-plane operation (get/list/set) — the data behind Key Vault Insights.\n// Source: \"AzureDiagnostics\" with ResourceType KEYVAULTS.\n// Use for: tracking secret access, expiring credential rotation, suspicious activity.\nAzureDiagnostics\n| where ResourceType == \"VAULTS\" and Category == \"AuditEvent\"\n| where TimeGenerated > ago(1h)\n| summarize Calls = count() by OperationName, ResultType, identity_claim_appid_g, CallerIPAddress\n| order by Calls desc"
+              },
+              {
+                "name": "storage-insights-transactions",
+                "displayName": "26 — Storage · Transactions per API (last 1h)",
+                "query": "// Storage Insights backing data: transaction counts + total request units per API.\n// Source: \"AzureMetrics\" with ResourceProvider MICROSOFT.STORAGE.\n// Use for: top APIs, throttling investigations, capacity trending.\nAzureMetrics\n| where ResourceProvider == \"MICROSOFT.STORAGE\"\n| where TimeGenerated > ago(1h)\n| where MetricName in (\"Transactions\", \"SuccessE2ELatency\", \"Ingress\", \"Egress\")\n| summarize Avg = avg(Average), Total = sum(Total) by MetricName, bin(TimeGenerated, 5m)\n| render timechart"
+              },
+              {
+                "name": "custom-metrics-cart-value",
+                "displayName": "27 — Custom · App Insights amlab.cartValue metric (1h)",
+                "query": "[replace('__APPI_LAW__', parameters('appInsightsLawName'), '// Custom metric emitted by the .NET app on /api/checkout.\n// Source: workspace(\"__APPI_LAW__\").AppMetrics (the App Insights LAW).\n// Demonstrates \"codeless + TrackMetric\" coexistence: SDK pre-aggregates locally.\nworkspace(\"__APPI_LAW__\").AppMetrics\n| where TimeGenerated > ago(1h)\n| where Name == \"amlab.cartValue\"\n| summarize Avg = avg(Sum / ItemCount), P95 = percentile(Sum / ItemCount, 95), Count = sum(ItemCount)\n          by bin(TimeGenerated, 5m)\n| render timechart')]"
+              },
+              {
+                "name": "custom-events-checkouts",
+                "displayName": "28 — Custom · CheckoutCompleted events (1h)",
+                "query": "[replace('__APPI_LAW__', parameters('appInsightsLawName'), '// Custom event from /api/checkout — payment ok vs declined breakdown.\n// Source: workspace(\"__APPI_LAW__\").AppEvents (the App Insights LAW).\nworkspace(\"__APPI_LAW__\").AppEvents\n| where TimeGenerated > ago(1h)\n| where Name == \"CheckoutCompleted\"\n| extend paymentResult = tostring(parse_json(Properties).paymentResult)\n| summarize Count = count() by paymentResult, bin(TimeGenerated, 5m)\n| render columnchart kind=stacked')]"
+              },
+              {
+                "name": "sentinel-incidents",
+                "displayName": "29 — Sentinel · Recent incidents (24h)",
+                "query": "// Sentinel incidents raised in the last 24h. Empty if Sentinel was disabled at deploy.\n// Source: \"SecurityIncident\" (Sentinel-managed table on the central LAW).\nSecurityIncident\n| where TimeGenerated > ago(24h)\n| project TimeGenerated, IncidentNumber, Title, Severity, Status, CreatedTime, ClassificationReason\n| order by TimeGenerated desc"
+              },
+              {
+                "name": "connection-monitor-availability",
+                "displayName": "30 — Network · End-to-end availability over 24h",
+                "query": "// 1-hour buckets of connectivity availability per (source, destination) pair.\n// Source: \"NWConnectionMonitorTestResult\".\nNWConnectionMonitorTestResult\n| where TimeGenerated > ago(24h)\n| summarize\n      Passes = countif(TestResult == \"Pass\"),\n      Fails = countif(TestResult != \"Pass\"),\n      AvailabilityPct = round(100.0 * countif(TestResult == \"Pass\") / count(), 2)\n    by SourceName, DestinationName, bin(TimeGenerated, 1h)\n| render timechart"
+              }
+            ]
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "savedSearches",
+                "count": "[length(variables('queries'))]"
+              },
+              "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
+              "apiVersion": "2020-08-01",
+              "name": "[format('{0}/{1}', parameters('centralLawName'), variables('queries')[copyIndex()].name)]",
+              "properties": {
+                "category": "[variables('category')]",
+                "displayName": "[variables('queries')[copyIndex()].displayName]",
+                "query": "[variables('queries')[copyIndex()].query]",
+                "version": 2
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'law-appinsights')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "kql-functions",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "centralLawName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
+          },
+          "appInsightsLawName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-appinsights'), '2022-09-01').outputs.name.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "13441797547168921085"
+            }
+          },
+          "parameters": {
+            "centralLawName": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW name."
+              }
+            },
+            "appInsightsLawName": {
+              "type": "string",
+              "metadata": {
+                "description": "App Insights LAW name (for cross-workspace functions)."
+              }
+            }
+          },
+          "variables": {
+            "category": "AzureMonitorDemoLab"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
+              "apiVersion": "2020-08-01",
+              "name": "[format('{0}/{1}', parameters('centralLawName'), 'fn-vmHealth')]",
+              "properties": {
+                "category": "[variables('category')]",
+                "displayName": "Function: vmHealth() — traffic-light status for all VMs",
+                "functionAlias": "vmHealth",
+                "functionParameters": "",
+                "query": "let heartbeats = Heartbeat\r\n  | summarize LastHB = max(TimeGenerated) by Computer, OSType\r\n  | extend MinutesSinceHB = datetime_diff(\"minute\", now(), LastHB);\r\nlet cpu = InsightsMetrics\r\n  | where TimeGenerated > ago(15m)\r\n  | where Namespace == \"Processor\" and Name == \"UtilizationPercentage\"\r\n  | summarize AvgCpu = avg(Val) by Computer;\r\nheartbeats\r\n| join kind=leftouter cpu on Computer\r\n| extend AvgCpu = coalesce(AvgCpu, 0.0)\r\n| extend Status = case(\r\n    MinutesSinceHB > 5 or AvgCpu > 90, \"Red\",\r\n    MinutesSinceHB > 2 or AvgCpu > 70, \"Orange\",\r\n    \"Green\")\r\n| project Computer, OSType, LastHB, MinutesSinceHB, AvgCpu, Status",
+                "version": 2
+              }
+            },
+            {
+              "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
+              "apiVersion": "2020-08-01",
+              "name": "[format('{0}/{1}', parameters('centralLawName'), 'fn-aksHealth')]",
+              "properties": {
+                "category": "[variables('category')]",
+                "displayName": "Function: aksHealth() — traffic-light status for AKS pods",
+                "functionAlias": "aksHealth",
+                "functionParameters": "",
+                "query": "KubePodInventory\r\n| where TimeGenerated > ago(15m)\r\n| summarize Restarts = sum(toint(ContainerRestartCount)),\r\n            arg_max(TimeGenerated, PodStatus) by Namespace, Name, ControllerName\r\n| extend Status = case(\r\n    PodStatus !in (\"Running\",\"Succeeded\") or Restarts > 10, \"Red\",\r\n    Restarts > 3, \"Orange\",\r\n    \"Green\")\r\n| project Namespace, Pod = Name, Controller = ControllerName, PodStatus, Restarts, Status",
+                "version": 2
+              }
+            },
+            {
+              "type": "Microsoft.OperationalInsights/workspaces/savedSearches",
+              "apiVersion": "2020-08-01",
+              "name": "[format('{0}/{1}', parameters('centralLawName'), 'fn-envHealth')]",
+              "properties": {
+                "category": "[variables('category')]",
+                "displayName": "Function: envHealth() — combined environment health",
+                "functionAlias": "envHealth",
+                "functionParameters": "",
+                "query": "[replace('__APPI_LAW__', parameters('appInsightsLawName'), 'let vms = vmHealth()\r\n  | project ResourceType = \"VM\", ResourceName = Computer, Status, Detail = strcat(\"CPU=\", round(AvgCpu,1), \"% HB=\", MinutesSinceHB, \"m ago\");\r\nlet pods = aksHealth()\r\n  | project ResourceType = \"AKS Pod\", ResourceName = Pod, Status, Detail = strcat(\"Restarts=\", Restarts, \" Status=\", PodStatus);\r\nlet appi = workspace(\"__APPI_LAW__\").AppRequests\r\n  | where TimeGenerated > ago(15m)\r\n  | summarize Total = count(), Failed = countif(Success == false)\r\n  | extend FailPct = round(100.0 * Failed / Total, 1)\r\n  | extend Status = case(FailPct > 10, \"Red\", FailPct > 5, \"Orange\", \"Green\")\r\n  | project ResourceType = \"App Insights\", ResourceName = \"App Service\", Status, Detail = strcat(\"FailRate=\", FailPct, \"% (\", Failed, \"/\", Total, \")\");\r\nunion vms, pods, appi\r\n| order by case(Status == \"Red\", 0, Status == \"Orange\", 1, 2) asc, ResourceType asc')]",
+                "version": 2
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'law-appinsights')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "workbook-traffic-lights",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[guid(resourceGroup().id, variables('workbookName'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "centralLawId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
+          },
+          "appInsightsLawName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-appinsights'), '2022-09-01').outputs.name.value]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "15552161612388443404"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Workbook resource name (a GUID-like string)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID (workbook primary scope)."
+              }
+            },
+            "appInsightsLawName": {
+              "type": "string",
+              "defaultValue": "law-amlab-appinsights",
+              "metadata": {
+                "description": "Name of the App Insights LAW (used for cross-workspace queries)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "variables": {
+            "trafficLightsQuery": "let lookback = 15m;\r\nlet nowT = now();\r\nlet vm = Heartbeat\r\n  | where TimeGenerated > ago(1h)\r\n  | summarize LastBeat = max(TimeGenerated) by Computer, OSType\r\n  | extend SecondsSince = datetime_diff(\"second\", nowT, LastBeat)\r\n  | extend Status = case(SecondsSince <= 300, \"🟢\", SecondsSince <= 900, \"🟠\", \"🔴\")\r\n  | project ResourceType = strcat(\"VM (\", OSType, \")\"), Resource = Computer, Status,\r\n            Detail = strcat(\"Last heartbeat \", SecondsSince, \"s ago\");\r\nlet aksNodes = KubeNodeInventory\r\n  | where TimeGenerated > ago(15m)\r\n  | summarize arg_max(TimeGenerated, *) by Computer\r\n  | summarize NotReady = countif(Status != \"Ready\"), Total = count();\r\nlet aksRestarts = toscalar(KubePodInventory\r\n  | where TimeGenerated > ago(15m)\r\n  | summarize Restarts = sum(toint(ContainerRestartCount))\r\n  | project Restarts);\r\nlet aks = aksNodes\r\n  | extend Restarts = aksRestarts\r\n  | extend Status = case(Total == 0, \"🔴\", NotReady > 0, \"🔴\", Restarts > 5, \"🟠\", \"🟢\")\r\n  | extend Detail = strcat(Total - NotReady, \"/\", Total, \" nodes Ready · \", Restarts, \" restarts (15m)\")\r\n  | project ResourceType = \"AKS Cluster\", Resource = \"aks\", Status, Detail;\r\nlet app = AppServiceHTTPLogs\r\n  | where TimeGenerated > ago(15m)\r\n  | summarize FiveXX = countif(ScStatus >= 500), Total = count() by _ResourceId\r\n  | extend Status = case(FiveXX >= 5, \"🔴\", FiveXX > 0, \"🟠\", \"🟢\")\r\n  | extend ResourceType = \"App Service\", Resource = tostring(split(_ResourceId, \"/\")[8])\r\n  | project ResourceType, Resource, Status, Detail = strcat(Total, \" req · \", FiveXX, \" 5xx (15m)\");\r\nlet appi = workspace(\"__APPI_LAW__\").AppRequests\r\n  | where TimeGenerated > ago(15m)\r\n  | summarize Total = count(), Failed = countif(Success == false)\r\n  | extend Status = case(Failed >= 10, \"🔴\", Failed > 0, \"🟠\", \"🟢\")\r\n  | project ResourceType = \"App Insights\", Resource = \"appi\", Status,\r\n            Detail = strcat(Total, \" requests · \", Failed, \" failed (15m)\");\r\nunion isfuzzy=true vm, aks, app, appi\r\n| extend SortKey = case(Status == \"🔴\", 0, Status == \"🟠\", 1, 2)\r\n| order by SortKey asc, ResourceType asc\r\n| project-away SortKey\r\n",
+            "queryFinal": "[replace(variables('trafficLightsQuery'), '__APPI_LAW__', parameters('appInsightsLawName'))]",
+            "summaryTilesQuery": "[replace('let vmsOnline = toscalar(Heartbeat | where TimeGenerated > ago(5m) | summarize dcount(Computer));\r\nlet aksReady = toscalar(KubeNodeInventory | where TimeGenerated > ago(15m) | summarize arg_max(TimeGenerated, *) by Computer | where Status == \"Ready\" | summarize count());\r\nlet totalReqs = toscalar(workspace(\"__APPI_LAW__\").AppRequests | where TimeGenerated > ago(1h) | summarize count());\r\nlet failedReqs = toscalar(workspace(\"__APPI_LAW__\").AppRequests | where TimeGenerated > ago(1h) | where Success == false | summarize count());\r\nlet avgLatency = toscalar(workspace(\"__APPI_LAW__\").AppRequests | where TimeGenerated > ago(1h) | summarize round(avg(DurationMs), 0));\r\nlet ingestMB = toscalar(Usage | where TimeGenerated > startofday(now()) | summarize round(sum(Quantity), 1));\r\nprint a=1\r\n| project Metric  = pack_array(\"💻 VMs Online\", \"☸️ AKS Nodes\", \"🌐 Requests (1h)\", \"❌ Failed (1h)\", \"⏱️ Avg Latency\", \"📦 Ingest Today\"),\r\n          Value   = pack_array(toreal(vmsOnline), toreal(aksReady), toreal(totalReqs), toreal(failedReqs), toreal(avgLatency), toreal(ingestMB)),\r\n          Suffix  = pack_array(\"\", \"\", \"\", \"\", \"ms\", \"MB\")\r\n| mv-expand Metric to typeof(string), Value to typeof(real), Suffix to typeof(string)\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
+            "vmCpuQuery": "InsightsMetrics\r\n| where Namespace == \"Processor\" and Name == \"UtilizationPercentage\"\r\n| summarize AvgCPU = round(avg(Val), 1) by bin(TimeGenerated, 5m), Computer\r\n| render timechart\r\n",
+            "vmMemoryQuery": "InsightsMetrics\r\n| where Namespace == \"Memory\" and Name == \"AvailableMB\"\r\n| summarize AvailMB = round(avg(Val), 0) by bin(TimeGenerated, 5m), Computer\r\n| render timechart\r\n",
+            "aksNodeCpuQuery": "Perf\r\n| where ObjectName == \"K8SNode\" and CounterName == \"cpuUsageNanoCores\"\r\n| summarize CPU_millicores = round(avg(CounterValue / 1000000.0), 0) by bin(TimeGenerated, 5m), Computer\r\n| render timechart\r\n",
+            "aksPodRestartsQuery": "KubePodInventory\r\n| summarize MaxRestarts = max(toint(ContainerRestartCount)) by Name, bin(TimeGenerated, 5m)\r\n| summarize TotalRestarts = sum(MaxRestarts) by bin(TimeGenerated, 5m)\r\n| render areachart\r\n",
+            "responseTimeQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\r\n| summarize P50 = percentile(DurationMs, 50), P95 = percentile(DurationMs, 95), P99 = percentile(DurationMs, 99) by bin(TimeGenerated, 5m)\r\n| render timechart\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
+            "slowestOpsQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\r\n| summarize AvgDuration = round(avg(DurationMs), 1), Requests = count() by OperationName\r\n| top 10 by AvgDuration desc\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
+            "appiDetailQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\r\n| summarize Failed = countif(Success == false), OK = countif(Success == true) by bin(TimeGenerated, 5m)\r\n| render timechart\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
+            "alertActivityQuery": "AzureActivity\r\n| where CategoryValue == \"Alert\"\r\n| project TimeGenerated, Operation = OperationNameValue, Status = ActivityStatusValue, Caller\r\n| order by TimeGenerated desc\r\n| take 25\r\n",
+            "dataIngestionQuery": "Usage\r\n| where TimeGenerated > startofday(now())\r\n| summarize IngestedMB = round(sum(Quantity), 2) by DataType\r\n| where IngestedMB > 0.01\r\n| top 15 by IngestedMB desc\r\n| render barchart\r\n",
+            "workbookContent": {
+              "version": "Notebook/1.0",
+              "items": [
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "## 🚦 Azure Monitor Demo Lab — Health Dashboard\n\nOne-glance overview of every resource in the demo lab.\n\n🟢 Healthy — 🟠 Warning — 🔴 Critical"
+                  },
+                  "name": "header"
+                },
+                {
+                  "type": 9,
+                  "content": {
+                    "version": "KqlParameterItem/1.0",
+                    "parameters": [
+                      {
+                        "id": "p_timeRange",
+                        "version": "KqlParameterItem/1.0",
+                        "name": "TimeRange",
+                        "type": 4,
+                        "isRequired": true,
+                        "value": {
+                          "durationMs": 3600000
+                        },
+                        "typeSettings": {
+                          "selectableValues": [
+                            {
+                              "durationMs": 900000
+                            },
+                            {
+                              "durationMs": 1800000
+                            },
+                            {
+                              "durationMs": 3600000
+                            },
+                            {
+                              "durationMs": 14400000
+                            },
+                            {
+                              "durationMs": 86400000
+                            }
+                          ]
+                        }
+                      }
+                    ],
+                    "style": "pills",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "parameters"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('summaryTilesQuery')]",
+                    "size": 4,
+                    "title": "Environment at a Glance",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "tiles",
+                    "tileSettings": {
+                      "titleContent": {
+                        "columnMatch": "Metric",
+                        "formatter": 1
+                      },
+                      "leftContent": {
+                        "columnMatch": "Value",
+                        "formatter": 12,
+                        "formatOptions": {
+                          "palette": "auto"
+                        },
+                        "numberFormat": {
+                          "unit": 0,
+                          "options": {
+                            "style": "decimal",
+                            "maximumFractionDigits": 0
+                          }
+                        }
+                      },
+                      "secondaryContent": {
+                        "columnMatch": "Suffix",
+                        "formatter": 1
+                      },
+                      "showBorder": true
+                    }
+                  },
+                  "name": "summaryTiles"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('queryFinal')]",
+                    "size": 1,
+                    "title": "Resource Health — Traffic Lights",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "table",
+                    "gridSettings": {
+                      "rowLimit": 200,
+                      "filter": true
+                    }
+                  },
+                  "name": "trafficLights"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "---\n## 📈 Infrastructure Trends"
+                  },
+                  "name": "infraHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('vmCpuQuery')]",
+                    "size": 0,
+                    "title": "VM CPU Utilization (%)",
+                    "timeContextFromParameter": "TimeRange",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "customWidth": "50",
+                  "name": "vmCpu"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('vmMemoryQuery')]",
+                    "size": 0,
+                    "title": "VM Available Memory (MB)",
+                    "timeContextFromParameter": "TimeRange",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "customWidth": "50",
+                  "name": "vmMemory"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('aksNodeCpuQuery')]",
+                    "size": 0,
+                    "title": "AKS Node CPU (millicores)",
+                    "timeContextFromParameter": "TimeRange",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "customWidth": "50",
+                  "name": "aksNodeCpu"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('aksPodRestartsQuery')]",
+                    "size": 0,
+                    "title": "AKS Pod Restarts",
+                    "timeContextFromParameter": "TimeRange",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "customWidth": "50",
+                  "name": "aksPodRestarts"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "---\n## 🌐 Application Performance"
+                  },
+                  "name": "appHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('responseTimeQuery')]",
+                    "size": 0,
+                    "title": "Response Time — P50 / P95 / P99 (ms)",
+                    "timeContextFromParameter": "TimeRange",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "customWidth": "50",
+                  "name": "responseTime"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('slowestOpsQuery')]",
+                    "size": 0,
+                    "title": "Slowest Operations (avg ms)",
+                    "timeContextFromParameter": "TimeRange",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "table"
+                  },
+                  "customWidth": "50",
+                  "name": "slowestOps"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "AppServiceHTTPLogs\n| summarize Hits = count() by tostring(ScStatus), bin(TimeGenerated, 5m)\n| render columnchart",
+                    "size": 0,
+                    "title": "App Service HTTP Status Codes",
+                    "timeContextFromParameter": "TimeRange",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "customWidth": "50",
+                  "name": "appServiceStatus"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('appiDetailQuery')]",
+                    "size": 0,
+                    "title": "App Insights — Requests OK vs Failed",
+                    "timeContextFromParameter": "TimeRange",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "customWidth": "50",
+                  "name": "appiRequests"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "---\n## ⚡ Platform Health"
+                  },
+                  "name": "platformHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('alertActivityQuery')]",
+                    "size": 0,
+                    "title": "Recent Alert Activity",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "table"
+                  },
+                  "customWidth": "50",
+                  "name": "alertActivity"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('dataIngestionQuery')]",
+                    "size": 0,
+                    "title": "Data Ingestion Today (MB by table)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "customWidth": "50",
+                  "name": "dataIngestion"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "---\n## 🔎 Detail Panels\n\nDrill-down views that explain *why* a row is 🔴 or 🟠."
+                  },
+                  "name": "detailHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "Heartbeat\n| where TimeGenerated > ago(1h)\n| summarize LastBeat = max(TimeGenerated) by Computer, OSType\n| extend SecondsSince = datetime_diff(\"second\", now(), LastBeat)\n| order by SecondsSince desc",
+                    "size": 0,
+                    "title": "VM Heartbeat Detail",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "table"
+                  },
+                  "customWidth": "50",
+                  "name": "vmDetail"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "KubePodInventory\n| where TimeGenerated > ago(15m)\n| summarize arg_max(TimeGenerated, *) by Name\n| project Namespace, Name, PodStatus, ContainerRestartCount, ContainerStatus, Computer\n| order by toint(ContainerRestartCount) desc",
+                    "size": 0,
+                    "title": "AKS Pod State Detail",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "table"
+                  },
+                  "customWidth": "50",
+                  "name": "aksDetail"
+                }
+              ],
+              "fallbackResourceIds": [
+                "[parameters('centralLawId')]"
+              ],
+              "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/workbooks",
+              "apiVersion": "2023-06-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "shared",
+              "properties": {
+                "displayName": "Azure Monitor Demo Lab — Health Dashboard",
+                "description": "Comprehensive health dashboard with traffic lights, infrastructure trends, application performance, and platform monitoring.",
+                "serializedData": "[string(variables('workbookContent'))]",
+                "category": "workbook",
+                "sourceId": "[parameters('centralLawId')]",
+                "version": "2.0"
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/workbooks', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'law-appinsights')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "workbook-cost",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[guid(resourceGroup().id, variables('costWorkbookName'))]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "centralLawId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "1574700689098493917"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Workbook resource name (must be GUID-like)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID (workbook scope)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "variables": {
+            "ingestByTableQuery": "Usage\r\n| where TimeGenerated > ago(7d)\r\n| where IsBillable == true\r\n| summarize GB = round(sum(Quantity) / 1024.0, 3) by DataType, bin(TimeGenerated, 1d)\r\n| order by TimeGenerated desc, GB desc\r\n| render columnchart kind=stacked\r\n",
+            "topTablesQuery": "Usage\r\n| where TimeGenerated > ago(24h)\r\n| where IsBillable == true\r\n| summarize GB_24h = round(sum(Quantity) / 1024.0, 3) by DataType\r\n| top 15 by GB_24h desc\r\n| render barchart\r\n",
+            "dailyTotalQuery": "Usage\r\n| where IsBillable == true\r\n| summarize GB = round(sum(Quantity) / 1024.0, 3) by bin(TimeGenerated, 1d)\r\n| order by TimeGenerated asc\r\n| render timechart\r\n",
+            "perSolutionQuery": "Usage\r\n| where TimeGenerated > ago(7d)\r\n| where IsBillable == true\r\n| summarize GB = round(sum(Quantity) / 1024.0, 3) by Solution\r\n| top 10 by GB desc\r\n| render piechart\r\n",
+            "capBurnQuery": "Usage\r\n| where IsBillable == true\r\n| where TimeGenerated >= startofday(now())\r\n| summarize TodayGB = round(sum(Quantity) / 1024.0, 3)\r\n| extend CapGB = toreal(1.0)\r\n| extend PercentOfCap = round(100.0 * TodayGB / CapGB, 1)\r\n| project Metric = pack_array(\"Today (GB)\", \"Daily cap (GB)\", \"% of cap used\"),\r\n          Value  = pack_array(TodayGB, CapGB, PercentOfCap)\r\n| mv-expand Metric to typeof(string), Value to typeof(real)\r\n",
+            "workbookContent": {
+              "version": "Notebook/1.0",
+              "items": [
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "## 💰 Cost of Monitoring — LAW Ingestion Overview\n\nEverything here reads from the built-in `Usage` table. Use this to pick candidates for **DCR transformations** (see [14 — Cost · Workspace Transformation effect]) and **Basic Logs** (see `toggle-table-plan.ps1`)."
+                  },
+                  "name": "header"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('capBurnQuery')]",
+                    "size": 4,
+                    "title": "Daily cap burn (today)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces",
+                    "visualization": "tiles"
+                  },
+                  "name": "capBurn"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('dailyTotalQuery')]",
+                    "size": 1,
+                    "title": "Total GB ingested per day (all tables)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "dailyTotal"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('topTablesQuery')]",
+                    "size": 1,
+                    "title": "Top tables (last 24h)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "topTables"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('ingestByTableQuery')]",
+                    "size": 1,
+                    "title": "Stacked daily ingestion by table (7d)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "ingestByTable"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('perSolutionQuery')]",
+                    "size": 1,
+                    "title": "GB by solution (7d)",
+                    "queryType": 0,
+                    "resourceType": "microsoft.operationalinsights/workspaces"
+                  },
+                  "name": "perSolution"
+                }
+              ],
+              "fallbackResourceIds": [
+                "[parameters('centralLawId')]"
+              ]
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/workbooks",
+              "apiVersion": "2023-06-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "shared",
+              "properties": {
+                "displayName": "💰 Azure Monitor Demo Lab — Cost of Monitoring",
+                "serializedData": "[string(variables('workbookContent'))]",
+                "category": "workbook",
+                "sourceId": "[parameters('centralLawId')]",
+                "version": "1.0"
+              }
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/workbooks', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
+      ]
+    }
+  ]
+}

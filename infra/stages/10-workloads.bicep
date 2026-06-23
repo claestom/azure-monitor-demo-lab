@@ -1,0 +1,198 @@
+targetScope = 'resourceGroup'
+
+@description('Azure region for all resources.')
+param location string = resourceGroup().location
+
+@description('Short prefix used to build resource names.')
+@minLength(3)
+@maxLength(8)
+param namePrefix string = 'amlab'
+
+@description('Admin username for the demo VMs.')
+param vmAdminUsername string = 'azureuser'
+
+@description('Admin password for the demo VMs.')
+@secure()
+param vmAdminPassword string
+
+@description('Deploy the Windows demo VM.')
+param deployWindowsVm bool = true
+
+@description('Deploy the Linux demo VM.')
+param deployLinuxVm bool = true
+
+@description('VM size.')
+param vmSize string = 'Standard_B2s'
+
+@description('AKS node VM size.')
+param aksNodeVmSize string = 'Standard_B2s'
+
+@description('AKS node count.')
+param aksNodeCount int = 1
+
+@description('Tag every resource with this owner.')
+param ownerTag string = 'demo-lab'
+
+var suffix = uniqueString(resourceGroup().id)
+var lawCentralName = 'law-${namePrefix}-central-${take(suffix, 5)}'
+var lawAppInsightsName = 'law-${namePrefix}-appinsights-${take(suffix, 5)}'
+var appInsightsName = 'appi-${namePrefix}'
+var amwName = 'amw-${namePrefix}'
+var grafanaName = 'amg-${namePrefix}-${take(suffix, 4)}'
+var vnetName = 'vnet-${namePrefix}'
+var linuxVmName = 'vm-${namePrefix}-lin'
+var windowsVmName = 'vmwin${take(suffix, 4)}'
+var aksName = 'aks-${namePrefix}'
+var aksDnsPrefix = '${namePrefix}-${take(suffix, 6)}'
+var appPlanName = 'plan-${namePrefix}'
+var webAppName = 'app-${namePrefix}-${take(suffix, 5)}'
+var dcrVmInsightsName = 'dcr-${namePrefix}-vminsights'
+var dcrPrometheusName = 'dcr-${namePrefix}-prometheus'
+var dceName = 'dce-${namePrefix}'
+var storageAccountName = 'st${namePrefix}${take(suffix, 8)}'
+var eventHubNsName = 'evhns-${namePrefix}-${take(suffix, 5)}'
+
+var commonTags = {
+  owner: ownerTag
+  purpose: 'azure-monitor-demo-lab'
+  costCenter: 'demo'
+}
+
+var workloadSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, 'snet-workload')
+
+resource lawCentral 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+  name: lawCentralName
+}
+
+resource lawAppInsights 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+  name: lawAppInsightsName
+}
+
+resource appInsights 'Microsoft.Insights/components@2020-02-02' existing = {
+  name: appInsightsName
+}
+
+resource amw 'Microsoft.Monitor/accounts@2023-04-03' existing = {
+  name: amwName
+}
+
+resource dce 'Microsoft.Insights/dataCollectionEndpoints@2023-03-11' existing = {
+  name: dceName
+}
+
+resource dcrVmInsights 'Microsoft.Insights/dataCollectionRules@2023-03-11' existing = {
+  name: dcrVmInsightsName
+}
+
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
+  name: storageAccountName
+}
+
+resource eventHubNs 'Microsoft.EventHub/namespaces@2022-10-01-preview' existing = {
+  name: eventHubNsName
+}
+
+resource eventHubAuthRule 'Microsoft.EventHub/namespaces/authorizationRules@2022-10-01-preview' existing = {
+  parent: eventHubNs
+  name: 'RootManageSharedAccessKey'
+}
+
+module vmLinux '../modules/vm-linux.bicep' = if (deployLinuxVm) {
+  name: 'vm-linux'
+  params: {
+    vmName: linuxVmName
+    location: location
+    vmSize: vmSize
+    adminUsername: vmAdminUsername
+    adminPassword: vmAdminPassword
+    subnetId: workloadSubnetId
+    dcrId: dcrVmInsights.id
+    tags: commonTags
+  }
+}
+
+module vmWindows '../modules/vm-windows.bicep' = if (deployWindowsVm) {
+  name: 'vm-windows'
+  params: {
+    vmName: windowsVmName
+    location: location
+    vmSize: vmSize
+    adminUsername: vmAdminUsername
+    adminPassword: vmAdminPassword
+    subnetId: workloadSubnetId
+    dcrId: dcrVmInsights.id
+    tags: commonTags
+  }
+}
+
+module aks '../modules/aks.bicep' = {
+  name: 'aks'
+  params: {
+    name: aksName
+    dnsPrefix: aksDnsPrefix
+    location: location
+    nodeVmSize: aksNodeVmSize
+    nodeCount: aksNodeCount
+    centralLawId: lawCentral.id
+    azureMonitorWorkspaceId: amw.id
+    dataCollectionEndpointId: dce.id
+    dcrPrometheusName: dcrPrometheusName
+    tags: commonTags
+  }
+}
+
+module grafana '../modules/grafana.bicep' = {
+  name: 'grafana'
+  params: {
+    name: grafanaName
+    location: location
+    azureMonitorWorkspaceId: amw.id
+    tags: commonTags
+  }
+}
+
+module appService '../modules/appservice.bicep' = {
+  name: 'appservice'
+  params: {
+    planName: appPlanName
+    webAppName: webAppName
+    location: location
+    appInsightsConnectionString: appInsights.properties.ConnectionString
+    appInsightsInstrumentationKey: appInsights.properties.InstrumentationKey
+    centralLawId: lawCentral.id
+    diagStorageAccountId: storageAccount.id
+    diagEventHubAuthRuleId: eventHubAuthRule.id
+    diagEventHubName: 'diagstream'
+    tags: commonTags
+  }
+}
+
+module connectionMonitor '../modules/connection-monitor.bicep' = {
+  scope: resourceGroup(subscription().subscriptionId, 'NetworkWatcherRG')
+  name: 'connection-monitor'
+  params: {
+    location: location
+    centralLawId: lawCentral.id
+    linuxVmId: deployLinuxVm ? vmLinux.outputs.vmId : ''
+    windowsVmId: deployWindowsVm ? vmWindows.outputs.vmId : ''
+    appServiceHost: appService.outputs.defaultHost
+    tags: commonTags
+  }
+}
+
+module flowLogs '../modules/flow-logs.bicep' = {
+  scope: resourceGroup(subscription().subscriptionId, 'NetworkWatcherRG')
+  name: 'flow-logs'
+  params: {
+    name: 'fl-${namePrefix}'
+    location: location
+    targetVnetId: resourceId('Microsoft.Network/virtualNetworks', vnetName)
+    networkWatcherId: connectionMonitor.outputs.networkWatcherId
+    storageAccountId: storageAccount.id
+    centralLawId: lawCentral.id
+    centralLawRegion: location
+    centralLawCustomerId: lawCentral.properties.customerId
+    retentionDays: 7
+    tags: commonTags
+  }
+}
