@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "2475163832458876058"
+      "templateHash": "3100826188964742058"
     }
   },
   "parameters": {
@@ -128,6 +128,20 @@
       "metadata": {
         "description": "Enable Microsoft Sentinel on the central workspace. Default true."
       }
+    },
+    "enablePlatformLogsDcr": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable the platform-logs DCR (scenario 51, public preview). Off by default — the DCR and central LAW must be in a region that supports the preview."
+      }
+    },
+    "enableMetricsExportDcr": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Enable the metrics-export DCR (scenario 52, GA). Off by default — the DCR and central LAW must be in the same region."
+      }
     }
   },
   "variables": {
@@ -157,6 +171,8 @@
     "costWorkbookName": "[format('wb-{0}-cost', parameters('namePrefix'))]",
     "securityWorkbookName": "[format('wb-{0}-security', parameters('namePrefix'))]",
     "sliUamiName": "[format('id-sli-{0}', parameters('namePrefix'))]",
+    "platformLogsDcrName": "[format('dcr-{0}-platformlogs', parameters('namePrefix'))]",
+    "metricsExportDcrName": "[format('dcr-{0}-metricsexport', parameters('namePrefix'))]",
     "commonTags": {
       "owner": "[parameters('ownerTag')]",
       "purpose": "azure-monitor-demo-lab",
@@ -5091,7 +5107,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "15495859199310160941"
+              "templateHash": "2744902256941642038"
             }
           },
           "parameters": {
@@ -5116,7 +5132,7 @@
             "testUrl": {
               "type": "string",
               "metadata": {
-                "description": "URL to test (e.g. https://app-amlab-tr75i.azurewebsites.net/)."
+                "description": "URL to test (e.g. https://app-<namePrefix>-<suffix>.azurewebsites.net/)."
               }
             },
             "actionGroupId": {
@@ -5781,7 +5797,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "5499073531722938190"
+              "templateHash": "8210817863758867681"
             }
           },
           "parameters": {
@@ -5853,7 +5869,7 @@
                     },
                     {
                       "name": "SampleCount",
-                      "type": "int",
+                      "type": "long",
                       "description": "Number of raw samples aggregated"
                     }
                   ]
@@ -6448,6 +6464,310 @@
       "dependsOn": [
         "lawCentral",
         "storageAccount"
+      ]
+    },
+    "platformLogsDcr": {
+      "condition": "[parameters('enablePlatformLogsDcr')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "platform-logs-dcr",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('platformLogsDcrName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "centralLawId": {
+            "value": "[reference('lawCentral').outputs.id.value]"
+          },
+          "keyVaultName": {
+            "value": "[variables('keyVaultName')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "8576984864352820430"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Platform-logs DCR name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region. Must match the destination LAW region and be a supported preview region."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID (Log Analytics destination + DCR data path)."
+              }
+            },
+            "keyVaultName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Key Vault to associate the DCR with (the monitored resource)."
+              }
+            },
+            "streams": {
+              "type": "array",
+              "defaultValue": [
+                "microsoft.keyvault/vaults:Logs-Group-All"
+              ],
+              "metadata": {
+                "description": "Platform-telemetry log streams to collect (resourceType:Logs-Group-All)."
+              }
+            },
+            "associationName": {
+              "type": "string",
+              "defaultValue": "amlab-platformlogs",
+              "metadata": {
+                "description": "Name of the data collection rule association created on the Key Vault."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/dataCollectionRules",
+              "apiVersion": "2024-03-11",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "PlatformTelemetry",
+              "properties": {
+                "dataSources": {
+                  "platformTelemetry": [
+                    {
+                      "streams": "[parameters('streams')]",
+                      "name": "platformLogsSource"
+                    }
+                  ]
+                },
+                "destinations": {
+                  "logAnalytics": [
+                    {
+                      "workspaceResourceId": "[parameters('centralLawId')]",
+                      "name": "centralLaw"
+                    }
+                  ]
+                },
+                "dataFlows": [
+                  {
+                    "streams": "[parameters('streams')]",
+                    "destinations": [
+                      "centralLaw"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/dataCollectionRuleAssociations",
+              "apiVersion": "2024-03-11",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+              "name": "[parameters('associationName')]",
+              "properties": {
+                "dataCollectionRuleId": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('name'))]",
+                "description": "Platform-logs DCR association (scenario 51) — replaces per-resource diagnostic settings."
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "dcrId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('name'))]"
+            },
+            "dcrName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "keyVault",
+        "lawCentral"
+      ]
+    },
+    "metricsExportDcr": {
+      "condition": "[parameters('enableMetricsExportDcr')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "metrics-export-dcr",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('metricsExportDcrName')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "centralLawId": {
+            "value": "[reference('lawCentral').outputs.id.value]"
+          },
+          "keyVaultName": {
+            "value": "[variables('keyVaultName')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "2101187004850280446"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Metrics-export DCR name."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region. Must match the destination LAW region."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID (Log Analytics destination + DCR data path)."
+              }
+            },
+            "keyVaultName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the Key Vault to associate the DCR with (the monitored resource)."
+              }
+            },
+            "streams": {
+              "type": "array",
+              "defaultValue": [
+                "Microsoft.KeyVault/vaults:Metrics-Group-All"
+              ],
+              "metadata": {
+                "description": "Platform-telemetry metric streams to export. Use \":Metrics-Group-All\" for all metrics of a type, or narrow to specific metric names to control cost."
+              }
+            },
+            "associationName": {
+              "type": "string",
+              "defaultValue": "amlab-metricsexport",
+              "metadata": {
+                "description": "Name of the data collection rule association created on the Key Vault."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Insights/dataCollectionRules",
+              "apiVersion": "2024-03-11",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "PlatformTelemetry",
+              "properties": {
+                "dataSources": {
+                  "platformTelemetry": [
+                    {
+                      "streams": "[parameters('streams')]",
+                      "name": "metricsExportSource"
+                    }
+                  ]
+                },
+                "destinations": {
+                  "logAnalytics": [
+                    {
+                      "workspaceResourceId": "[parameters('centralLawId')]",
+                      "name": "centralLaw"
+                    }
+                  ]
+                },
+                "dataFlows": [
+                  {
+                    "streams": "[parameters('streams')]",
+                    "destinations": [
+                      "centralLaw"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/dataCollectionRuleAssociations",
+              "apiVersion": "2024-03-11",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+              "name": "[parameters('associationName')]",
+              "properties": {
+                "dataCollectionRuleId": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('name'))]",
+                "description": "Metrics-export DCR association (scenario 52) — dimensional metrics to AzureMetricsV2."
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('name'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "dcrId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('name'))]"
+            },
+            "dcrName": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "keyVault",
+        "lawCentral"
       ]
     },
     "sentinel": {

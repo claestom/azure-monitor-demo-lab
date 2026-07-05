@@ -79,6 +79,16 @@ variable "enable_sentinel" {
   default = true
 }
 
+variable "enable_platform_logs_dcr" {
+  type    = bool
+  default = false
+}
+
+variable "enable_metrics_export_dcr" {
+  type    = bool
+  default = false
+}
+
 variable "enable_stage_a" { type = bool }
 variable "enable_stage_b" { type = bool }
 variable "enable_stage_c" { type = bool }

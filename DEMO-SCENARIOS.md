@@ -21,10 +21,10 @@ Pick a workload (or theme) and run only those scenarios. Each row links to the n
 | 🌐 **Networking (VNet + NSG)** | ⭐[34](#s34) Connection Monitor · ⭐[35](#s35) Flow Logs + Traffic Analytics · ⭐[50](#s50) Network Insights |
 | 🔑 **Platform resources (Key Vault, Storage)** | ⭐[36](#s36) Key Vault + Storage Insights |
 | 🚨 **Alerts & incident response** | [7](#s7) Alerts + Action Group · [12](#s12) AMBA · [17](#s17) Dynamic Thresholds · [23](#s23) Processing Rules · [15](#s15) Auto-mitigation · [8](#s8) Break the lab · ⭐[37](#s37) Nightly maintenance · ⭐[38](#s38) SIEM webhook |
-| 💰 **Cost & data routing** | [9](#s9) Daily caps · [11](#s11) DCR Transform · [20](#s20) Basic vs Analytics · [21](#s21) Summary Rules · ⭐[39](#s39) Data Export · ⭐[40](#s40) Diag fan-out · ⭐[41](#s41) LAW replication · ⭐[42](#s42) Cost workbook |
+| 💰 **Cost & data routing** | [9](#s9) Daily caps · [11](#s11) DCR Transform · [20](#s20) Basic vs Analytics · [21](#s21) Summary Rules · ⭐[39](#s39) Data Export · ⭐[40](#s40) Diag fan-out · ⭐[41](#s41) LAW replication · ⭐[42](#s42) Cost workbook · ⭐[51](#s51) Platform logs at scale (DCR) · ⭐[52](#s52) Metrics Export (DCR) |
 | 🔐 **Security** | [27](#s27) Granular RBAC · ⭐[43](#s43) Sentinel · ⭐[44](#s44) Search jobs + Restore · ⭐[47](#s47) Control-plane drift watch · ⭐[48](#s48) Privilege escalation watch · ⭐[49](#s49) Exfil early warning |
 | 🧠 **AI / ML in Azure Monitor** | [16](#s16) Copilot · [13](#s13) Smart Detection · [17](#s17) Dynamic Thresholds · [18](#s18) Code Optimizations · [19](#s19) Predictive autoscale |
-| 🛠️ **Platform foundations** | [5](#s5) Policy auto-onboard · [6](#s6) Cross-workspace KQL · [24](#s24) Custom Logs Ingestion API · [26](#s26) KQL Functions |
+| 🛠️ **Platform foundations** | [5](#s5) Policy auto-onboard · [6](#s6) Cross-workspace KQL · [24](#s24) Custom Logs Ingestion API · [26](#s26) KQL Functions · ⭐[51](#s51) Platform logs at scale (DCR) |
 
 > **Suggested 25-min "by-workload" demos:** App Service → 3, 22, 28, 29, 33 · AKS → 4, 14, 30, 31 · Cost → 9, 11, 20, 39, 42 · Security → 27, 47, 48 · Workload health → 1 + 45 + 46.
 
@@ -2306,6 +2306,106 @@ Scenarios [34](#s34) (Connection Monitor) and [35](#s35) (Flow Logs + Traffic An
 
 ---
 
+<a id="s51"></a>
+## 51 · 💰 Cost — Platform logs at scale with DCRs (public preview)
+
+**Audience:** platform teams, FinOps, architects managing telemetry across 1,000+ resources.
+**Time:** 4 min.
+
+### Story
+Today the lab collects Azure resource platform logs the classic way: **one diagnostic setting per resource**, pushed by the DINE policy in scenario [5](#s5). That works for ~30 resources — but a team responsible for 8,000 resources across 14 subscriptions has to configure, audit, monitor for drift, and re-enable each one individually. Azure Monitor's new **Data Collection Rules (DCRs) for Azure Resource Platform Logs** (public preview, Jun 2026) collapses all of that into **one rule associated with thousands of resources** — the same declarative model already used for agents, metrics, and custom logs. Define once, govern centrally, scale infinitely.
+
+### Diagnostic settings vs. DCR-based platform logs
+
+| Dimension | Diagnostic settings (today) | DCR-based platform logs (preview) |
+|---|---|---|
+| **Configuration** | One setting per resource; drift goes unnoticed | One DCR + DCR Associations (DCRA) across thousands of resources |
+| **Cost** | No pre-ingestion filtering | Filter & transform at ingestion time (Log Analytics destination) — drop noise before billing |
+| **Security** | Mixed auth patterns | Managed identity (system/user-assigned) + least-privilege RBAC for Storage & Event Hubs — no shared keys |
+| **Operations** | Manual onboarding, hard to roll back | ARM / Bicep / Terraform / Azure Policy; version-controlled like IaC |
+| **Governance** | Different pattern per telemetry type | One declarative model, auditable associations |
+
+### What's wired (opt-in IaC)
+
+The lab ships the DCR as code but **off by default** — the DCR and the central LAW must sit in a region that supports the preview.
+
+| Object | Value |
+|---|---|
+| Module | [`infra/modules/platform-logs-dcr.bicep`](infra/modules/platform-logs-dcr.bicep) — `PlatformTelemetry` DCR + DCR association |
+| Feature flag | `enablePlatformLogsDcr` (Bicep) / `enable_platform_logs_dcr` (Terraform) — default `false` |
+| Stream | `microsoft.keyvault/vaults:Logs-Group-All` |
+| Monitored resource | `kv-amlab-<suffix>` (via one DCR association — swap in any/many resources) |
+| Destination | `law-amlab-central` (Log Analytics — no managed identity / RBAC required) |
+
+> Enable it: `az deployment group create ... --parameters enablePlatformLogsDcr=true` (Bicep) or `enable_platform_logs_dcr = true` in `stages.tfvars` (Terraform).
+
+### Click-path
+
+1. **Contrast the current model** — `app-amlab-<suffix>` → **Diagnostic settings** → show the per-resource `send-to-central-law` row (scenario [40](#s40)). Point out that every resource in the RG has its own copy, pushed by the DINE policy from scenario [5](#s5).
+2. **Show the new model** — **Monitor → Data Collection Rules** → *Create* → **Platform logs (preview)** as the data source type → pick log categories once → target `law-amlab-central`.
+3. **Associate at scale** — instead of touching each resource, one DCRA (or an Azure Policy assignment) attaches the single rule to many resources. Show the association list.
+4. **Filter before billing** — add an ingestion-time transform on the Log Analytics destination (e.g. drop verbose categories) — the same lever as scenario [11](#s11), now applied to platform logs. Loop the saving back to the cost workbook in scenario [42](#s42).
+   > ⓘ **Preview limits:** transformations are supported only for the **Log Analytics** destination; coverage is a growing list of resource types/regions — check the [supported resource types reference](https://learn.microsoft.com/en-us/azure/azure-monitor/data-collection/platform-logs-reference) before relying on it.
+5. *(Optional)* Route the same rule to Storage (archive) and Event Hubs (SIEM stream) with managed identity — the DCR equivalent of the fan-out in scenario [40](#s40), but governed by one rule instead of three per-resource settings.
+
+### Killer line
+> *"Diagnostic settings are per-resource toil. A single DCR for platform logs is per-resource toil deleted — one rule, thousands of resources, filtered before it's billed, governed like your Bicep."*
+
+**Reference:** [Platform log collection with data collection rules (Preview)](https://learn.microsoft.com/en-us/azure/azure-monitor/data-collection/platform-logs-collect?tabs=azure-portal%2Clog-analytics-workspace) · [Announcement blog](https://techcommunity.microsoft.com/blog/azureobservabilityblog/public-preview---azure-monitor---collect-azure-resource-platform-logs-at-scale-w/4525296)
+
+---
+
+<a id="s52"></a>
+## 52 · 💰 Cost — Azure Monitor Metrics Export via DCRs (GA)
+
+**Audience:** FinOps, SRE, architects building metrics pipelines.
+**Time:** 3 min.
+
+### Story
+Scenario [39](#s39) exports **logs** out of LAW. This one exports **platform metrics** out of Azure Monitor. **Azure Monitor Metrics Export** — now **Generally Available** (Jun 2026) and expanded from 12 to **44 Azure regions** — continuously streams supported platform metrics via **data collection rules** to Storage, Event Hubs, or Log Analytics. Unlike the metrics half of diagnostic settings, DCR-based export **preserves metric dimensions**, lets you **filter by metric name** to control volume and cost, and delivers with **end-to-end latency typically under ~3 minutes**.
+
+### DCR metrics export vs. diagnostic-settings metrics
+
+| Capability | Diagnostic settings (metrics) | Metrics Export via DCR (GA) |
+|---|---|---|
+| **Dimensions** | Flattened / limited | Multidimensional fidelity preserved |
+| **Filtering** | All-or-nothing per category | Filter by specific metric names |
+| **Destinations** | Storage / Event Hubs / LAW | Storage / Event Hubs / LAW |
+| **Latency** | Higher | Typically within ~3 min end-to-end |
+| **Scale / regions** | — | 44 regions, tuned for large environments |
+
+### What's wired (opt-in IaC)
+
+The export DCR ships as code but **off by default** — the DCR and the central LAW must be in the same region.
+
+| Object | Value |
+|---|---|
+| Module | [`infra/modules/metrics-export-dcr.bicep`](infra/modules/metrics-export-dcr.bicep) — `PlatformTelemetry` DCR + DCR association |
+| Feature flag | `enableMetricsExportDcr` (Bicep) / `enable_metrics_export_dcr` (Terraform) — default `false` |
+| Stream | `Microsoft.KeyVault/vaults:Metrics-Group-All` (narrow to specific metric names to cut volume) |
+| Monitored resource | `kv-amlab-<suffix>` (dimensional metrics like `ServiceApiLatency` by `StatusCode`) |
+| Destination | `law-amlab-central` → `AzureMetricsV2` table (no managed identity / RBAC required) |
+
+> Enable it: `az deployment group create ... --parameters enableMetricsExportDcr=true` (Bicep) or `enable_metrics_export_dcr = true` in `stages.tfvars` (Terraform).
+
+### Click-path
+
+1. **Create the export** — **Monitor → Data Collection Rules** → *Create* → **Metrics export** data source → scope to a lab resource (e.g. `app-amlab-<suffix>` or `aks-amlab`).
+2. **Control what you export** — select **all supported metrics** for the resource type, or **filter to specific metric names** (e.g. only `Http5xx` + `Requests` for the App Service) to keep downstream volume — and cost — down.
+3. **Pick a destination**:
+   - **Storage** → cheap long-term metric archive (pairs with scenario [39](#s39)'s log archive).
+   - **Event Hubs** → real-time stream into a third-party observability / FinOps pipeline (pairs with scenario [40](#s40)'s fan-out).
+   - **Log Analytics** → correlate metrics with logs in KQL.
+4. **Show dimensional fidelity** — open the destination and point at a metric that still carries its dimensions (e.g. per-status-code, per-instance) — the thing diagnostic settings drops.
+5. *(Optional)* Note the latency: trigger traffic, then show the metric landing at the destination within ~3 minutes.
+
+### Killer line
+> *"Diagnostic settings flatten your metrics and give you all-or-nothing. DCR-based Metrics Export keeps every dimension, lets you ship only the metric names you care about, and lands them in under three minutes — now GA across 44 regions."*
+
+**Reference:** [Metrics export using data collection rules](https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/data-collection-metrics) · [Announcement blog](https://techcommunity.microsoft.com/blog/azureobservabilityblog/azure-monitor-metrics-export-generally-available/4523712)
+
+---
+
 ## Updated demo flow (≈50 min)
 
 | Min | Scenario |
@@ -2343,7 +2443,7 @@ Scenarios [34](#s34) (Connection Monitor) and [35](#s35) (Flow Logs + Traffic An
 | **App developers** | 3 → 28 → 29 → 14 → 30 → 18 → 33 → 25 |
 | **Platform / SRE on AKS** | 4 → 14 → 30 → 31 → 32 → 8 → 15 |
 | **Infra ops (VM + network)** | 2 → 50 → 34 → 35 → 7 → 12 → 15 |
-| **FinOps** | 9 → 11 → 20 → 21 → 39 → 42 |
+| **FinOps** | 9 → 11 → 20 → 21 → 39 → 42 → 51 → 52 |
 | **SecOps** | 27 → 47 → 48 → 49 → 44 |
 | **AI/ML curious** | 16 → 13 → 17 → 18 → 19 |
 | **Workload owners / SRE leads** | 1 → 45 → 12 → 7 → 8 (Root entity flips Unhealthy) |

@@ -63,6 +63,12 @@ param siemWebhookUrl string = ''
 @description('Enable Microsoft Sentinel on the central workspace. Default true.')
 param enableSentinel bool = true
 
+@description('Enable the platform-logs DCR (scenario 51, public preview). Off by default — the DCR and central LAW must be in a region that supports the preview.')
+param enablePlatformLogsDcr bool = false
+
+@description('Enable the metrics-export DCR (scenario 52, GA). Off by default — the DCR and central LAW must be in the same region.')
+param enableMetricsExportDcr bool = false
+
 // ---------------------------------------------------------------------------------
 // Naming
 // ---------------------------------------------------------------------------------
@@ -92,6 +98,8 @@ var keyVaultName        = 'kv-${namePrefix}-${take(suffix, 5)}'
 var costWorkbookName    = 'wb-${namePrefix}-cost'
 var securityWorkbookName = 'wb-${namePrefix}-security'
 var sliUamiName         = 'id-sli-${namePrefix}'
+var platformLogsDcrName = 'dcr-${namePrefix}-platformlogs'
+var metricsExportDcrName = 'dcr-${namePrefix}-metricsexport'
 
 var commonTags = {
   owner: ownerTag
@@ -697,6 +705,42 @@ module dataExport 'modules/data-export.bicep' = {
     storageAccountId: storageAccount.outputs.id
     tables: [ 'Heartbeat' ]
   }
+}
+
+// ---------------------------------------------------------------------------------
+// Scenario 51 — Platform logs at scale with DCRs (public preview).
+//   One PlatformTelemetry DCR + association on the Key Vault, replacing the
+//   per-resource diagnostic-setting model with a single, scale-out rule.
+//   Off by default (enablePlatformLogsDcr=false) — preview + region-limited.
+// ---------------------------------------------------------------------------------
+module platformLogsDcr 'modules/platform-logs-dcr.bicep' = if (enablePlatformLogsDcr) {
+  name: 'platform-logs-dcr'
+  params: {
+    name: platformLogsDcrName
+    location: location
+    centralLawId: lawCentral.outputs.id
+    keyVaultName: keyVaultName
+    tags: commonTags
+  }
+  dependsOn: [ keyVault ]
+}
+
+// ---------------------------------------------------------------------------------
+// Scenario 52 — Azure Monitor Metrics Export via DCRs (GA).
+//   One PlatformTelemetry DCR + association on the Key Vault, exporting
+//   dimensional platform metrics to the central LAW (AzureMetricsV2 table).
+//   Off by default (enableMetricsExportDcr=false) — DCR + LAW must share a region.
+// ---------------------------------------------------------------------------------
+module metricsExportDcr 'modules/metrics-export-dcr.bicep' = if (enableMetricsExportDcr) {
+  name: 'metrics-export-dcr'
+  params: {
+    name: metricsExportDcrName
+    location: location
+    centralLawId: lawCentral.outputs.id
+    keyVaultName: keyVaultName
+    tags: commonTags
+  }
+  dependsOn: [ keyVault ]
 }
 
 // ---------------------------------------------------------------------------------

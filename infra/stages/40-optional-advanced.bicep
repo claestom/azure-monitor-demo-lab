@@ -20,12 +20,19 @@ param deployLinuxVm bool = true
 @description('Tag every resource with this owner.')
 param ownerTag string = 'demo-lab'
 
+@description('Enable the platform-logs DCR (scenario 51, public preview). Off by default — preview + region-limited.')
+param enablePlatformLogsDcr bool = false
+
+@description('Enable the metrics-export DCR (scenario 52, GA). Off by default — DCR + LAW must share a region.')
+param enableMetricsExportDcr bool = false
+
 var suffix = uniqueString(resourceGroup().id)
 var lawCentralName = 'law-${namePrefix}-central-${take(suffix, 5)}'
 var amwName = 'amw-${namePrefix}'
 var aksName = 'aks-${namePrefix}'
 var actionGroupName = 'ag-${namePrefix}-email'
 var storageAccountName = 'st${namePrefix}${take(suffix, 8)}'
+var keyVaultName = 'kv-${namePrefix}-${take(suffix, 5)}'
 var appInsightsName = 'appi-${namePrefix}'
 var webAppName = 'app-${namePrefix}-${take(suffix, 5)}'
 var vmssName = 'vmss-${namePrefix}'
@@ -149,6 +156,38 @@ module sliIdentity '../modules/sli-identity.bicep' = {
     uamiName: sliUamiName
     location: location
     azureMonitorWorkspaceId: amw.id
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Scenario 51 — Platform logs at scale with DCRs (public preview).
+//   Single PlatformTelemetry DCR + association on the Key Vault, replacing the
+//   per-resource diagnostic-setting model. Off by default (preview + region-limited).
+// ---------------------------------------------------------------------------------
+module platformLogsDcr '../modules/platform-logs-dcr.bicep' = if (enablePlatformLogsDcr) {
+  name: 'platform-logs-dcr'
+  params: {
+    name: 'dcr-${namePrefix}-platformlogs'
+    location: location
+    centralLawId: lawCentral.id
+    keyVaultName: keyVaultName
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
+// Scenario 52 — Azure Monitor Metrics Export via DCRs (GA).
+//   Single PlatformTelemetry DCR + association on the Key Vault, exporting
+//   dimensional platform metrics to the central LAW. Off by default (region-bound).
+// ---------------------------------------------------------------------------------
+module metricsExportDcr '../modules/metrics-export-dcr.bicep' = if (enableMetricsExportDcr) {
+  name: 'metrics-export-dcr'
+  params: {
+    name: 'dcr-${namePrefix}-metricsexport'
+    location: location
+    centralLawId: lawCentral.id
+    keyVaultName: keyVaultName
     tags: commonTags
   }
 }

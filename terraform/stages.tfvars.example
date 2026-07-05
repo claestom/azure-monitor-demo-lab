@@ -28,3 +28,10 @@ enable_stage_b = false  # Workloads (App Service, AKS, VMs, VMSS, Connection Mon
 enable_stage_c = false  # Alerting (metric/log/health alerts, action groups, AMBA, Prom rules)
 enable_stage_d = false  # Security posture (Sentinel, custom logs, exfil early warning)
 enable_stage_e = false  # Optional advanced (auto-mitigation Logic App, availability test, etc.)
+
+# Optional preview/GA telemetry features (part of Stage E). Off by default because
+# the DCR and the central LAW must be in the same region and the platform-logs DCR
+# is still in public preview (region-limited). Flip to true once you've confirmed
+# your region is supported.
+enable_platform_logs_dcr  = false  # Scenario 51 - platform logs at scale via DCR (public preview)
+enable_metrics_export_dcr = false  # Scenario 52 - metrics export via DCR (GA)

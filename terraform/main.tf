@@ -132,12 +132,14 @@ resource "azapi_resource" "stage_e" {
       mode     = "Incremental"
       template = sensitive(jsondecode(file("${path.module}/../infra/stages/40-optional-advanced.json")))
       parameters = {
-        location        = { value = var.location }
-        namePrefix      = { value = var.name_prefix }
-        enableSentinel  = { value = var.enable_sentinel }
-        deployWindowsVm = { value = var.deploy_windows_vm }
-        deployLinuxVm   = { value = var.deploy_linux_vm }
-        ownerTag        = { value = var.owner_tag }
+        location               = { value = var.location }
+        namePrefix             = { value = var.name_prefix }
+        enableSentinel         = { value = var.enable_sentinel }
+        deployWindowsVm        = { value = var.deploy_windows_vm }
+        deployLinuxVm          = { value = var.deploy_linux_vm }
+        ownerTag               = { value = var.owner_tag }
+        enablePlatformLogsDcr  = { value = var.enable_platform_logs_dcr }
+        enableMetricsExportDcr = { value = var.enable_metrics_export_dcr }
       }
     }
   }
