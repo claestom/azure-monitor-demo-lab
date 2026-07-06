@@ -1,6 +1,6 @@
 # Azure Monitor Demo Lab
 
-A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for progressive enablement), and **50 demo scenarios** — all driven from a single, gitignored config file.
+A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for progressive enablement), and **52 demo scenarios** — all driven from a single, gitignored config file.
 
 Built for **demos, microhacks, and hackathons**: deploy it into your own subscription, explore Azure Monitor end-to-end, break it, restore it, and tear it down.
 
@@ -16,6 +16,29 @@ A single resource group wired end-to-end across the observability stack:
 - **Security** — Microsoft Sentinel onboarding, security-posture alert rules, granular (workspace/table/row) RBAC.
 - **Cost & data routing** — daily caps, Basic/Analytics table plans, Summary Rules, Data Export, dedicated cost workbook.
 - **Reliability previews** — Service Groups + Health Models, SLIs/SLOs, Search Jobs + archive restore.
+
+### Resources at a glance
+
+Everything lands in one resource group (`rg-azure-monitor-lab`):
+
+| Count | Resource | Role |
+|---|---|---|
+| 2 | Log Analytics workspaces | central infra/AKS/activity + App Insights backend |
+| 1 | Application Insights | app telemetry (workspace-based) |
+| 1 | Azure Monitor Workspace | Managed Prometheus metrics |
+| 1 | Azure Managed Grafana | dashboards (AMW-bound) |
+| 2 | Virtual Machines (Linux + Windows) | VM Insights via AMA + DCR |
+| 1 | AKS cluster | Container Insights + Managed Prometheus |
+| 1 | Linux VMSS | predictive autoscale |
+| 1 | App Service (B1) + plan | auto-instrumented .NET 8 sample |
+| 1 | VNet + NSG | Connection Monitor + NSG Flow Logs |
+| 1 | Storage account | flow logs, diag archive, data export |
+| 1 | Event Hub namespace | diagnostics fan-out / export |
+| 1 | Key Vault | platform telemetry source |
+| 1 | Action Group + 7+ alerts | detection & routing (incl. AMBA) |
+| 1 | Logic App | alert auto-mitigation |
+| 3 | Workbooks | Traffic Lights · Cost · Security |
+| — | Sentinel, DCRs, DINE policies, granular RBAC | governance & security |
 
 > Full capability matrix and the list of every deployed resource → **[REFERENCE.md](REFERENCE.md)**.
 
@@ -119,7 +142,7 @@ When you're done (cost guardrails of 1 GB/day are baked in either way):
 | Doc | What's in it |
 |---|---|
 | [REFERENCE.md](REFERENCE.md) | Full capability matrix · every deployed resource · demo walkthrough · cost breakdown · folder layout · optional add-ons · troubleshooting |
-| [DEMO-SCENARIOS.md](DEMO-SCENARIOS.md) | All 50 demo scenarios — story, click-path, and "killer line", plus audience-pivoted shortlists |
+| [DEMO-SCENARIOS.md](DEMO-SCENARIOS.md) | All 52 demo scenarios — story, click-path, and "killer line", plus audience-pivoted shortlists |
 | [docs/DEPLOY-BICEP-STEP-BY-STEP.md](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md) | Staged deployment tutorials |
 | Stage notes: [A](docs/STAGE-A-FOUNDATION.md) · [B](docs/STAGE-B-WORKLOADS.md) · [C](docs/STAGE-C-ALERTING.md) · [D](docs/STAGE-D-SECURITY-POSTURE.md) · [E](docs/STAGE-E-OPTIONAL-ADVANCED.md) | Per-stage speaker notes |
 | [docs/CUSTOMER-STAGE-HANDOUT.md](docs/CUSTOMER-STAGE-HANDOUT.md) | Per-stage time + cost cheat sheet |

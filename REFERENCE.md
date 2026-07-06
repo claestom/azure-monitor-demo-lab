@@ -2,7 +2,7 @@
 
 > 👈 **New here? Start with the [README](README.md).** This is the deep-dive reference: full capability matrix, every deployed resource, the demo walkthrough, cost breakdown, folder layout, optional add-ons, and troubleshooting.
 
-A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for customer-facing progressive enablement), 50 demo scenarios — all driven from one central config file.
+A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for customer-facing progressive enablement), 52 demo scenarios — all driven from one central config file.
 
 ## Capabilities
 
@@ -28,6 +28,59 @@ A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel*
 | **Granular RBAC** | 3 service principals scoped at workspace / table / row level (`setup-rbac-demo.ps1` + `demo-granular-rbac.ps1`). | [docs](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/manage-access) |
 | **Service Groups + Health Models (preview)** | `setup-health-model.ps1` provisions an Azure **Service Group** and links the RG. SLI/SLO scaffolding in `setup-slis.ps1`. | [docs](https://learn.microsoft.com/en-us/azure/azure-monitor/health-model) |
 | **"Break the lab" + "Start the lab"** | Scripted incident injection (`break-the-lab.ps1`, `start-the-lab.ps1`, `start-ramp.ps1`) + one-shot restore (`restore-the-lab.ps1`). | — |
+
+---
+
+## What gets deployed
+
+```
+rg-azure-monitor-lab/
+├─ Observability backbone
+│   ├─ law-amlab-central          ← Log Analytics — infra + AKS + AzureActivity
+│   ├─ law-amlab-appinsights      ← Log Analytics — App Insights backend
+│   ├─ appi-amlab                 ← Application Insights (workspace-based)
+│   ├─ amw-amlab                  ← Azure Monitor Workspace (Managed Prometheus)
+│   ├─ dce-amlab                  ← Data Collection Endpoint (Linux)
+│   ├─ dcr-amlab-vminsights       ← DCR — VM perf + Map → central LAW
+│   ├─ dcr-amlab-prometheus       ← DCR — Prometheus → AMW
+│   ├─ dcr-amlab-workspace-...    ← Workspace transformation DCR (drops /read)
+│   ├─ dcr-amlab-customlogs       ← Custom-table DCR (Logs Ingestion API)
+│   └─ amg-amlab-XXXX             ← Azure Managed Grafana (Essential) bound to AMW
+├─ Compute workloads
+│   ├─ vm-amlab-lin               ← Ubuntu + AMA + Dependency Agent + DCR assoc.
+│   ├─ vmwinXXXX                  ← Windows Server 2022 + AMA + Dep. Agent + DCR
+│   ├─ vmss-amlab                 ← Linux VMSS + Predictive autoscale
+│   ├─ aks-amlab                  ← AKS (Free tier, 2 × B2s) + Container Insights + Managed Prom
+│   └─ plan-amlab + app-amlab-XX  ← Linux App Service B1 + .NET 8 sample (auto-instrumented)
+├─ Networking
+│   ├─ vnet-amlab + nsg-amlab     ← /16 with workload, AKS, and VMSS subnets
+│   ├─ Connection Monitor         ← VM → VM + VM → public endpoint probes
+│   └─ NSG Flow Logs              ← into Storage + Traffic Analytics
+├─ Platform telemetry sources
+│   ├─ st-amlabXXXX               ← Storage account (flow logs + diag archive + export target)
+│   ├─ evhns-amlab-XXXX           ← Event Hub namespace (diag fan-out + data export)
+│   └─ kv-amlab-XXXX              ← Key Vault (RBAC mode)
+├─ Governance & policy
+│   ├─ amlab-diag-* (×N)          ← Built-in DINE policy assignments → central LAW
+│   └─ amlab-diag-fanout          ← Multi-destination diag setting (LAW + EH + Storage)
+├─ Alerting & response
+│   ├─ ag-amlab-email             ← Action Group → email (+ optional SIEM webhook)
+│   ├─ alert-* (×7+)              ← Metric + KQL + activity-log + dynamic-threshold alerts
+│   ├─ AMBA-* (×N)                ← Azure Monitor Baseline Alerts
+│   ├─ apr-amlab-*                ← Alert Processing Rules (suppress/group)
+│   └─ logic-amlab-automitigate   ← Logic App auto-mitigation runbook
+├─ Security
+│   ├─ Sentinel onboarded         ← on law-amlab-central + security-posture alert rules
+│   └─ id-sli-amlab               ← UAMI used by SLI/SLO scaffolding
+└─ Workbooks
+    ├─ wb-amlab-trafficlights     ← 🚦 Traffic Lights — single pane of glass
+    ├─ wb-amlab-cost              ← Cost of monitoring
+    └─ wb-amlab-security          ← Security posture
+```
+
+> **Opt-in (default off):** `dcr-amlab-platformlogs` (platform-logs DCR, preview) and `dcr-amlab-metricsexport` (metrics-export DCR, GA) — enable via `enablePlatformLogsDcr` / `enableMetricsExportDcr` (Bicep) or `enable_platform_logs_dcr` / `enable_metrics_export_dcr` (Terraform).
+
+Inside the central LAW you also get **12+ saved KQL searches** and **KQL functions** under category `AzureMonitorDemoLab` (Logs → Saved searches / Functions). Optional one-shot scripts (`create-summary-rule.ps1`, `setup-rbac-demo.ps1`, `setup-health-model.ps1`, `setup-slis.ps1`) layer additional artefacts on top — see [Optional add-ons](#optional-add-ons-opt-in-scripts) below.
 
 ---
 
@@ -115,60 +168,9 @@ Walk-through docs:
 
 ---
 
-## What gets deployed
-
-```
-rg-azure-monitor-lab/
-├─ Observability backbone
-│   ├─ law-amlab-central          ← Log Analytics — infra + AKS + AzureActivity
-│   ├─ law-amlab-appinsights      ← Log Analytics — App Insights backend
-│   ├─ appi-amlab                 ← Application Insights (workspace-based)
-│   ├─ amw-amlab                  ← Azure Monitor Workspace (Managed Prometheus)
-│   ├─ dce-amlab                  ← Data Collection Endpoint (Linux)
-│   ├─ dcr-amlab-vminsights       ← DCR — VM perf + Map → central LAW
-│   ├─ dcr-amlab-prometheus       ← DCR — Prometheus → AMW
-│   ├─ dcr-amlab-workspace-...    ← Workspace transformation DCR (drops /read)
-│   ├─ dcr-amlab-customlogs       ← Custom-table DCR (Logs Ingestion API)
-│   └─ amg-amlab-XXXX             ← Azure Managed Grafana (Essential) bound to AMW
-├─ Compute workloads
-│   ├─ vm-amlab-lin               ← Ubuntu + AMA + Dependency Agent + DCR assoc.
-│   ├─ vmwinXXXX                  ← Windows Server 2022 + AMA + Dep. Agent + DCR
-│   ├─ vmss-amlab                 ← Linux VMSS + Predictive autoscale
-│   ├─ aks-amlab                  ← AKS (Free tier, 2 × B2s) + Container Insights + Managed Prom
-│   └─ plan-amlab + app-amlab-XX  ← Linux App Service B1 + .NET 8 sample (auto-instrumented)
-├─ Networking
-│   ├─ vnet-amlab + nsg-amlab     ← /16 with workload, AKS, and VMSS subnets
-│   ├─ Connection Monitor         ← VM → VM + VM → public endpoint probes
-│   └─ NSG Flow Logs              ← into Storage + Traffic Analytics
-├─ Platform telemetry sources
-│   ├─ st-amlabXXXX               ← Storage account (flow logs + diag archive + export target)
-│   ├─ evhns-amlab-XXXX           ← Event Hub namespace (diag fan-out + data export)
-│   └─ kv-amlab-XXXX              ← Key Vault (RBAC mode)
-├─ Governance & policy
-│   ├─ amlab-diag-* (×N)          ← Built-in DINE policy assignments → central LAW
-│   └─ amlab-diag-fanout          ← Multi-destination diag setting (LAW + EH + Storage)
-├─ Alerting & response
-│   ├─ ag-amlab-email             ← Action Group → email (+ optional SIEM webhook)
-│   ├─ alert-* (×7+)              ← Metric + KQL + activity-log + dynamic-threshold alerts
-│   ├─ AMBA-* (×N)                ← Azure Monitor Baseline Alerts
-│   ├─ apr-amlab-*                ← Alert Processing Rules (suppress/group)
-│   └─ logic-amlab-automitigate   ← Logic App auto-mitigation runbook
-├─ Security
-│   ├─ Sentinel onboarded         ← on law-amlab-central + security-posture alert rules
-│   └─ id-sli-amlab               ← UAMI used by SLI/SLO scaffolding
-└─ Workbooks
-    ├─ wb-amlab-trafficlights     ← 🚦 Traffic Lights — single pane of glass
-    ├─ wb-amlab-cost              ← Cost of monitoring
-    └─ wb-amlab-security          ← Security posture
-```
-
-Inside the central LAW you also get **12+ saved KQL searches** and **KQL functions** under category `AzureMonitorDemoLab` (Logs → Saved searches / Functions). Optional one-shot scripts (`create-summary-rule.ps1`, `setup-rbac-demo.ps1`, `setup-health-model.ps1`, `setup-slis.ps1`) layer additional artefacts on top — see [Optional add-ons](#optional-add-ons-opt-in-scripts) below.
-
----
-
 ## Demo flow
 
-The lab supports **50 numbered demo scenarios**, each with a story, a click-path, and a "killer line". See [`DEMO-SCENARIOS.md`](DEMO-SCENARIOS.md) for the full catalogue, including audience-pivoted shortlists (App Service · AKS · Cost · Security · Workload health).
+The lab supports **52 numbered demo scenarios**, each with a story, a click-path, and a "killer line". See [`DEMO-SCENARIOS.md`](DEMO-SCENARIOS.md) for the full catalogue, including audience-pivoted shortlists (App Service · AKS · Cost · Security · Workload health).
 
 **Suggested 25-minute "first taste" walkthrough** (covers the cross-stack story):
 
@@ -294,7 +296,7 @@ azure-monitor-demo-lab/
 
 ## Ideas to extend beyond current scope
 
-The lab covers 50 scenarios out of the box; here are well-scoped follow-ups for deeper sessions:
+The lab covers 52 scenarios out of the box; here are well-scoped follow-ups for deeper sessions:
 
 - **Multi-region DR drill** — pair the central LAW with a paired region (the `enableLawReplication` parameter wires this up) and walk alert + workbook continuity during a regional outage.
 - **Cross-subscription workbook rollup** — clone the Traffic Lights workbook into a management-group-scoped variant.
