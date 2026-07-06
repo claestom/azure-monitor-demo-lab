@@ -23,6 +23,11 @@ A single resource group wired end-to-end across the observability stack:
 
 Everything below lands in a **single resource group** (`rg-azure-monitor-lab`). Telemetry flows left-to-right: workloads emit signals, agents/policies collect them, the backplane stores them, and the consumption layer turns them into dashboards, alerts, and responses.
 
+[![Azure Monitor Demo Lab architecture — Azure-icon overview](docs/architecture-overview.svg)](docs/architecture.drawio)
+
+<details>
+<summary>Text / emoji version (Mermaid)</summary>
+
 ```mermaid
 flowchart LR
   subgraph WL["🖥️ Workloads"]
@@ -90,6 +95,8 @@ flowchart LR
   style DATA fill:#2A1E08,stroke:#D9A441,color:#F7E6C4;
   style USE fill:#1F1430,stroke:#A877D6,color:#EADDF7;
 ```
+
+</details>
 
 > 🎨 **Full Azure-icon diagram (editable):** [docs/architecture.drawio](docs/architecture.drawio) — open with [diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension. It contains a per-tier overview plus detail pages for each pillar.
 

@@ -1,0 +1,159 @@
+# Generates docs/architecture-overview.svg — a self-contained, dark-mode architecture
+# diagram that uses the official Azure service icons (from the draw.io azure2 library)
+# and preserves the exact groups + relationships shown in the README Mermaid diagram.
+#
+# Icons are downloaded from the jgraph/drawio public library and base64-embedded into a
+# single SVG so the result renders on GitHub with no external dependencies.
+#
+# Re-run after changing nodes/edges:  ./scripts/gen-architecture-svg.ps1
+
+$ErrorActionPreference = 'Stop'
+$base = 'https://raw.githubusercontent.com/jgraph/drawio/dev/src/main/webapp/img/lib/azure2'
+
+# --- icon key -> library path ---------------------------------------------------------
+$iconPaths = @{
+  vm       = 'compute/Virtual_Machine.svg'
+  vmss     = 'compute/VM_Scale_Sets.svg'
+  aks      = 'compute/Kubernetes_Services.svg'
+  app      = 'compute/App_Services.svg'
+  net      = 'networking/Virtual_Networks.svg'
+  ama      = 'general/Input_Output.svg'
+  flow     = 'networking/Network_Watcher.svg'
+  pol      = 'management_governance/Policy.svg'
+  law      = 'management_governance/Log_Analytics_Workspaces.svg'
+  ai       = 'management_governance/Application_Insights.svg'
+  amw      = 'management_governance/Monitor.svg'
+  storage  = 'storage/Storage_Accounts.svg'
+  eventhub = 'iot/Event_Hubs.svg'
+  keyvault = 'security/Key_Vaults.svg'
+  graf     = 'general/Dashboard.svg'
+  wb       = 'general/Workbooks.svg'
+  ag       = 'management_governance/Alerts.svg'
+  logic    = 'integration/Logic_Apps.svg'
+  sent     = 'security/Azure_Sentinel.svg'
+}
+
+$repoRoot = Split-Path $PSScriptRoot -Parent
+$iconDir  = Join-Path $repoRoot 'docs/icons/azure'
+New-Item -ItemType Directory -Force -Path $iconDir | Out-Null
+
+# --- download + base64-embed ----------------------------------------------------------
+$dataUri = @{}
+foreach ($k in $iconPaths.Keys) {
+  $name = Split-Path $iconPaths[$k] -Leaf
+  $dest = Join-Path $iconDir $name
+  if (-not (Test-Path $dest)) {
+    Invoke-WebRequest "$base/$($iconPaths[$k])" -UseBasicParsing -OutFile $dest
+  }
+  $bytes = [IO.File]::ReadAllBytes($dest)
+  $dataUri[$k] = 'data:image/svg+xml;base64,' + [Convert]::ToBase64String($bytes)
+}
+
+# --- tiers (columns) ------------------------------------------------------------------
+$cols = [ordered]@{
+  WL   = @{ x = 30;   w = 250; title = 'Workloads';                fill = '#0E2438'; stroke = '#4AA3E0'; text = '#D6EBFB' }
+  COL  = @{ x = 330;  w = 250; title = 'Collection';               fill = '#0E2615'; stroke = '#57B96A'; text = '#D8F3DE' }
+  DATA = @{ x = 630;  w = 310; title = 'Telemetry backplane';      fill = '#2A1E08'; stroke = '#D9A441'; text = '#F7E6C4' }
+  USE  = @{ x = 990;  w = 300; title = 'Consumption & response';   fill = '#1F1430'; stroke = '#A877D6'; text = '#EADDF7' }
+}
+
+# --- nodes (id, column, label lines, icon key(s)) -------------------------------------
+$nodes = [ordered]@{
+  VM    = @{ col = 'WL';   i = 0; lines = @('Linux & Windows VMs');            icons = @('vm') }
+  VMSS  = @{ col = 'WL';   i = 1; lines = @('Linux VMSS','predictive autoscale'); icons = @('vmss') }
+  AKS   = @{ col = 'WL';   i = 2; lines = @('AKS','Container Insights');       icons = @('aks') }
+  APP   = @{ col = 'WL';   i = 3; lines = @('.NET 8 App Service','auto-instrumented'); icons = @('app') }
+  NET   = @{ col = 'WL';   i = 4; lines = @('VNet / NSG','Connection Monitor'); icons = @('net') }
+
+  AMA   = @{ col = 'COL';  i = 0; lines = @('Azure Monitor Agent','DCRs · DCE'); icons = @('ama') }
+  FLOW  = @{ col = 'COL';  i = 1; lines = @('NSG Flow Logs');                   icons = @('flow') }
+  POL   = @{ col = 'COL';  i = 2; lines = @('Diag Settings via','Policy (DINE)'); icons = @('pol') }
+
+  LAW   = @{ col = 'DATA'; i = 0; lines = @('Log Analytics','central');         icons = @('law') }
+  LAWAI = @{ col = 'DATA'; i = 1; lines = @('Log Analytics','App Insights');     icons = @('law') }
+  AI    = @{ col = 'DATA'; i = 2; lines = @('Application Insights');             icons = @('ai') }
+  AMW   = @{ col = 'DATA'; i = 3; lines = @('Azure Monitor Workspace','Managed Prometheus'); icons = @('amw') }
+  PLAT  = @{ col = 'DATA'; i = 4; lines = @('Storage · Event Hub · Key Vault');  icons = @('storage','eventhub','keyvault') }
+
+  GRAF  = @{ col = 'USE';  i = 0; lines = @('Managed Grafana');                  icons = @('graf') }
+  WB    = @{ col = 'USE';  i = 1; lines = @('Workbooks','Traffic Lights · Cost · Security'); icons = @('wb') }
+  AG    = @{ col = 'USE';  i = 2; lines = @('Action Group','Alerts · AMBA');     icons = @('ag') }
+  LOGIC = @{ col = 'USE';  i = 3; lines = @('Logic App','auto-mitigation');      icons = @('logic') }
+  SENT  = @{ col = 'USE';  i = 4; lines = @('Microsoft Sentinel');               icons = @('sent') }
+}
+
+# --- edges (source -> target) ---------------------------------------------------------
+$edges = @(
+  @('VM','AMA'), @('VMSS','AMA'), @('AKS','AMA'), @('AKS','AMW'), @('APP','AI'), @('NET','FLOW'),
+  @('AMA','LAW'), @('AMA','AMW'), @('FLOW','PLAT'), @('POL','LAW'), @('AI','LAWAI'), @('PLAT','LAW'),
+  @('LAW','WB'), @('LAWAI','WB'), @('AMW','GRAF'), @('LAW','AG'), @('AI','AG'), @('AG','LOGIC'), @('LAW','SENT')
+)
+
+# --- geometry -------------------------------------------------------------------------
+$W = 1320; $H = 600
+$grpY = 60; $grpH = 475
+$cellH = 66; $cellStep = 84; $firstTop = 108
+function NodeTop($n) { $firstTop + ($n.i * $cellStep) }
+function ColOf($n)   { $cols[$n.col] }
+function Esc($s)     { $s -replace '&','&amp;' -replace '<','&lt;' -replace '>','&gt;' }
+
+$sb = New-Object System.Text.StringBuilder
+[void]$sb.AppendLine("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 $W $H' font-family='Segoe UI, Helvetica, Arial, sans-serif'>")
+[void]$sb.AppendLine("<rect x='0' y='0' width='$W' height='$H' rx='10' fill='#0D1117'/>")
+[void]$sb.AppendLine("<text x='$($W/2)' y='36' fill='#E6EDF3' font-size='20' font-weight='700' text-anchor='middle'>rg-azure-monitor-lab · swedencentral</text>")
+[void]$sb.AppendLine("<defs><marker id='arrow' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#7D8590'/></marker></defs>")
+
+# group boxes
+foreach ($key in $cols.Keys) {
+  $c = $cols[$key]
+  [void]$sb.AppendLine("<rect x='$($c.x)' y='$grpY' width='$($c.w)' height='$grpH' rx='12' fill='$($c.fill)' stroke='$($c.stroke)' stroke-width='1.5'/>")
+  [void]$sb.AppendLine("<text x='$($c.x + $c.w/2)' y='$($grpY+28)' fill='$($c.text)' font-size='15' font-weight='700' text-anchor='middle'>$(Esc $c.title)</text>")
+}
+
+# edges first (under nodes)
+function AnchorRight($n) { $c = ColOf $n; @(($c.x + $c.w), ((NodeTop $n) + $cellH/2)) }
+function AnchorLeft($n)  { $c = ColOf $n; @($c.x, ((NodeTop $n) + $cellH/2)) }
+function AnchorTop($n)   { $c = ColOf $n; @(($c.x + $c.w/2), (NodeTop $n)) }
+function AnchorBottom($n){ $c = ColOf $n; @(($c.x + $c.w/2), ((NodeTop $n) + $cellH)) }
+
+foreach ($e in $edges) {
+  $s = $nodes[$e[0]]; $t = $nodes[$e[1]]
+  if ($s.col -eq $t.col) {
+    $a = AnchorBottom $s; $b = AnchorTop $t
+    [void]$sb.AppendLine("<path d='M $($a[0]),$($a[1]) L $($b[0]),$($b[1])' fill='none' stroke='#7D8590' stroke-width='1.4' marker-end='url(#arrow)'/>")
+  } else {
+    $a = AnchorRight $s; $b = AnchorLeft $t
+    $mx = ($a[0] + $b[0]) / 2
+    [void]$sb.AppendLine("<path d='M $($a[0]),$($a[1]) C $mx,$($a[1]) $mx,$($b[1]) $($b[0]),$($b[1])' fill='none' stroke='#7D8590' stroke-width='1.4' marker-end='url(#arrow)'/>")
+  }
+}
+
+# nodes
+foreach ($id in $nodes.Keys) {
+  $n = $nodes[$id]; $c = ColOf $n; $top = NodeTop $n
+  [void]$sb.AppendLine("<rect x='$($c.x+8)' y='$top' width='$($c.w-16)' height='$cellH' rx='8' fill='#161B22' stroke='$($c.stroke)' stroke-opacity='0.5' stroke-width='1'/>")
+  $ic = $n.icons
+  if ($ic.Count -eq 1) {
+    [void]$sb.AppendLine("<image x='$($c.x+16)' y='$($top+13)' width='40' height='40' href='$($dataUri[$ic[0]])'/>")
+    $lx = $c.x + 64
+  } else {
+    $ix = $c.x + 16
+    foreach ($k in $ic) { [void]$sb.AppendLine("<image x='$ix' y='$($top+8)' width='30' height='30' href='$($dataUri[$k])'/>"); $ix += 34 }
+    $lx = $c.x + 16
+  }
+  $lines = $n.lines
+  if ($ic.Count -gt 1) {
+    [void]$sb.AppendLine("<text x='$lx' y='$($top+52)' fill='$($c.text)' font-size='11.5' font-weight='600'>$(Esc $lines[0])</text>")
+  } elseif ($lines.Count -eq 1) {
+    [void]$sb.AppendLine("<text x='$lx' y='$($top+38)' fill='$($c.text)' font-size='12.5' font-weight='600'>$(Esc $lines[0])</text>")
+  } else {
+    [void]$sb.AppendLine("<text x='$lx' y='$($top+28)' fill='$($c.text)' font-size='12.5' font-weight='600'>$(Esc $lines[0])</text>")
+    [void]$sb.AppendLine("<text x='$lx' y='$($top+44)' fill='$($c.text)' font-size='10.5' opacity='0.85'>$(Esc $lines[1])</text>")
+  }
+}
+
+[void]$sb.AppendLine('</svg>')
+
+$outPath = Join-Path $repoRoot 'docs/architecture-overview.svg'
+[IO.File]::WriteAllText($outPath, $sb.ToString(), [Text.UTF8Encoding]::new($false))
+Write-Output "Wrote $outPath ($($sb.Length) bytes), $($iconPaths.Count) icons in $iconDir"
