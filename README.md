@@ -26,33 +26,33 @@ Everything below lands in a **single resource group** (`rg-azure-monitor-lab`). 
 ```mermaid
 flowchart LR
   subgraph WL["🖥️ Workloads"]
-    VM["Linux &amp; Windows VMs"]
-    VMSS["Linux VMSS<br/>predictive autoscale"]
-    AKS["AKS<br/>Container Insights"]
-    APP[".NET 8 App Service<br/>auto-instrumented"]
-    NET["VNet / NSG<br/>Connection Monitor"]
+    VM["🖥️ Linux &amp; Windows VMs"]
+    VMSS["🧱 Linux VMSS<br/>predictive autoscale"]
+    AKS["☸️ AKS<br/>Container Insights"]
+    APP["🌐 .NET 8 App Service<br/>auto-instrumented"]
+    NET["🕸️ VNet / NSG<br/>Connection Monitor"]
   end
 
   subgraph COL["📥 Collection"]
-    AMA["Azure Monitor Agent<br/>DCRs · DCE"]
-    FLOW["NSG Flow Logs"]
-    POL["Diag Settings via<br/>Policy (DINE)"]
+    AMA["🛰️ Azure Monitor Agent<br/>DCRs · DCE"]
+    FLOW["🌊 NSG Flow Logs"]
+    POL["📜 Diag Settings via<br/>Policy (DINE)"]
   end
 
   subgraph DATA["🗄️ Telemetry backplane"]
-    LAW["Log Analytics<br/>central"]
-    LAWAI["Log Analytics<br/>App Insights"]
-    AI["Application Insights"]
-    AMW["Azure Monitor Workspace<br/>Managed Prometheus"]
-    PLAT["Storage · Event Hub · Key Vault"]
+    LAW["🗃️ Log Analytics<br/>central"]
+    LAWAI["🗃️ Log Analytics<br/>App Insights"]
+    AI["💡 Application Insights"]
+    AMW["🔥 Azure Monitor Workspace<br/>Managed Prometheus"]
+    PLAT["📦 Storage · Event Hub · Key Vault"]
   end
 
   subgraph USE["📊 Consumption &amp; response"]
-    GRAF["Managed Grafana"]
-    WB["Workbooks<br/>Traffic Lights · Cost · Security"]
-    AG["Action Group<br/>Alerts · AMBA"]
-    LOGIC["Logic App<br/>auto-mitigation"]
-    SENT["Microsoft Sentinel"]
+    GRAF["📈 Managed Grafana"]
+    WB["📓 Workbooks<br/>Traffic Lights · Cost · Security"]
+    AG["🚨 Action Group<br/>Alerts · AMBA"]
+    LOGIC["⚡ Logic App<br/>auto-mitigation"]
+    SENT["🛡️ Microsoft Sentinel"]
   end
 
   VM --> AMA
@@ -74,6 +74,21 @@ flowchart LR
   AI --> AG
   AG --> LOGIC
   LAW --> SENT
+
+  classDef workload fill:#12314D,stroke:#4AA3E0,color:#D6EBFB,stroke-width:1px;
+  classDef collect fill:#123322,stroke:#57B96A,color:#D8F3DE,stroke-width:1px;
+  classDef data fill:#3A2A0D,stroke:#D9A441,color:#F7E6C4,stroke-width:1px;
+  classDef use fill:#2C1C40,stroke:#A877D6,color:#EADDF7,stroke-width:1px;
+
+  class VM,VMSS,AKS,APP,NET workload;
+  class AMA,FLOW,POL collect;
+  class LAW,LAWAI,AI,AMW,PLAT data;
+  class GRAF,WB,AG,LOGIC,SENT use;
+
+  style WL fill:#0E2438,stroke:#4AA3E0,color:#D6EBFB;
+  style COL fill:#0E2615,stroke:#57B96A,color:#D8F3DE;
+  style DATA fill:#2A1E08,stroke:#D9A441,color:#F7E6C4;
+  style USE fill:#1F1430,stroke:#A877D6,color:#EADDF7;
 ```
 
 > 🎨 **Full Azure-icon diagram (editable):** [docs/architecture.drawio](docs/architecture.drawio) — open with [diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension. It contains a per-tier overview plus detail pages for each pillar.
