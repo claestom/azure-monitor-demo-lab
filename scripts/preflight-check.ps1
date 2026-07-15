@@ -59,6 +59,7 @@ param(
   [string] $VmssSize        = 'Standard_B1s',
   [bool]   $DeployLinuxVm   = $true,
   [bool]   $DeployWindowsVm = $true,
+  [string] $AppServicePlanTier = 'Basic',
   [switch] $WarnOnly
 )
 
@@ -220,6 +221,41 @@ foreach ($t in $paasTypes) {
   } else {
     Add-Result "$($t.Label)" "$($t.Ns)/$($t.Type) NOT available in $Location — pick a supported region" 'FAIL'
   }
+}
+
+# ---------------------------------------------------------------------------
+# 3b. App Service Plan quota — subscription-specific, per-region, per-tier.
+#     SEPARATE from Compute vCPU quota AND from resource-type availability: a region can
+#     offer App Service yet have a per-subscription limit of 0 for a given tier, which
+#     fails deployment with 'InternalSubscriptionIsOverQuotaForSku'. The lab deploys a
+#     Basic (B1) Linux plan, so we check the Basic-tier core quota here.
+# ---------------------------------------------------------------------------
+Write-Step "Checking App Service Plan quota ($AppServicePlanTier tier)"
+$webUsageJson = az rest --method get `
+  --url "https://management.azure.com/subscriptions/$($sub.id)/providers/Microsoft.Web/locations/$Location/usages?api-version=2023-12-01" `
+  -o json 2>$null
+if ($webUsageJson) {
+  $webUsage = ($webUsageJson | ConvertFrom-Json).value
+  $tierUsage = $webUsage | Where-Object { $_.name.localizedValue -eq $AppServicePlanTier } | Select-Object -First 1
+  if ($null -eq $tierUsage) {
+    Add-Result "App Service quota" "$AppServicePlanTier-tier quota not reported for $Location — verify manually" 'WARN'
+  } else {
+    $webLimit = [int]$tierUsage.limit
+    if ($webLimit -lt 0) {
+      # Azure reports -1 for "no cap" (unlimited).
+      Add-Result "App Service quota" "$AppServicePlanTier tier: unlimited (limit -1, used $($tierUsage.currentValue))" 'PASS'
+    } else {
+      $availWeb = $webLimit - [int]$tierUsage.currentValue
+      $detail = "$AppServicePlanTier tier: need 1 core, have $availWeb free (limit $webLimit, used $($tierUsage.currentValue))"
+      if ($availWeb -lt 1) {
+        Add-Result "App Service quota" "$detail — INSUFFICIENT (this subscription has no $AppServicePlanTier App Service quota in $Location; pick another region or request an increase)" 'FAIL'
+      } else {
+        Add-Result "App Service quota" $detail 'PASS'
+      }
+    }
+  }
+} else {
+  Add-Result "App Service quota" "could not query Microsoft.Web usages for $Location — verify manually" 'WARN'
 }
 
 # ---------------------------------------------------------------------------

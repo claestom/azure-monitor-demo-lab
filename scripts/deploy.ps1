@@ -155,7 +155,13 @@ $mainBicep = Join-Path $PSScriptRoot '..' 'infra' 'main.bicep'
 # so we detect them here and surface actionable guidance instead of silently continuing.
 $capacityCodes = @(
   'AksCapacityHeavyUsage','CapacityHeavyUsage','AllocationFailed','ZonalAllocationFailed',
-  'OverconstrainedAllocationRequest','SkuNotAvailable','QuotaExceeded','InsufficientCapacity'
+  'OverconstrainedAllocationRequest','SkuNotAvailable','InsufficientCapacity'
+)
+
+# Hard per-subscription quota limits (NOT transient) — e.g. a region with 0 App Service
+# quota for a tier. Retrying won't help; the fix is a different region or a quota request.
+$quotaCodes = @(
+  'InternalSubscriptionIsOverQuotaForSku','QuotaExceeded','OverQuota','SubscriptionIsOverQuotaForSku'
 )
 
 function Get-FailedOperationMessages {
@@ -186,6 +192,7 @@ while ($true) {
   # Deployment failed — figure out whether it's a transient capacity/allocation problem.
   $failMessages = Get-FailedOperationMessages -Rg $ResourceGroup -Name $deploymentName
   $matchedCode  = $capacityCodes | Where-Object { $failMessages -match $_ } | Select-Object -First 1
+  $matchedQuota = $quotaCodes    | Where-Object { $failMessages -match $_ } | Select-Object -First 1
 
   if ($matchedCode) {
     Write-Host "`n   ⚠ Capacity/allocation failure ($matchedCode) in region '$Location'." -ForegroundColor Yellow
@@ -205,7 +212,23 @@ quota/SKU API, so the pre-flight check can't catch it. Fixes (see https://aka.ms
 "@
   }
 
-  # Not a capacity problem — surface the real error and stop.
+  if ($matchedQuota) {
+    throw @"
+Deployment failed: '$matchedQuota' in region '$Location'.
+
+This subscription has a hard quota limit (often 0) for a required SKU in this region — for
+example App Service Basic-tier compute. Retrying will NOT help. Fixes:
+  • Deploy to a region where the SKU has quota (fastest), e.g.:
+        ./scripts/deploy.ps1 -ResourceGroup $ResourceGroup -Location northeurope
+  • Or request a quota increase: https://aka.ms/antquotahelp
+Run ./scripts/preflight-check.ps1 -Location <region> to find a region with quota.
+
+Failed operation details:
+$failMessages
+"@
+  }
+
+  # Not a capacity/quota problem — surface the real error and stop.
   throw "Deployment '$deploymentName' failed. Failed operation details:`n$failMessages"
 }
 
