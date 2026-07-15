@@ -33,7 +33,8 @@
 param(
   [string] $ResourceGroup  = 'rg-azure-monitor-lab',
   [string] $Location       = 'swedencentral',
-  [string] $ParametersFile = (Join-Path $PSScriptRoot '..' 'infra' 'main.parameters.json')
+  [string] $ParametersFile = (Join-Path $PSScriptRoot '..' 'infra' 'main.parameters.json'),
+  [switch] $SkipPreflight
 )
 
 $ErrorActionPreference = 'Stop'
@@ -41,6 +42,12 @@ $ErrorActionPreference = 'Stop'
 function Write-Step($msg) {
   Write-Host "`n==> $msg" -ForegroundColor Cyan
 }
+
+# Deployment sizing used by the pre-flight availability/quota check. Defaults match the
+# Bicep defaults; overridden from lab.config.json below when present.
+$pfAksNodeCount    = 1
+$pfDeployWindowsVm = $true
+$pfDeployLinuxVm   = $true
 
 # -------------------------------------------------------------------
 # Materialize derived files (.azure-target.json, main.parameters.json,
@@ -63,6 +70,11 @@ if (Test-Path $labConfigPath) {
   if (-not $PSBoundParameters.ContainsKey('Location') -and -not [string]::IsNullOrWhiteSpace($labCfg.location)) {
     $Location = $labCfg.location
   }
+
+  # Mirror the deployment sizing so the pre-flight check validates the real footprint.
+  if ($null -ne $labCfg.aksNodeCount)    { $pfAksNodeCount    = [int]$labCfg.aksNodeCount }
+  if ($null -ne $labCfg.deployWindowsVm) { $pfDeployWindowsVm = [bool]$labCfg.deployWindowsVm }
+  if ($null -ne $labCfg.deployLinuxVm)   { $pfDeployLinuxVm   = [bool]$labCfg.deployLinuxVm }
 }
 
 # -------------------------------------------------------------------
@@ -91,6 +103,21 @@ Assert-AllowedSubscription
 # 0. Sanity
 Write-Step "Active subscription"
 az account show --query "{name:name, id:id, tenantId:tenantId, user:user.name}" -o table
+
+# 0b. Pre-flight availability + quota check — fail in ~15s instead of 20min in.
+if ($SkipPreflight) {
+  Write-Step "Skipping pre-flight availability/quota check (-SkipPreflight)"
+} else {
+  Write-Step "Pre-flight: validating SKUs + quota + resource availability in $Location"
+  $preflight = Join-Path $PSScriptRoot 'preflight-check.ps1'
+  & $preflight -Location $Location `
+               -AksNodeCount $pfAksNodeCount `
+               -DeployWindowsVm $pfDeployWindowsVm `
+               -DeployLinuxVm $pfDeployLinuxVm
+  if ($LASTEXITCODE -ne 0) {
+    throw "Pre-flight check failed for region '$Location'. Fix the FAIL rows above (or re-run with -SkipPreflight to bypass) before deploying."
+  }
+}
 
 # 1. Resource group
 Write-Step "Ensuring resource group $ResourceGroup in $Location"

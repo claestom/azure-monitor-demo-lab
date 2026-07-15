@@ -128,6 +128,8 @@ notepad lab.config.json
 
 Defaults: resource group `rg-azure-monitor-lab`, region `swedencentral`. Override with `-ResourceGroup` / `-Location` (explicit args win over `lab.config.json`, which wins over these defaults). The group is created if it doesn't already exist, or reused if it does. End-to-end ~20–25 minutes. See [REFERENCE.md → Deploy](REFERENCE.md#deploy) for the config details and the subscription guardrail.
 
+> **Pre-flight check.** Before creating anything, `deploy.ps1` runs [`scripts/preflight-check.ps1`](scripts/preflight-check.ps1), which validates — in ~15 seconds — that every VM SKU, vCPU quota, and PaaS resource type the lab needs is actually available in the selected region for your subscription. It fails fast with a PASS/WARN/FAIL table instead of blowing up 20 minutes into the deployment. Run it standalone to vet a region before committing (`./scripts/preflight-check.ps1 -Location westeurope`), or bypass with `./scripts/deploy.ps1 -SkipPreflight`.
+
 **Two delivery modes:**
 
 - **One-shot** — `./scripts/deploy.ps1` deploys everything at once (fastest, internal demos).
