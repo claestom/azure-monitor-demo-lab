@@ -225,12 +225,14 @@ foreach ($t in $paasTypes) {
 
 # ---------------------------------------------------------------------------
 # 3b. App Service Plan quota — subscription-specific, per-region, per-tier.
-#     SEPARATE from Compute vCPU quota AND from resource-type availability: a region can
-#     offer App Service yet have a per-subscription limit of 0 for a given tier, which
-#     fails deployment with 'InternalSubscriptionIsOverQuotaForSku'. The lab deploys a
-#     Basic (B1) Linux plan, so we check the Basic-tier core quota here.
+#     ADVISORY ONLY (never a hard blocker). The Microsoft.Web '.../usages' Basic entry is a
+#     legacy Av2-family reservation number: 'limit 0' does NOT reliably mean creation fails
+#     (e.g. westus3 reports 0 yet creates Basic plans fine), while uksouth reports 0 AND
+#     genuinely fails with 'InternalSubscriptionIsOverQuotaForSku'. Since the signal can't
+#     tell those apart, we WARN (not FAIL) here and let ARM's fast preflight validation at
+#     deploy time be the authoritative gate (deploy.ps1 hard-fails in seconds with guidance).
 # ---------------------------------------------------------------------------
-Write-Step "Checking App Service Plan quota ($AppServicePlanTier tier)"
+Write-Step "Checking App Service Plan quota ($AppServicePlanTier tier, advisory)"
 $webUsageJson = az rest --method get `
   --url "https://management.azure.com/subscriptions/$($sub.id)/providers/Microsoft.Web/locations/$Location/usages?api-version=2023-12-01" `
   -o json 2>$null
@@ -246,9 +248,9 @@ if ($webUsageJson) {
       Add-Result "App Service quota" "$AppServicePlanTier tier: unlimited (limit -1, used $($tierUsage.currentValue))" 'PASS'
     } else {
       $availWeb = $webLimit - [int]$tierUsage.currentValue
-      $detail = "$AppServicePlanTier tier: need 1 core, have $availWeb free (limit $webLimit, used $($tierUsage.currentValue))"
+      $detail = "$AppServicePlanTier tier: reported limit $webLimit, used $($tierUsage.currentValue)"
       if ($availWeb -lt 1) {
-        Add-Result "App Service quota" "$detail — INSUFFICIENT (this subscription has no $AppServicePlanTier App Service quota in $Location; pick another region or request an increase)" 'FAIL'
+        Add-Result "App Service quota" "$detail — region reports 0 $AppServicePlanTier quota. This signal is UNRELIABLE (some regions create Basic plans anyway). If the deploy really is blocked it fails fast with 'InternalSubscriptionIsOverQuotaForSku' — then pick another region or request an increase." 'WARN'
       } else {
         Add-Result "App Service quota" $detail 'PASS'
       }
