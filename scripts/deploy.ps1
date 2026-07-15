@@ -34,7 +34,8 @@ param(
   [string] $ResourceGroup  = 'rg-azure-monitor-lab',
   [string] $Location       = 'swedencentral',
   [string] $ParametersFile = (Join-Path $PSScriptRoot '..' 'infra' 'main.parameters.json'),
-  [switch] $SkipPreflight
+  [switch] $SkipPreflight,
+  [int]    $MaxDeployRetries = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -149,13 +150,64 @@ Write-Step "Deploying main.bicep (this takes 15-25 minutes — AKS + VMs + Grafa
 $deploymentName = "amlab-$(Get-Date -Format 'yyyyMMddHHmmss')"
 $mainBicep = Join-Path $PSScriptRoot '..' 'infra' 'main.bicep'
 
-az deployment group create `
-  --resource-group $ResourceGroup `
-  --name $deploymentName `
-  --template-file $mainBicep `
-  --parameters "@$ParametersFile" `
-  --parameters location=$Location `
-  --output none
+# Transient allocation/capacity error codes. These are region-wide, service-side, and
+# NOT knowable ahead of time via any quota/SKU/availability API (see preflight-check.ps1) —
+# so we detect them here and surface actionable guidance instead of silently continuing.
+$capacityCodes = @(
+  'AksCapacityHeavyUsage','CapacityHeavyUsage','AllocationFailed','ZonalAllocationFailed',
+  'OverconstrainedAllocationRequest','SkuNotAvailable','QuotaExceeded','InsufficientCapacity'
+)
+
+function Get-FailedOperationMessages {
+  param([string] $Rg, [string] $Name)
+  $msgs = az deployment operation group list -g $Rg -n $Name `
+            --query "[?properties.provisioningState=='Failed'].properties.statusMessage" -o json 2>$null
+  if ($msgs) { ($msgs | ConvertFrom-Json | ForEach-Object { $_ | ConvertTo-Json -Depth 10 -Compress }) -join "`n" } else { '' }
+}
+
+$attempt = 0
+while ($true) {
+  $attempt++
+  if ($attempt -gt 1) {
+    $deploymentName = "amlab-$(Get-Date -Format 'yyyyMMddHHmmss')"
+    Write-Host "   Retry $($attempt - 1)/$MaxDeployRetries — capacity is often reclaimed as others delete clusters..." -ForegroundColor Yellow
+  }
+
+  az deployment group create `
+    --resource-group $ResourceGroup `
+    --name $deploymentName `
+    --template-file $mainBicep `
+    --parameters "@$ParametersFile" `
+    --parameters location=$Location `
+    --output none
+
+  if ($LASTEXITCODE -eq 0) { break }
+
+  # Deployment failed — figure out whether it's a transient capacity/allocation problem.
+  $failMessages = Get-FailedOperationMessages -Rg $ResourceGroup -Name $deploymentName
+  $matchedCode  = $capacityCodes | Where-Object { $failMessages -match $_ } | Select-Object -First 1
+
+  if ($matchedCode) {
+    Write-Host "`n   ⚠ Capacity/allocation failure ($matchedCode) in region '$Location'." -ForegroundColor Yellow
+    if ($attempt -le $MaxDeployRetries) {
+      Start-Sleep -Seconds 60
+      continue
+    }
+    throw @"
+Deployment failed: '$matchedCode' in region '$Location'.
+
+This is a transient, region-wide Azure capacity condition — it can't be pre-validated by any
+quota/SKU API, so the pre-flight check can't catch it. Fixes (see https://aka.ms/akscapacityheavyusage):
+  • Deploy to another region (fastest). The RG + region are now parameters, e.g.:
+        ./scripts/deploy.ps1 -ResourceGroup $ResourceGroup -Location northeurope
+  • Or retry later — capacity is reclaimed as others delete clusters:
+        ./scripts/deploy.ps1 -ResourceGroup $ResourceGroup -Location $Location -MaxDeployRetries 3
+"@
+  }
+
+  # Not a capacity problem — surface the real error and stop.
+  throw "Deployment '$deploymentName' failed. Failed operation details:`n$failMessages"
+}
 
 Write-Step "Capturing deployment outputs"
 $outputsJson = az deployment group show -g $ResourceGroup -n $deploymentName --query properties.outputs -o json

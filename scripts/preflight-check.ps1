@@ -192,8 +192,11 @@ if ($coresUsage) {
 
 # ---------------------------------------------------------------------------
 # 3. PaaS resource-type availability in the region.
+#     NOTE: this proves the resource TYPE is offered in the region — it is NOT a
+#     live-capacity guarantee. Control-plane capacity (e.g. AKS 'AksCapacityHeavyUsage')
+#     is transient and has no pre-check API; deploy.ps1 handles that class at deploy time.
 # ---------------------------------------------------------------------------
-Write-Step "Checking PaaS resource-type availability"
+Write-Step "Checking PaaS resource-type availability (region offering, not live capacity)"
 $paasTypes = @(
   @{ Label = 'AKS';                    Ns = 'Microsoft.ContainerService'; Type = 'managedClusters' }
   @{ Label = 'App Service (Linux)';    Ns = 'Microsoft.Web';              Type = 'sites' }
@@ -244,4 +247,7 @@ if ($failCount -gt 0) {
 }
 
 Write-Host "✅ Pre-flight OK — region '$Location' can host the lab." -ForegroundColor Green
+Write-Host "   Note: this validates availability + quota, NOT live service capacity. Transient" -ForegroundColor DarkGray
+Write-Host "   region-wide shortages (e.g. AKS 'AksCapacityHeavyUsage') can't be pre-checked by any" -ForegroundColor DarkGray
+Write-Host "   Azure API; if one occurs at deploy time, re-run with -Location <other region>." -ForegroundColor DarkGray
 exit 0
