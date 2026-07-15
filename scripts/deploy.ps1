@@ -13,13 +13,20 @@
        - Apply the K8s frontend + k6 load generator (pointing at the App Service URL)
 
 .PARAMETER ResourceGroup
-  Resource group name. Defaults to rg-azure-monitor-lab.
+  Resource group name. Created if it does not already exist; reused if it does.
+  Precedence: explicit -ResourceGroup > lab.config.json 'resourceGroup' > default 'rg-azure-monitor-lab'.
 
 .PARAMETER Location
-  Region. Defaults to swedencentral.
+  Region. Precedence: explicit -Location > lab.config.json 'location' > default 'swedencentral'.
 
 .PARAMETER ParametersFile
   Bicep parameters file. Defaults to infra/main.parameters.json.
+
+.EXAMPLE
+  ./scripts/deploy.ps1
+
+.EXAMPLE
+  ./scripts/deploy.ps1 -ResourceGroup rg-my-lab -Location westeurope
 #>
 
 [CmdletBinding()]
@@ -45,6 +52,17 @@ $labConfigPath = Join-Path $PSScriptRoot '..' 'lab.config.json'
 if (Test-Path $labConfigPath) {
   Write-Host "==> Syncing derived config files from lab.config.json" -ForegroundColor Cyan
   & (Join-Path $PSScriptRoot 'sync-config.ps1')
+
+  # Honor lab.config.json as the single source of truth for RG + region, but only
+  # when the caller did not pass an explicit override. Precedence:
+  #   explicit -ResourceGroup/-Location  >  lab.config.json  >  built-in defaults.
+  $labCfg = Get-Content -Raw $labConfigPath | ConvertFrom-Json
+  if (-not $PSBoundParameters.ContainsKey('ResourceGroup') -and -not [string]::IsNullOrWhiteSpace($labCfg.resourceGroup)) {
+    $ResourceGroup = $labCfg.resourceGroup
+  }
+  if (-not $PSBoundParameters.ContainsKey('Location') -and -not [string]::IsNullOrWhiteSpace($labCfg.location)) {
+    $Location = $labCfg.location
+  }
 }
 
 # -------------------------------------------------------------------

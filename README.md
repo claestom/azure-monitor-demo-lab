@@ -121,9 +121,12 @@ notepad lab.config.json
 
 # 2. Deploy (deploy.ps1 calls sync-config.ps1 for you)
 ./scripts/deploy.ps1
+
+# Or target a custom resource group / region (created if it doesn't exist yet):
+./scripts/deploy.ps1 -ResourceGroup rg-my-lab -Location westeurope
 ```
 
-Defaults: resource group `rg-azure-monitor-lab`, region `swedencentral`. End-to-end ~20–25 minutes. See [REFERENCE.md → Deploy](REFERENCE.md#deploy) for the config details and the subscription guardrail.
+Defaults: resource group `rg-azure-monitor-lab`, region `swedencentral`. Override with `-ResourceGroup` / `-Location` (explicit args win over `lab.config.json`, which wins over these defaults). The group is created if it doesn't already exist, or reused if it does. End-to-end ~20–25 minutes. See [REFERENCE.md → Deploy](REFERENCE.md#deploy) for the config details and the subscription guardrail.
 
 **Two delivery modes:**
 
