@@ -1,0 +1,304 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "config": {
+      "isWizard": false,
+      "basics": {
+        "description": "**Azure Monitor Demo Lab** — full portal deployment. Every setting is provided here in the UI; no local config file is required. Pick a **Resource group** and **Region**, then step through the tabs to tune workloads, monitoring, and advanced options. Sensible defaults are pre-filled everywhere.",
+        "resourceGroup": {
+          "allowExisting": true,
+          "constraints": {
+            "validationMessage": "Recommended name: rg-azure-monitor-lab"
+          }
+        },
+        "location": {
+          "label": "Region",
+          "toolTip": "Azure region for all lab resources. swedencentral is the recommended default.",
+          "resourceTypes": [
+            "Microsoft.OperationalInsights/workspaces",
+            "Microsoft.ContainerService/managedClusters"
+          ]
+        }
+      }
+    },
+    "basics": [
+      {
+        "name": "namePrefix",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Name prefix",
+        "defaultValue": "amlab",
+        "toolTip": "Short prefix used to build resource names. Lowercase, 3-8 chars.",
+        "constraints": {
+          "required": true,
+          "regex": "^[a-z0-9]{3,8}$",
+          "validationMessage": "3-8 lowercase alphanumeric characters."
+        }
+      },
+      {
+        "name": "alertEmail",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Alert email",
+        "defaultValue": "",
+        "toolTip": "Email address that receives Action Group notifications.",
+        "constraints": {
+          "required": true,
+          "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+          "validationMessage": "Enter a valid email address."
+        }
+      },
+      {
+        "name": "vmAdminUsername",
+        "type": "Microsoft.Common.TextBox",
+        "label": "VM admin username",
+        "defaultValue": "azureuser",
+        "toolTip": "Admin username for the demo VMs.",
+        "constraints": {
+          "required": true,
+          "regex": "^[a-z][a-z0-9-]{2,31}$",
+          "validationMessage": "Lowercase, start with a letter, 3-32 chars."
+        }
+      },
+      {
+        "name": "adminCredentials",
+        "type": "Microsoft.Compute.CredentialsCombo",
+        "label": {
+          "password": "VM admin password",
+          "confirmPassword": "Confirm password"
+        },
+        "toolTip": {
+          "password": "Admin password for the demo VMs. Must meet Azure complexity rules."
+        },
+        "constraints": {
+          "required": true
+        },
+        "options": {
+          "hideConfirmation": false
+        },
+        "osPlatform": "Windows",
+        "visible": true
+      }
+    ],
+    "steps": [
+      {
+        "name": "workloads",
+        "label": "Workloads",
+        "elements": [
+          {
+            "name": "deployLinuxVm",
+            "type": "Microsoft.Common.OptionsGroup",
+            "label": "Deploy Linux VM",
+            "defaultValue": "Yes",
+            "toolTip": "Deploy the Ubuntu 22.04 demo VM (VM Insights).",
+            "constraints": {
+              "allowedValues": [
+                { "label": "Yes", "value": true },
+                { "label": "No", "value": false }
+              ],
+              "required": true
+            }
+          },
+          {
+            "name": "deployWindowsVm",
+            "type": "Microsoft.Common.OptionsGroup",
+            "label": "Deploy Windows VM",
+            "defaultValue": "Yes",
+            "toolTip": "Deploy the Windows Server 2022 demo VM (VM Insights).",
+            "constraints": {
+              "allowedValues": [
+                { "label": "Yes", "value": true },
+                { "label": "No", "value": false }
+              ],
+              "required": true
+            }
+          },
+          {
+            "name": "vmSize",
+            "type": "Microsoft.Common.TextBox",
+            "label": "VM size",
+            "defaultValue": "Standard_B2s",
+            "toolTip": "VM size for the demo VMs (kept small for a lab).",
+            "constraints": {
+              "required": true,
+              "regex": "^[A-Za-z0-9_]+$",
+              "validationMessage": "Enter a valid VM SKU, e.g. Standard_B2s."
+            }
+          },
+          {
+            "name": "aksNodeVmSize",
+            "type": "Microsoft.Common.TextBox",
+            "label": "AKS node VM size",
+            "defaultValue": "Standard_B2s",
+            "toolTip": "VM size for AKS nodes.",
+            "constraints": {
+              "required": true,
+              "regex": "^[A-Za-z0-9_]+$",
+              "validationMessage": "Enter a valid VM SKU, e.g. Standard_B2s."
+            }
+          },
+          {
+            "name": "aksNodeCount",
+            "type": "Microsoft.Common.Slider",
+            "min": 1,
+            "max": 5,
+            "label": "AKS node count",
+            "defaultValue": 1,
+            "showStepMarkers": true,
+            "toolTip": "Number of nodes in the AKS node pool.",
+            "constraints": {
+              "required": true
+            }
+          }
+        ]
+      },
+      {
+        "name": "monitoring",
+        "label": "Monitoring & cost",
+        "elements": [
+          {
+            "name": "dailyCapGb",
+            "type": "Microsoft.Common.Slider",
+            "min": 1,
+            "max": 10,
+            "label": "Daily ingestion cap (GB)",
+            "defaultValue": 1,
+            "showStepMarkers": true,
+            "toolTip": "Daily ingestion cap on the central Log Analytics workspace.",
+            "constraints": {
+              "required": true
+            }
+          },
+          {
+            "name": "enableSentinel",
+            "type": "Microsoft.Common.OptionsGroup",
+            "label": "Enable Microsoft Sentinel",
+            "defaultValue": "Yes",
+            "toolTip": "Enable Microsoft Sentinel on the central workspace.",
+            "constraints": {
+              "allowedValues": [
+                { "label": "Yes", "value": true },
+                { "label": "No", "value": false }
+              ],
+              "required": true
+            }
+          },
+          {
+            "name": "enablePlatformLogsDcr",
+            "type": "Microsoft.Common.OptionsGroup",
+            "label": "Enable platform-logs DCR (preview)",
+            "defaultValue": "No",
+            "toolTip": "Scenario 51 (public preview). Requires a region that supports the preview.",
+            "constraints": {
+              "allowedValues": [
+                { "label": "Yes", "value": true },
+                { "label": "No", "value": false }
+              ],
+              "required": true
+            }
+          },
+          {
+            "name": "enableMetricsExportDcr",
+            "type": "Microsoft.Common.OptionsGroup",
+            "label": "Enable metrics-export DCR",
+            "defaultValue": "No",
+            "toolTip": "Scenario 52 (GA). The DCR and central workspace must be in the same region.",
+            "constraints": {
+              "allowedValues": [
+                { "label": "Yes", "value": true },
+                { "label": "No", "value": false }
+              ],
+              "required": true
+            }
+          },
+          {
+            "name": "enableLawReplication",
+            "type": "Microsoft.Common.OptionsGroup",
+            "label": "Enable LAW cross-region replication",
+            "defaultValue": "No",
+            "toolTip": "Doubles ingestion cost. Requires a paired secondary region below.",
+            "constraints": {
+              "allowedValues": [
+                { "label": "Yes", "value": true },
+                { "label": "No", "value": false }
+              ],
+              "required": true
+            }
+          },
+          {
+            "name": "lawReplicationLocation",
+            "type": "Microsoft.Common.TextBox",
+            "label": "LAW replication region",
+            "defaultValue": "",
+            "toolTip": "Secondary region (must be a paired region of the primary). Required when replication is enabled.",
+            "constraints": {
+              "required": "[equals(steps('monitoring').enableLawReplication, true)]",
+              "regex": "^[a-z0-9]*$",
+              "validationMessage": "Enter a region short name, e.g. westeurope."
+            },
+            "visible": "[equals(steps('monitoring').enableLawReplication, true)]"
+          }
+        ]
+      },
+      {
+        "name": "advanced",
+        "label": "Advanced",
+        "elements": [
+          {
+            "name": "ownerTag",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Owner tag",
+            "defaultValue": "demo-lab",
+            "toolTip": "Value for the 'owner' tag applied to every resource.",
+            "constraints": {
+              "required": true
+            }
+          },
+          {
+            "name": "appServiceRepoUrl",
+            "type": "Microsoft.Common.TextBox",
+            "label": "App Service sample repo URL",
+            "defaultValue": "https://github.com/Azure-Samples/dotnetcore-docs-hello-world-linux",
+            "toolTip": "Public GitHub repo deployed to the App Service.",
+            "constraints": {
+              "required": true,
+              "regex": "^https://.+",
+              "validationMessage": "Enter a valid https:// URL."
+            }
+          },
+          {
+            "name": "siemWebhookUrl",
+            "type": "Microsoft.Common.TextBox",
+            "label": "SIEM / Teams webhook URL (optional)",
+            "defaultValue": "",
+            "toolTip": "Optional secondary SIEM/Teams webhook added to the Action Group. Leave empty to skip.",
+            "constraints": {
+              "required": false
+            }
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "location": "[location()]",
+      "namePrefix": "[basics('namePrefix')]",
+      "alertEmail": "[basics('alertEmail')]",
+      "vmAdminUsername": "[basics('vmAdminUsername')]",
+      "vmAdminPassword": "[basics('adminCredentials').password]",
+      "deployLinuxVm": "[steps('workloads').deployLinuxVm]",
+      "deployWindowsVm": "[steps('workloads').deployWindowsVm]",
+      "vmSize": "[steps('workloads').vmSize]",
+      "aksNodeVmSize": "[steps('workloads').aksNodeVmSize]",
+      "aksNodeCount": "[steps('workloads').aksNodeCount]",
+      "dailyCapGb": "[steps('monitoring').dailyCapGb]",
+      "enableSentinel": "[steps('monitoring').enableSentinel]",
+      "enablePlatformLogsDcr": "[steps('monitoring').enablePlatformLogsDcr]",
+      "enableMetricsExportDcr": "[steps('monitoring').enableMetricsExportDcr]",
+      "enableLawReplication": "[steps('monitoring').enableLawReplication]",
+      "lawReplicationLocation": "[steps('monitoring').lawReplicationLocation]",
+      "ownerTag": "[steps('advanced').ownerTag]",
+      "appServiceRepoUrl": "[steps('advanced').appServiceRepoUrl]",
+      "siemWebhookUrl": "[steps('advanced').siemWebhookUrl]"
+    }
+  }
+}

@@ -6,18 +6,21 @@ Built for **demos, microhacks, and hackathons**: deploy it into your own subscri
 
 ## What's inside
 
-A single resource group wired end-to-end across the observability stack:
+One resource group, wired end-to-end across the observability stack:
 
-- **Telemetry backbone** — 2 × Log Analytics, Application Insights, Azure Monitor Workspace (Managed Prometheus), DCRs + ingest-time workspace transformation.
-- **Workloads** — Linux/Windows VMs (VM Insights), AKS (Container Insights + Managed Prometheus + Grafana + OpenTelemetry), Linux VMSS (predictive autoscale), .NET 8 App Service (codeless auto-instrumentation).
-- **Networking** — Connection Monitor, NSG Flow Logs + Traffic Analytics, Network Insights.
-- **Governance** — Diagnostic Settings via DeployIfNotExists policy, cross-workspace KQL, reusable KQL functions.
-- **Alerting & response** — Action Group, 7+ metric/KQL/activity/dynamic-threshold alerts, AMBA, alert processing rules, Logic App auto-mitigation.
-- **Security** — Microsoft Sentinel onboarding, security-posture alert rules, granular (workspace/table/row) RBAC.
-- **Cost & data routing** — daily caps, Basic/Analytics table plans, Summary Rules, Data Export, dedicated cost workbook.
-- **Reliability previews** — Service Groups + Health Models, SLIs/SLOs, Search Jobs + archive restore.
+| Layer | What you get |
+| --- | --- |
+| **Workloads** | Linux/Windows VMs, AKS, Linux VMSS (predictive autoscale), .NET 8 App Service |
+| **Workload monitoring** | VM Insights, Container Insights, Managed Prometheus, Grafana, OpenTelemetry, codeless App Service auto-instrumentation |
+| **Telemetry backbone** | 2 × Log Analytics, Application Insights, Azure Monitor Workspace (Managed Prometheus), DCRs with ingest-time transforms |
+| **Governance** | Diagnostic Settings via DeployIfNotExists policy, cross-workspace KQL, reusable KQL functions |
+| **Networking** | Connection Monitor, NSG Flow Logs + Traffic Analytics, Network Insights |
+| **Alerting & response** | Action Group, 7+ metric/KQL/activity/dynamic-threshold alerts, AMBA, alert processing rules, Logic App auto-mitigation |
+| **Security** | Microsoft Sentinel onboarding, security-posture alert rules, granular workspace/table/row RBAC |
+| **Cost & data routing** | Daily caps, Basic/Analytics table plans, Summary Rules, Data Export, cost workbook |
+| **Reliability previews** | Service Groups + Health Models, SLIs/SLOs, Search Jobs + archive restore |
 
-> For the exact list of every resource that gets deployed, see **[REFERENCE.md → What gets deployed](REFERENCE.md#what-gets-deployed)**.
+> Full resource-by-resource list: **[REFERENCE.md → What gets deployed](REFERENCE.md#what-gets-deployed)**.
 
 ## Architecture
 
@@ -111,6 +114,23 @@ flowchart LR
 > **Two IaC paths, one config.** Bicep is primary (`infra/`); Terraform (`terraform/`) is a parallel implementation driven from the same `lab.config.json`. Pick one — don't mix.
 
 ## Deploy
+
+### Option 1 — Deploy to Azure (portal, no local setup)
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-demo-lab%2Fmaster%2Finfra%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-demo-lab%2Fmaster%2Finfra%2FcreateUiDefinition.json)
+
+Opens a guided **Custom deployment** wizard in the Azure Portal — **every value is entered in the UI, no local files needed**. Sensible defaults are pre-filled throughout; you only *must* supply an **alert email** and a **VM admin password**.
+
+| Tab | You provide |
+|---|---|
+| **Basics** | Resource group (recommended `rg-azure-monitor-lab`), Region (recommended `swedencentral`), name prefix, alert email, VM admin username + password |
+| **Workloads** | Deploy Linux/Windows VMs, VM size, AKS node size + count |
+| **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
+| **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook |
+
+> Use **Option 2** if you prefer Infrastructure-as-Code, the staged workshop, or the subscription guardrail.
+
+### Option 2 — Scripted (Bicep / Terraform, full control)
 
 This repo ships **zero secrets**. Populate one central config file; `sync-config.ps1` generates every derived input from it.
 
