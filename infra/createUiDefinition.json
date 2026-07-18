@@ -240,12 +240,14 @@
           },
           {
             "name": "lawReplicationInfo",
-            "type": "Microsoft.Common.InfoBox",
+            "type": "Microsoft.Common.TextBlock",
             "visible": "[equals(steps('monitoring').enableLawReplication, true)]",
             "options": {
-              "icon": "Info",
-              "text": "See the list of supported regions for Log Analytics workspace replication.",
-              "uri": "https://learn.microsoft.com/en-us/azure/azure-monitor/logs/workspace-replication?tabs=azure-cli#supported-regions"
+              "text": "The secondary region must be in the supported list for Log Analytics workspace replication.",
+              "link": {
+                "label": "View supported regions",
+                "uri": "https://learn.microsoft.com/en-us/azure/azure-monitor/logs/workspace-replication?tabs=azure-cli#supported-regions"
+              }
             }
           }
         ]
