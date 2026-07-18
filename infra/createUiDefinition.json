@@ -237,6 +237,16 @@
               "validationMessage": "Enter a region short name, e.g. westeurope."
             },
             "visible": "[equals(steps('monitoring').enableLawReplication, true)]"
+          },
+          {
+            "name": "lawReplicationInfo",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[equals(steps('monitoring').enableLawReplication, true)]",
+            "options": {
+              "icon": "Info",
+              "text": "See the list of supported regions for Log Analytics workspace replication.",
+              "uri": "https://learn.microsoft.com/en-us/azure/azure-monitor/logs/workspace-replication?tabs=azure-cli#supported-regions"
+            }
           }
         ]
       },
