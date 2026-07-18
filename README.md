@@ -1,6 +1,6 @@
 # Azure Monitor Demo Lab
 
-A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for progressive enablement), and **52 demo scenarios** — all driven from a single, gitignored config file.
+A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for progressive enablement), and **52 demo scenarios** - all driven from a single, gitignored config file.
 
 Built for **demos, microhacks, and hackathons**: deploy it into your own subscription, explore Azure Monitor end-to-end, break it, restore it, and tear it down.
 
@@ -26,7 +26,7 @@ One resource group, wired end-to-end across the observability stack:
 
 Everything below lands in a **single resource group** (`rg-azure-monitor-lab`). Telemetry flows left-to-right: workloads emit signals, agents/policies collect them, the backplane stores them, and the consumption layer turns them into dashboards, alerts, and responses.
 
-[![Azure Monitor Demo Lab architecture — Azure-icon overview](docs/architecture-overview.svg)](docs/architecture.drawio)
+[![Azure Monitor Demo Lab architecture - Azure-icon overview](docs/architecture-overview.svg)](docs/architecture.drawio)
 
 <details>
 <summary>Text / emoji version (Mermaid)</summary>
@@ -101,21 +101,21 @@ flowchart LR
 
 </details>
 
-> 🎨 **Full Azure-icon diagram (editable):** [docs/architecture.drawio](docs/architecture.drawio) — open with [diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension. It contains a per-tier overview plus detail pages for each pillar.
+> 🎨 **Full Azure-icon diagram (editable):** [docs/architecture.drawio](docs/architecture.drawio) - open with [diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension. It contains a per-tier overview plus detail pages for each pillar.
 
 ## Prerequisites
 
 - Azure CLI (`az`) ≥ 2.60, logged in: `az login`
 - `kubectl` (any recent version)
-- Bicep CLI (bundled with `az` ≥ 2.20) — **or** Terraform ≥ 1.6 for the Terraform path
+- Bicep CLI (bundled with `az` ≥ 2.20) - **or** Terraform ≥ 1.6 for the Terraform path
 - PowerShell 7+
 - A subscription with quota for ~5 small VMs/nodes (`Standard_B2s`), 1 App Service B1, Managed Grafana, Storage, Event Hub, Key Vault.
 
-> **Two IaC paths, one config.** Bicep is primary (`infra/`); Terraform (`terraform/`) is a parallel implementation driven from the same `lab.config.json`. Pick one — don't mix.
+> **Two IaC paths, one config.** Bicep is primary (`infra/`); Terraform (`terraform/`) is a parallel implementation driven from the same `lab.config.json`. Pick one - don't mix.
 
 ## Deploy
 
-### Option 1 — Deploy to Azure (portal, no local setup)
+### Option 1 - Deploy to Azure (portal, no local setup)
 
 <div align="center">
 
@@ -123,7 +123,7 @@ flowchart LR
 
 </div>
 
-Opens a guided **Custom deployment** wizard in the Azure Portal — **every value is entered in the UI, no local files needed**. Sensible defaults are pre-filled throughout; you only *must* supply an **alert email** and a **VM admin password**.
+Opens a guided **Custom deployment** wizard in the Azure Portal - **every value is entered in the UI, no local files needed**. Sensible defaults are pre-filled throughout; you only *must* supply an **alert email** and a **VM admin password**.
 
 | Tab | You provide |
 |---|---|
@@ -134,7 +134,7 @@ Opens a guided **Custom deployment** wizard in the Azure Portal — **every valu
 
 > Use **Option 2** if you prefer Infrastructure-as-Code, the staged workshop, or the subscription guardrail.
 
-### Option 2 — Scripted (Bicep / Terraform, full control)
+### Option 2 - Scripted (Bicep / Terraform, full control)
 
 This repo ships **zero secrets**. Populate one central config file; `sync-config.ps1` generates every derived input from it.
 
@@ -152,14 +152,14 @@ notepad lab.config.json
 
 Defaults: resource group `rg-azure-monitor-lab`, region `swedencentral`. Override with `-ResourceGroup` / `-Location` (explicit args win over `lab.config.json`, which wins over these defaults). The group is created if it doesn't already exist, or reused if it does. End-to-end ~20–25 minutes. See [REFERENCE.md → Deploy](REFERENCE.md#deploy) for the config details and the subscription guardrail.
 
-> **Pre-flight check.** Before creating anything, `deploy.ps1` runs [`scripts/preflight-check.ps1`](scripts/preflight-check.ps1), which validates — in ~15 seconds — that every VM SKU, vCPU quota, and PaaS resource type the lab needs is actually available in the selected region for your subscription. It fails fast with a PASS/WARN/FAIL table instead of blowing up 20 minutes into the deployment. Run it standalone to vet a region before committing (`./scripts/preflight-check.ps1 -Location westeurope`), or bypass with `./scripts/deploy.ps1 -SkipPreflight`.
+> **Pre-flight check.** Before creating anything, `deploy.ps1` runs [`scripts/preflight-check.ps1`](scripts/preflight-check.ps1), which validates - in ~15 seconds - that every VM SKU, vCPU quota, and PaaS resource type the lab needs is actually available in the selected region for your subscription. It fails fast with a PASS/WARN/FAIL table instead of blowing up 20 minutes into the deployment. Run it standalone to vet a region before committing (`./scripts/preflight-check.ps1 -Location westeurope`), or bypass with `./scripts/deploy.ps1 -SkipPreflight`.
 >
-> The pre-flight validates *availability + quota*, not *live service capacity*. Transient, region-wide shortages such as AKS `AksCapacityHeavyUsage` have no pre-check API and can only surface at deploy time. If one hits, `deploy.ps1` detects it and points you to the fix — deploy to another region (`-Location northeurope`) or retry (`-MaxDeployRetries 3`), since capacity is reclaimed as other clusters are deleted.
+> The pre-flight validates *availability + quota*, not *live service capacity*. Transient, region-wide shortages such as AKS `AksCapacityHeavyUsage` have no pre-check API and can only surface at deploy time. If one hits, `deploy.ps1` detects it and points you to the fix - deploy to another region (`-Location northeurope`) or retry (`-MaxDeployRetries 3`), since capacity is reclaimed as other clusters are deleted.
 
 **Two delivery modes:**
 
-- **One-shot** — `./scripts/deploy.ps1` deploys everything at once (fastest, internal demos).
-- **Staged workshop** — 5 progressive stages (A–E) you can pause between, toggled in `lab.config.json`. Step-by-step guides: [Bicep](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [Terraform](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md).
+- **One-shot** - `./scripts/deploy.ps1` deploys everything at once (fastest, internal demos).
+- **Staged workshop** - 5 progressive stages (A–E) you can pause between, toggled in `lab.config.json`. Step-by-step guides: [Bicep](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [Terraform](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md).
 
 When you're done (cost guardrails of 1 GB/day are baked in either way):
 
@@ -172,13 +172,13 @@ When you're done (cost guardrails of 1 GB/day are baked in either way):
 | Doc | What's in it |
 |---|---|
 | [REFERENCE.md](REFERENCE.md) | Full capability matrix · every deployed resource · demo walkthrough · cost breakdown · folder layout · optional add-ons · troubleshooting |
-| [DEMO-SCENARIOS.md](DEMO-SCENARIOS.md) | All 52 demo scenarios — story, click-path, and "killer line", plus audience-pivoted shortlists |
+| [DEMO-SCENARIOS.md](DEMO-SCENARIOS.md) | All 52 demo scenarios - story, click-path, and "killer line", plus audience-pivoted shortlists |
 | [docs/DEPLOY-BICEP-STEP-BY-STEP.md](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md) | Staged deployment tutorials |
 | Stage notes: [A](docs/STAGE-A-FOUNDATION.md) · [B](docs/STAGE-B-WORKLOADS.md) · [C](docs/STAGE-C-ALERTING.md) · [D](docs/STAGE-D-SECURITY-POSTURE.md) · [E](docs/STAGE-E-OPTIONAL-ADVANCED.md) | Per-stage speaker notes |
 | [docs/CUSTOMER-STAGE-HANDOUT.md](docs/CUSTOMER-STAGE-HANDOUT.md) | Per-stage time + cost cheat sheet |
 
 ## Contributing & license
 
-Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). To report a security issue, see [SECURITY.md](SECURITY.md).
+Contributions are welcome - see [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). To report a security issue, see [SECURITY.md](SECURITY.md).
 
-Licensed under the **[MIT License](LICENSE)** — free to use, modify, and redistribute (including for microhacks, hackathons, and your own demos), provided as-is without warranty.
+Licensed under the **[MIT License](LICENSE)** - free to use, modify, and redistribute (including for microhacks, hackathons, and your own demos), provided as-is without warranty.
