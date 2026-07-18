@@ -43,7 +43,7 @@
   Report problems but do not fail (exit 0 / no throw). Useful for a dry inspection.
 
 .EXAMPLE
-  ./scripts/preflight-check.ps1 -Location swedencentral
+  ./scripts/preflight-check.ps1 -Location northeurope
 
 .EXAMPLE
   ./scripts/preflight-check.ps1 -Location westeurope -AksNodeCount 2 -WarnOnly

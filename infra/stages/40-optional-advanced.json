@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "504440572937421651"
+      "templateHash": "7590387020166881074"
     }
   },
   "parameters": {
@@ -701,7 +701,7 @@
             "value": "[format('hm-{0}-workload', parameters('namePrefix'))]"
           },
           "location": {
-            "value": "[parameters('location')]"
+            "value": "swedencentral"
           },
           "webAppId": {
             "value": "[resourceId('Microsoft.Web/sites', variables('webAppName'))]"

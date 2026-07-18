@@ -134,7 +134,7 @@ notepad lab.config.json   # fill in subscriptionId, tenantId, alertEmail, vmAdmi
 ```hcl
 subscription_id     = "<your-subscription-id>"
 resource_group_name = "rg-azure-monitor-lab"   # optional - default is rg-azure-monitor-lab
-location            = "swedencentral"
+location            = "northeurope"
 alert_email         = "your.alias@example.com"
 vm_admin_password   = "<STRONG-PASSWORD>"
 
@@ -152,7 +152,7 @@ enable_stage_e = false
 Terraform looks the RG up via data source rather than creating it, so `terraform destroy` will not nuke it. Create it once (idempotent - safe to re-run):
 
 ```powershell
-az group create -n rg-azure-monitor-lab -l swedencentral --tags purpose=azure-monitor-demo-lab owner=demo-lab
+az group create -n rg-azure-monitor-lab -l northeurope --tags purpose=azure-monitor-demo-lab owner=demo-lab
 ```
 
 If you skip this step, `terraform plan` will fail with `Resource Group "rg-azure-monitor-lab" was not found`.
@@ -272,7 +272,7 @@ A few resources are subscription-scoped or live in `NetworkWatcherRG` and surviv
 ```powershell
 az monitor log-analytics workspace list-deleted-workspaces --subscription $sub --query "[?contains(name,'amlab')]" -o table
 # Permanent purge if needed:
-# az rest --method delete --url "https://management.azure.com/subscriptions/$sub/providers/Microsoft.OperationalInsights/locations/swedencentral/deletedWorkspaces/<name>?api-version=2023-09-01"
+# az rest --method delete --url "https://management.azure.com/subscriptions/$sub/providers/Microsoft.OperationalInsights/locations/northeurope/deletedWorkspaces/<name>?api-version=2023-09-01"
 ```
 
 2. Soft-deleted Application Insights components (also 14-day grace):
@@ -284,8 +284,8 @@ az monitor app-insights component list-deleted --subscription $sub --query "[?co
 3. NSG/VNet flow logs in `NetworkWatcherRG` (Stage B creates them outside the lab RG):
 
 ```powershell
-az network watcher flow-log list -l swedencentral --subscription $sub --query "[?contains(name,'amlab')].{name:name,enabled:enabled}" -o table
-# az network watcher flow-log delete -l swedencentral -n <flowLogName> --subscription $sub
+az network watcher flow-log list -l northeurope --subscription $sub --query "[?contains(name,'amlab')].{name:name,enabled:enabled}" -o table
+# az network watcher flow-log delete -l northeurope -n <flowLogName> --subscription $sub
 ```
 
 4. Custom role definition from Stage D (`AMLAB - Granular Log Reader (<hash>)`). Auto-removed once no scopes reference it; force-delete if it lingers:

@@ -100,7 +100,7 @@ function Esc($s)     { $s -replace '&','&amp;' -replace '<','&lt;' -replace '>',
 $sb = New-Object System.Text.StringBuilder
 [void]$sb.AppendLine("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 $W $H' font-family='Segoe UI, Helvetica, Arial, sans-serif'>")
 [void]$sb.AppendLine("<rect x='0' y='0' width='$W' height='$H' rx='10' fill='#0D1117'/>")
-[void]$sb.AppendLine("<text x='$($W/2)' y='36' fill='#E6EDF3' font-size='20' font-weight='700' text-anchor='middle'>rg-azure-monitor-lab · swedencentral</text>")
+[void]$sb.AppendLine("<text x='$($W/2)' y='36' fill='#E6EDF3' font-size='20' font-weight='700' text-anchor='middle'>rg-azure-monitor-lab · northeurope</text>")
 [void]$sb.AppendLine("<defs><marker id='arrow' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#7D8590'/></marker></defs>")
 
 # group boxes

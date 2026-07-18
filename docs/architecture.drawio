@@ -4,7 +4,7 @@
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        <mxCell id="rg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1F77B4;dashed=1;dashPattern=8 8;strokeWidth=2;verticalAlign=top;fontStyle=1;fontSize=14;align=left;spacingLeft=14;spacingTop=8" value="rg-azure-monitor-lab  ·  swedencentral" vertex="1">
+        <mxCell id="rg" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#1F77B4;dashed=1;dashPattern=8 8;strokeWidth=2;verticalAlign=top;fontStyle=1;fontSize=14;align=left;spacingLeft=14;spacingTop=8" value="rg-azure-monitor-lab  ·  northeurope" vertex="1">
           <mxGeometry height="1060" width="1660" x="20" y="20" as="geometry" />
         </mxCell>
         <mxCell id="zwl" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#EBF5FB;strokeColor=#0078D4;strokeWidth=1;verticalAlign=top;fontStyle=1;fontSize=12;align=left;spacingLeft=10;spacingTop=6;fontColor=#0078D4" value="WORKLOADS" vertex="1">

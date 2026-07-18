@@ -1508,7 +1508,7 @@ VM Insights tells you what a VM is *doing*. **Connection Monitor v2** tells you 
 
 ### What's deployed
 
-The module is scoped to the singleton **`NetworkWatcher_swedencentral`** in `NetworkWatcherRG` (Azure auto-creates one Network Watcher per region per subscription — only one allowed):
+The module is scoped to the singleton **`NetworkWatcher_northeurope`** in `NetworkWatcherRG` (Azure auto-creates one Network Watcher per region per subscription — only one allowed):
 
 | Object | Value |
 |---|---|
@@ -1644,7 +1644,7 @@ When `siemWebhookUrl` is non-empty, `ag-amlab-email` ends up with three webhooks
 1. Redeploy with the parameter:
    ```powershell
    ./scripts/deploy.ps1 -ResourceGroup rg-azure-monitor-lab `
-     -Location swedencentral
+     -Location northeurope
    # When prompted for the secure param, or in main.parameters.json:
    # "siemWebhookUrl": { "value": "https://<your-siem-webhook>" }
    ```
@@ -1853,7 +1853,7 @@ The central LAW is already collecting Activity Log, signin logs (when assigned),
    # lands in AzureActivity within ~5-10 min, then the rule's next 15-min run
    # raises an incident.
    $rgTemp = "rg-sentinel-demo-$(Get-Random -Maximum 9999)"
-   az group create -n $rgTemp -l swedencentral --tags purpose=sentinel-demo | Out-Null
+   az group create -n $rgTemp -l northeurope --tags purpose=sentinel-demo | Out-Null
    az group delete -n $rgTemp --yes --no-wait
    ```
 5. **Microsoft Defender → Investigation & response → Incidents & alerts → Incidents** — wait ~10-15 min — the Sentinel-generated incident appears in the **same queue** as Defender XDR incidents, with severity, MITRE tactics (`Impact` / `T1485`), entity mapping (`Caller`, `_ResourceId`), and a `Detection source = Microsoft Sentinel` tag.

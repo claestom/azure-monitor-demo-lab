@@ -79,8 +79,8 @@ az monitor log-analytics query -w $lawId --analytics-query "Heartbeat | where Ti
 az monitor log-analytics query -w $lawId --analytics-query "AppRequests | where TimeGenerated > ago(15m) | summarize requests = count(), failures = countif(Success == false)" -o table
 
 # Connection monitor + flow logs
-az network watcher connection-monitor list -l swedencentral -o table
-az network watcher flow-log list -l swedencentral --query "[?starts_with(name, 'fl-amlab')]" -o table
+az network watcher connection-monitor list -l northeurope -o table
+az network watcher flow-log list -l northeurope --query "[?starts_with(name, 'fl-amlab')]" -o table
 ```
 
 If `Heartbeat` returns zero rows, wait 3–5 min for AMA to handshake; if still empty, check the VM has the AMA extension installed and the DCR association exists.

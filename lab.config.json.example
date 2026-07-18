@@ -11,7 +11,7 @@
   "vmAdminPassword":  "<STRONG-PASSWORD>",
 
   "resourceGroup":    "rg-azure-monitor-lab",
-  "location":         "swedencentral",
+  "location":         "northeurope",
   "namePrefix":       "amlab",
   "vmAdminUsername":  "azureuser",
   "dailyCapGb":       1,

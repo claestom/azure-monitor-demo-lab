@@ -1,6 +1,6 @@
 <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1320 600' font-family='Segoe UI, Helvetica, Arial, sans-serif'>
 <rect x='0' y='0' width='1320' height='600' rx='10' fill='#0D1117'/>
-<text x='660' y='36' fill='#E6EDF3' font-size='20' font-weight='700' text-anchor='middle'>rg-azure-monitor-lab · swedencentral</text>
+<text x='660' y='36' fill='#E6EDF3' font-size='20' font-weight='700' text-anchor='middle'>rg-azure-monitor-lab · northeurope</text>
 <defs><marker id='arrow' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#7D8590'/></marker></defs>
 <rect x='30' y='60' width='250' height='475' rx='12' fill='#0E2438' stroke='#4AA3E0' stroke-width='1.5'/>
 <text x='155' y='88' fill='#D6EBFB' font-size='15' font-weight='700' text-anchor='middle'>Workloads</text>

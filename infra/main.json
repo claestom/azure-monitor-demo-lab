@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "3100826188964742058"
+      "templateHash": "16786233641646249513"
     }
   },
   "parameters": {
@@ -7759,7 +7759,7 @@
             "value": "[format('hm-{0}-workload', parameters('namePrefix'))]"
           },
           "location": {
-            "value": "[parameters('location')]"
+            "value": "swedencentral"
           },
           "tags": {
             "value": "[variables('commonTags')]"

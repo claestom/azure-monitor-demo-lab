@@ -28,79 +28,6 @@ Everything below lands in a **single resource group** (`rg-azure-monitor-lab`). 
 
 [![Azure Monitor Demo Lab architecture - Azure-icon overview](docs/architecture-overview.svg)](docs/architecture.drawio)
 
-<details>
-<summary>Text / emoji version (Mermaid)</summary>
-
-```mermaid
-flowchart LR
-  subgraph WL["🖥️ Workloads"]
-    VM["🖥️ Linux &amp; Windows VMs"]
-    VMSS["🧱 Linux VMSS<br/>predictive autoscale"]
-    AKS["☸️ AKS<br/>Container Insights"]
-    APP["🌐 .NET 8 App Service<br/>auto-instrumented"]
-    NET["🕸️ VNet / NSG<br/>Connection Monitor"]
-  end
-
-  subgraph COL["📥 Collection"]
-    AMA["🛰️ Azure Monitor Agent<br/>DCRs · DCE"]
-    FLOW["🌊 NSG Flow Logs"]
-    POL["📜 Diag Settings via<br/>Policy (DINE)"]
-  end
-
-  subgraph DATA["🗄️ Telemetry backplane"]
-    LAW["🗃️ Log Analytics<br/>central"]
-    LAWAI["🗃️ Log Analytics<br/>App Insights"]
-    AI["💡 Application Insights"]
-    AMW["🔥 Azure Monitor Workspace<br/>Managed Prometheus"]
-    PLAT["📦 Storage · Event Hub · Key Vault"]
-  end
-
-  subgraph USE["📊 Consumption &amp; response"]
-    GRAF["📈 Managed Grafana"]
-    WB["📓 Workbooks<br/>Traffic Lights · Cost · Security"]
-    AG["🚨 Action Group<br/>Alerts · AMBA"]
-    LOGIC["⚡ Logic App<br/>auto-mitigation"]
-    SENT["🛡️ Microsoft Sentinel"]
-  end
-
-  VM --> AMA
-  VMSS --> AMA
-  AKS --> AMA
-  AKS --> AMW
-  APP --> AI
-  NET --> FLOW
-  AMA --> LAW
-  AMA --> AMW
-  FLOW --> PLAT
-  POL --> LAW
-  AI --> LAWAI
-  PLAT --> LAW
-  LAW --> WB
-  LAWAI --> WB
-  AMW --> GRAF
-  LAW --> AG
-  AI --> AG
-  AG --> LOGIC
-  LAW --> SENT
-
-  classDef workload fill:#12314D,stroke:#4AA3E0,color:#D6EBFB,stroke-width:1px;
-  classDef collect fill:#123322,stroke:#57B96A,color:#D8F3DE,stroke-width:1px;
-  classDef data fill:#3A2A0D,stroke:#D9A441,color:#F7E6C4,stroke-width:1px;
-  classDef use fill:#2C1C40,stroke:#A877D6,color:#EADDF7,stroke-width:1px;
-
-  class VM,VMSS,AKS,APP,NET workload;
-  class AMA,FLOW,POL collect;
-  class LAW,LAWAI,AI,AMW,PLAT data;
-  class GRAF,WB,AG,LOGIC,SENT use;
-
-  style WL fill:#0E2438,stroke:#4AA3E0,color:#D6EBFB;
-  style COL fill:#0E2615,stroke:#57B96A,color:#D8F3DE;
-  style DATA fill:#2A1E08,stroke:#D9A441,color:#F7E6C4;
-  style USE fill:#1F1430,stroke:#A877D6,color:#EADDF7;
-```
-
-</details>
-
 > 🎨 **Full Azure-icon diagram (editable):** [docs/architecture.drawio](docs/architecture.drawio) - open with [diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension. It contains a per-tier overview plus detail pages for each pillar.
 
 ## Prerequisites
@@ -115,6 +42,8 @@ flowchart LR
 
 ## Deploy
 
+> **Recommended region:** `northeurope` (the default) for the widest feature availability. The Health Model preview is pinned to `swedencentral` automatically, since it isn't available in `northeurope` — everything else follows the region you pick.
+
 ### Option 1 - Deploy to Azure (portal, no local setup)
 
 <div align="center">
@@ -127,7 +56,7 @@ Opens a guided **Custom deployment** wizard in the Azure Portal - **every value 
 
 | Tab | You provide |
 |---|---|
-| **Basics** | Resource group (recommended `rg-azure-monitor-lab`), Region (recommended `swedencentral`), name prefix, alert email, VM admin username + password |
+| **Basics** | Resource group (recommended `rg-azure-monitor-lab`), Region (recommended `northeurope`), name prefix, alert email, VM admin username + password |
 | **Workloads** | Deploy Linux/Windows VMs, VM size, AKS node size + count |
 | **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
 | **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook |
@@ -139,22 +68,31 @@ Opens a guided **Custom deployment** wizard in the Azure Portal - **every value 
 This repo ships **zero secrets**. Populate one central config file; `sync-config.ps1` generates every derived input from it.
 
 ```powershell
-# 1. Copy the template and fill in subscriptionId, tenantId, alertEmail, vmAdminPassword, ...
+# 1. Clone the repo and enter it
+git clone https://github.com/claestom/azure-monitor-demo-lab.git
+cd azure-monitor-demo-lab
+
+# 2. Copy the template and fill in subscriptionId, tenantId, alertEmail, vmAdminPassword, ...
 Copy-Item lab.config.json.example lab.config.json
 notepad lab.config.json
 
-# 2. Deploy (deploy.ps1 calls sync-config.ps1 for you)
+# 3. Deploy (deploy.ps1 calls sync-config.ps1 for you)
 ./scripts/deploy.ps1
 
 # Or target a custom resource group / region (created if it doesn't exist yet):
 ./scripts/deploy.ps1 -ResourceGroup rg-my-lab -Location westeurope
 ```
 
-Defaults: resource group `rg-azure-monitor-lab`, region `swedencentral`. Override with `-ResourceGroup` / `-Location` (explicit args win over `lab.config.json`, which wins over these defaults). The group is created if it doesn't already exist, or reused if it does. End-to-end ~20–25 minutes. See [REFERENCE.md → Deploy](REFERENCE.md#deploy) for the config details and the subscription guardrail.
+Defaults: resource group `rg-azure-monitor-lab`, region `northeurope`. Override with `-ResourceGroup` / `-Location` (explicit args win over `lab.config.json`, which wins over these defaults). The group is created if it doesn't already exist, or reused if it does. End-to-end ~20–25 minutes. See [REFERENCE.md → Deploy](REFERENCE.md#deploy) for the config details and the subscription guardrail.
 
-> **Pre-flight check.** Before creating anything, `deploy.ps1` runs [`scripts/preflight-check.ps1`](scripts/preflight-check.ps1), which validates - in ~15 seconds - that every VM SKU, vCPU quota, and PaaS resource type the lab needs is actually available in the selected region for your subscription. It fails fast with a PASS/WARN/FAIL table instead of blowing up 20 minutes into the deployment. Run it standalone to vet a region before committing (`./scripts/preflight-check.ps1 -Location westeurope`), or bypass with `./scripts/deploy.ps1 -SkipPreflight`.
->
-> The pre-flight validates *availability + quota*, not *live service capacity*. Transient, region-wide shortages such as AKS `AksCapacityHeavyUsage` have no pre-check API and can only surface at deploy time. If one hits, `deploy.ps1` detects it and points you to the fix - deploy to another region (`-Location northeurope`) or retry (`-MaxDeployRetries 3`), since capacity is reclaimed as other clusters are deleted.
+<details>
+<summary><b>Pre-flight check</b> (region SKU / quota validation before deploy)</summary>
+
+Before creating anything, `deploy.ps1` runs [`scripts/preflight-check.ps1`](scripts/preflight-check.ps1), which validates - in ~15 seconds - that every VM SKU, vCPU quota, and PaaS resource type the lab needs is actually available in the selected region for your subscription. It fails fast with a PASS/WARN/FAIL table instead of blowing up 20 minutes into the deployment. Run it standalone to vet a region before committing (`./scripts/preflight-check.ps1 -Location westeurope`), or bypass with `./scripts/deploy.ps1 -SkipPreflight`.
+
+The pre-flight validates *availability + quota*, not *live service capacity*. Transient, region-wide shortages such as AKS `AksCapacityHeavyUsage` have no pre-check API and can only surface at deploy time. If one hits, `deploy.ps1` detects it and points you to the fix - deploy to another region (`-Location northeurope`) or retry (`-MaxDeployRetries 3`), since capacity is reclaimed as other clusters are deleted.
+
+</details>
 
 **Two delivery modes:**
 

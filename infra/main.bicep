@@ -813,7 +813,10 @@ module healthModel 'modules/health-model.bicep' = {
   name: 'health-model'
   params: {
     healthModelName: 'hm-${namePrefix}-workload'
-    location: location
+    // Health Model (preview) is only available in a limited set of regions
+    // (UK South, Canada Central, Central US, Sweden Central, Southeast Asia),
+    // so its region is pinned to swedencentral independent of the lab location.
+    location: 'swedencentral'
     tags: commonTags
     webAppId: appService.outputs.webAppId
     appInsightsId: appInsights.outputs.id

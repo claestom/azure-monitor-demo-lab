@@ -17,7 +17,7 @@
   Precedence: explicit -ResourceGroup > lab.config.json 'resourceGroup' > default 'rg-azure-monitor-lab'.
 
 .PARAMETER Location
-  Region. Precedence: explicit -Location > lab.config.json 'location' > default 'swedencentral'.
+  Region. Precedence: explicit -Location > lab.config.json 'location' > default 'northeurope'.
 
 .PARAMETER ParametersFile
   Bicep parameters file. Defaults to infra/main.parameters.json.
@@ -32,7 +32,7 @@
 [CmdletBinding()]
 param(
   [string] $ResourceGroup  = 'rg-azure-monitor-lab',
-  [string] $Location       = 'swedencentral',
+  [string] $Location       = 'northeurope',
   [string] $ParametersFile = (Join-Path $PSScriptRoot '..' 'infra' 'main.parameters.json'),
   [switch] $SkipPreflight,
   [int]    $MaxDeployRetries = 0

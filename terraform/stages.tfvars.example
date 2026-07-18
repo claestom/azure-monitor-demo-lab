@@ -16,7 +16,7 @@ subscription_id     = "00000000-0000-0000-0000-000000000000"
 # If you omit resource_group_name, the default "rg-azure-monitor-lab" is used.
 resource_group_name = "rg-azure-monitor-lab"
 
-location            = "swedencentral"
+location            = "northeurope"
 alert_email         = "your.alias@example.com"
 vm_admin_password   = "<STRONG-PASSWORD>"
 

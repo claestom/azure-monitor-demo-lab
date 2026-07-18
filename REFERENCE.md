@@ -141,7 +141,7 @@ Two delivery modes — pick whichever fits your audience.
 ./scripts/deploy.ps1
 ```
 
-Defaults: resource group `rg-azure-monitor-lab`, region `swedencentral`, parameters in `infra/main.parameters.json` (auto-generated from `lab.config.json` — see Bootstrap above).
+Defaults: resource group `rg-azure-monitor-lab`, region `northeurope`, parameters in `infra/main.parameters.json` (auto-generated from `lab.config.json` — see Bootstrap above). The Health Model (preview) is pinned to `swedencentral` regardless of the lab region, since it isn't available in `northeurope`.
 
 End-to-end: ~20–25 minutes (AKS + Grafana are the slowest). After it finishes, the script prints the App Service URL, the AKS LB IP, the Grafana URL, and the Workbook resource ID.
 
