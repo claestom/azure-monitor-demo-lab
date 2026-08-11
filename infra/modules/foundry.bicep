@@ -254,6 +254,7 @@ resource tokenSpikeAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
 }
 
 output accountName string = account.name
+output accountId string = account.id
 output projectName string = project.name
 output projectEndpoint string = 'https://${account.name}.services.ai.azure.com/api/projects/${project.name}'
 output chatDeployment string = chat.name

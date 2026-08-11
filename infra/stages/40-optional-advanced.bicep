@@ -26,6 +26,9 @@ param enablePlatformLogsDcr bool = false
 @description('Enable the metrics-export DCR (scenario 52, GA). Off by default — DCR + LAW must share a region.')
 param enableMetricsExportDcr bool = false
 
+@description('Fold the AI (Foundry) workload into the workload health model as a fourth "AI" tier. Requires the AI stage (50-ai) to have run.')
+param enableAi bool = false
+
 var suffix = uniqueString(resourceGroup().id)
 var lawCentralName = 'law-${namePrefix}-central-${take(suffix, 5)}'
 var amwName = 'amw-${namePrefix}'
@@ -149,6 +152,10 @@ module healthModel '../modules/health-model.bicep' = {
     keyVaultId: resourceId('Microsoft.KeyVault/vaults', 'kv-${namePrefix}-${take(suffix, 5)}')
     storageAccountId: storageAccount.id
     actionGroupId: actionGroup.id
+    // Fold the AI tier in when the Foundry account (from the AI stage) exists.
+    enableAi: enableAi
+    foundryAccountId: enableAi ? resourceId('Microsoft.CognitiveServices/accounts', toLower('ai${namePrefix}${take(suffix, 8)}')) : ''
+    appInsightsLawId: appInsights.properties.WorkspaceResourceId
     tags: commonTags
   }
 }

@@ -82,6 +82,15 @@ param storageAccountId string
 @description('Resource ID of the Action Group to notify on entity degraded/unhealthy. Optional.')
 param actionGroupId string = ''
 
+@description('Fold the AI (Foundry) workload into this model as a fourth "AI" tier. Off by default.')
+param enableAi bool = false
+
+@description('Resource ID of the Foundry (AI Services) account. Required when enableAi = true.')
+param foundryAccountId string = ''
+
+@description('Resource ID of the App Insights backing Log Analytics workspace (per-agent AI signals). Required when enableAi = true.')
+param appInsightsLawId string = ''
+
 // -----------------------------------------------------------------------------
 // Parent resource: Health Model + authentication setting
 // -----------------------------------------------------------------------------
@@ -124,12 +133,32 @@ resource monitoringReaderOnRg 'Microsoft.Authorization/roleAssignments@2022-04-0
   }
 }
 
+// Log Analytics Reader (73c42c96-874c-492b-b04d-ab87d138a893) — only when AI is folded in,
+// so the model's identity can run the per-agent Log Analytics query signals.
+resource logAnalyticsReaderOnRg 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (enableAi) {
+  name: guid(resourceGroup().id, healthModel.id, '73c42c96-874c-492b-b04d-ab87d138a893')
+  scope: resourceGroup()
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '73c42c96-874c-492b-b04d-ab87d138a893')
+    principalId: healthModel.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // -----------------------------------------------------------------------------
 // Helper vars
 // -----------------------------------------------------------------------------
 var rootName = healthModelName
 var authName = 'systemAssigned'
 var actionGroupIds = empty(actionGroupId) ? [] : [ actionGroupId ]
+
+// Demo agent personas (gen_ai.agent.name from workloads/ai) modelled as AI-tier entities.
+var aiAgents = [
+  { key: 'support-triage', display: 'Support Triage', x: 500, y: 700 }
+  { key: 'finops-qa', display: 'FinOps Q&A', x: 650, y: 700 }
+  { key: 'doc-summarizer', display: 'Doc Summarizer', x: 800, y: 700 }
+  { key: 'context-rich-assistant', display: 'Context-Rich Assistant', x: 950, y: 700 }
+]
 
 // -----------------------------------------------------------------------------
 // Tier-1 generic entities (frontend / compute / platform)
@@ -751,6 +780,151 @@ resource entStorage 'Microsoft.CloudHealth/healthmodels/entities@2026-01-01-prev
 }
 
 // -----------------------------------------------------------------------------
+// Tier-1 AI entity + tier-2 Foundry account and per-agent entities (enableAi)
+// -----------------------------------------------------------------------------
+resource entAi 'Microsoft.CloudHealth/healthmodels/entities@2026-01-01-preview' = if (enableAi) {
+  parent: healthModel
+  name: 'aiworkload'
+  properties: {
+    displayName: 'AI workload (Foundry)'
+    impact: 'Standard'
+    canvasPosition: { x: 600, y: 200 }
+    icon: { iconName: 'ApplicationInsights' }
+    signalGroups: {
+      dependencies: {
+        aggregationType: 'WorstOf'
+        ignoreUnknown: true
+      }
+    }
+    alerts: empty(actionGroupId) ? null : {
+      unhealthy: {
+        severity: 'Sev2'
+        description: 'AMLAB AI workload unhealthy (Foundry account + agents rollup).'
+        actionGroupIds: actionGroupIds
+      }
+    }
+  }
+}
+
+resource entFoundry 'Microsoft.CloudHealth/healthmodels/entities@2026-01-01-preview' = if (enableAi) {
+  parent: healthModel
+  name: 'foundry'
+  properties: {
+    displayName: 'Foundry account'
+    impact: 'Standard'
+    canvasPosition: { x: 600, y: 450 }
+    icon: { iconName: 'ApplicationInsights' }
+    healthObjective: 99
+    signalGroups: {
+      azureResource: {
+        authenticationSetting: authName
+        azureResourceId: foundryAccountId
+        azureResourceKind: 'aiservices'
+        signals: [
+          {
+            name: 'latency'
+            signalKind: 'AzureResourceMetric'
+            displayName: 'Latency (avg)'
+            metricNamespace: 'Microsoft.CognitiveServices/accounts'
+            metricName: 'Latency'
+            aggregationType: 'Average'
+            dataUnit: 'MilliSeconds'
+            timeGrain: 'PT5M'
+            refreshInterval: 'PT5M'
+            evaluationRules: {
+              degradedRule:  { operator: 'GreaterThan', threshold: 2000 }
+              unhealthyRule: { operator: 'GreaterThan', threshold: 5000 }
+            }
+          }
+          {
+            name: 'totalErrors'
+            signalKind: 'AzureResourceMetric'
+            displayName: 'Total errors (5 min)'
+            metricNamespace: 'Microsoft.CognitiveServices/accounts'
+            metricName: 'TotalErrors'
+            aggregationType: 'Total'
+            dataUnit: 'Count'
+            timeGrain: 'PT5M'
+            refreshInterval: 'PT5M'
+            evaluationRules: {
+              degradedRule:  { operator: 'GreaterThan', threshold: 10 }
+              unhealthyRule: { operator: 'GreaterThan', threshold: 50 }
+            }
+          }
+          {
+            // Token volume as a cost/load indicator (not an availability signal).
+            name: 'totalTokens'
+            signalKind: 'AzureResourceMetric'
+            displayName: 'Total tokens (5 min) — cost/load'
+            metricNamespace: 'Microsoft.CognitiveServices/accounts'
+            metricName: 'TotalTokens'
+            aggregationType: 'Total'
+            dataUnit: 'Count'
+            timeGrain: 'PT5M'
+            refreshInterval: 'PT5M'
+            evaluationRules: {
+              degradedRule:  { operator: 'GreaterThan', threshold: 500000 }
+              unhealthyRule: { operator: 'GreaterThan', threshold: 2000000 }
+            }
+          }
+        ]
+      }
+    }
+  }
+  dependsOn: [ authSetting ]
+}
+
+// One entity per agent persona, each carrying error-rate + estimated-cost signals
+// queried from the workspace-based App Insights AppDependencies table (high cost or
+// error rate turns the agent unhealthy).
+resource entAgents 'Microsoft.CloudHealth/healthmodels/entities@2026-01-01-preview' = [for a in aiAgents: if (enableAi) {
+  parent: healthModel
+  name: 'agent-${a.key}'
+  properties: {
+    displayName: a.display
+    impact: 'Standard'
+    healthObjective: 99
+    canvasPosition: { x: a.x, y: a.y }
+    icon: { iconName: 'ApplicationInsights' }
+    signalGroups: {
+      azureLogAnalytics: {
+        authenticationSetting: authName
+        logAnalyticsWorkspaceResourceId: appInsightsLawId
+        signals: [
+          {
+            name: 'error-rate'
+            signalKind: 'LogAnalyticsQuery'
+            displayName: 'Error rate (%, 1h)'
+            dataUnit: 'Percent'
+            refreshInterval: 'PT5M'
+            valueColumnName: 'ErrorPct'
+            queryText: 'AppDependencies | where TimeGenerated > ago(1h) | where tostring(Properties[\'gen_ai.agent.name\']) == \'${a.display}\' | summarize total=count(), failures=countif(Success==false) | project ErrorPct=iff(total==0, 0.0, round(100.0*failures/total, 1))'
+            evaluationRules: {
+              degradedRule: { operator: 'GreaterThan', threshold: 5 }
+              unhealthyRule: { operator: 'GreaterThan', threshold: 20 }
+            }
+          }
+          {
+            name: 'cost-cents'
+            signalKind: 'LogAnalyticsQuery'
+            displayName: 'Estimated cost (US cents/hour)'
+            dataUnit: 'Count'
+            refreshInterval: 'PT5M'
+            valueColumnName: 'CostCents'
+            queryText: 'AppDependencies | where TimeGenerated > ago(1h) | where tostring(Properties[\'gen_ai.agent.name\']) == \'${a.display}\' | extend inTok=toint(Properties[\'gen_ai.usage.input_tokens\']), outTok=toint(Properties[\'gen_ai.usage.output_tokens\']), cachedTok=toint(Properties[\'gen_ai.usage.cached_input_tokens\']) | extend freshIn=inTok-coalesce(cachedTok, 0) | summarize c=round((sum(freshIn)*0.25 + sum(coalesce(cachedTok, 0))*0.025 + sum(outTok)*2.0)/1000000.0*100, 2) | project CostCents=coalesce(c, 0.0)'
+            evaluationRules: {
+              degradedRule: { operator: 'GreaterThan', threshold: 10 }
+              unhealthyRule: { operator: 'GreaterThan', threshold: 30 }
+            }
+          }
+        ]
+      }
+    }
+  }
+  dependsOn: [ authSetting ]
+}]
+
+// -----------------------------------------------------------------------------
 // Relationships  (parent <- child)
 //
 // Root (= healthModelName) is auto-created. Tier-1 entities roll up to it.
@@ -868,6 +1042,38 @@ resource relStoragePlatform 'Microsoft.CloudHealth/healthmodels/relationships@20
   }
   dependsOn: [ entStorage, entPlatform ]
 }
+
+// AI tier relationships (enableAi): ai -> root, foundry + agents -> ai.
+resource relAiRoot 'Microsoft.CloudHealth/healthmodels/relationships@2026-01-01-preview' = if (enableAi) {
+  parent: healthModel
+  name: 'ai-to-root'
+  properties: {
+    parentEntityName: rootName
+    childEntityName: 'aiworkload'
+    displayName: 'AI workload'
+  }
+  dependsOn: [ entAi ]
+}
+
+resource relFoundryAi 'Microsoft.CloudHealth/healthmodels/relationships@2026-01-01-preview' = if (enableAi) {
+  parent: healthModel
+  name: 'foundry-to-ai'
+  properties: {
+    parentEntityName: 'aiworkload'
+    childEntityName: 'foundry'
+  }
+  dependsOn: [ entFoundry, entAi ]
+}
+
+resource relAgentsAi 'Microsoft.CloudHealth/healthmodels/relationships@2026-01-01-preview' = [for a in aiAgents: if (enableAi) {
+  parent: healthModel
+  name: 'agent-${a.key}-to-ai'
+  properties: {
+    parentEntityName: 'aiworkload'
+    childEntityName: 'agent-${a.key}'
+  }
+  dependsOn: [ entAgents, entAi ]
+}]
 
 // -----------------------------------------------------------------------------
 // Outputs

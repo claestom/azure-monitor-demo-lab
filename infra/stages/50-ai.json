@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "10003680393508789428"
+      "templateHash": "10224663763983052318"
     }
   },
   "parameters": {
@@ -55,9 +55,9 @@
     },
     "enableHealthModel": {
       "type": "bool",
-      "defaultValue": true,
+      "defaultValue": false,
       "metadata": {
-        "description": "Deploy the AI health model (CloudHealth preview, region-limited)."
+        "description": "Deploy a SEPARATE AI health model. Off by default — the AI tier is folded into the workload health model (hm-<prefix>-workload, Stage E) instead. Turn on only for a standalone A+AI deployment with no Stage E."
       }
     }
   },
@@ -109,7 +109,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "12749881853011620752"
+              "templateHash": "18231224087103930965"
             }
           },
           "parameters": {
@@ -489,6 +489,10 @@
             "accountName": {
               "type": "string",
               "value": "[variables('accountName')]"
+            },
+            "accountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]"
             },
             "projectName": {
               "type": "string",

@@ -34,8 +34,8 @@ param routerModelVersion string = '2025-08-07'
 @description('Deploy the AI FinOps query pack + workbook.')
 param enableObservability bool = true
 
-@description('Deploy the AI health model (CloudHealth preview, region-limited).')
-param enableHealthModel bool = true
+@description('Deploy a SEPARATE AI health model. Off by default — the AI tier is folded into the workload health model (hm-<prefix>-workload, Stage E) instead. Turn on only for a standalone A+AI deployment with no Stage E.')
+param enableHealthModel bool = false
 
 var appInsightsName = 'appi-${namePrefix}'
 

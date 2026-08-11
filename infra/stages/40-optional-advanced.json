@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "7590387020166881074"
+      "templateHash": "17857777656953120505"
     }
   },
   "parameters": {
@@ -65,6 +65,13 @@
       "defaultValue": false,
       "metadata": {
         "description": "Enable the metrics-export DCR (scenario 52, GA). Off by default — DCR + LAW must share a region."
+      }
+    },
+    "enableAi": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Fold the AI (Foundry) workload into the workload health model as a fourth \"AI\" tier. Requires the AI stage (50-ai) to have run."
       }
     }
   },
@@ -726,6 +733,13 @@
           "actionGroupId": {
             "value": "[resourceId('Microsoft.Insights/actionGroups', variables('actionGroupName'))]"
           },
+          "enableAi": {
+            "value": "[parameters('enableAi')]"
+          },
+          "foundryAccountId": "[if(parameters('enableAi'), createObject('value', resourceId('Microsoft.CognitiveServices/accounts', toLower(format('ai{0}{1}', parameters('namePrefix'), take(variables('suffix'), 8))))), createObject('value', ''))]",
+          "appInsightsLawId": {
+            "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').WorkspaceResourceId]"
+          },
           "tags": {
             "value": "[variables('commonTags')]"
           }
@@ -737,7 +751,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "18236062229913747199"
+              "templateHash": "14459821496710233331"
             }
           },
           "parameters": {
@@ -827,12 +841,59 @@
               "metadata": {
                 "description": "Resource ID of the Action Group to notify on entity degraded/unhealthy. Optional."
               }
+            },
+            "enableAi": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Fold the AI (Foundry) workload into this model as a fourth \"AI\" tier. Off by default."
+              }
+            },
+            "foundryAccountId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Resource ID of the Foundry (AI Services) account. Required when enableAi = true."
+              }
+            },
+            "appInsightsLawId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Resource ID of the App Insights backing Log Analytics workspace (per-agent AI signals). Required when enableAi = true."
+              }
             }
           },
           "variables": {
             "rootName": "[parameters('healthModelName')]",
             "authName": "systemAssigned",
-            "actionGroupIds": "[if(empty(parameters('actionGroupId')), createArray(), createArray(parameters('actionGroupId')))]"
+            "actionGroupIds": "[if(empty(parameters('actionGroupId')), createArray(), createArray(parameters('actionGroupId')))]",
+            "aiAgents": [
+              {
+                "key": "support-triage",
+                "display": "Support Triage",
+                "x": 500,
+                "y": 700
+              },
+              {
+                "key": "finops-qa",
+                "display": "FinOps Q&A",
+                "x": 650,
+                "y": 700
+              },
+              {
+                "key": "doc-summarizer",
+                "display": "Doc Summarizer",
+                "x": 800,
+                "y": 700
+              },
+              {
+                "key": "context-rich-assistant",
+                "display": "Context-Rich Assistant",
+                "x": 950,
+                "y": 700
+              }
+            ]
           },
           "resources": [
             {
@@ -865,6 +926,20 @@
               "name": "[guid(resourceGroup().id, resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
+                "principalId": "[reference(resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), '2026-01-01-preview', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableAi')]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), '73c42c96-874c-492b-b04d-ab87d138a893')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '73c42c96-874c-492b-b04d-ab87d138a893')]",
                 "principalId": "[reference(resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), '2026-01-01-preview', 'full').identity.principalId]",
                 "principalType": "ServicePrincipal"
               },
@@ -1673,6 +1748,199 @@
               ]
             },
             {
+              "condition": "[parameters('enableAi')]",
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'aiworkload')]",
+              "properties": {
+                "displayName": "AI workload (Foundry)",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": 600,
+                  "y": 200
+                },
+                "icon": {
+                  "iconName": "ApplicationInsights"
+                },
+                "signalGroups": {
+                  "dependencies": {
+                    "aggregationType": "WorstOf",
+                    "ignoreUnknown": true
+                  }
+                },
+                "alerts": "[if(empty(parameters('actionGroupId')), null(), createObject('unhealthy', createObject('severity', 'Sev2', 'description', 'AMLAB AI workload unhealthy (Foundry account + agents rollup).', 'actionGroupIds', variables('actionGroupIds'))))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableAi')]",
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'foundry')]",
+              "properties": {
+                "displayName": "Foundry account",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": 600,
+                  "y": 450
+                },
+                "icon": {
+                  "iconName": "ApplicationInsights"
+                },
+                "healthObjective": 99,
+                "signalGroups": {
+                  "azureResource": {
+                    "authenticationSetting": "[variables('authName')]",
+                    "azureResourceId": "[parameters('foundryAccountId')]",
+                    "azureResourceKind": "aiservices",
+                    "signals": [
+                      {
+                        "name": "latency",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Latency (avg)",
+                        "metricNamespace": "Microsoft.CognitiveServices/accounts",
+                        "metricName": "Latency",
+                        "aggregationType": "Average",
+                        "dataUnit": "MilliSeconds",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 2000
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 5000
+                          }
+                        }
+                      },
+                      {
+                        "name": "totalErrors",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Total errors (5 min)",
+                        "metricNamespace": "Microsoft.CognitiveServices/accounts",
+                        "metricName": "TotalErrors",
+                        "aggregationType": "Total",
+                        "dataUnit": "Count",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 10
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 50
+                          }
+                        }
+                      },
+                      {
+                        "name": "totalTokens",
+                        "signalKind": "AzureResourceMetric",
+                        "displayName": "Total tokens (5 min) — cost/load",
+                        "metricNamespace": "Microsoft.CognitiveServices/accounts",
+                        "metricName": "TotalTokens",
+                        "aggregationType": "Total",
+                        "dataUnit": "Count",
+                        "timeGrain": "PT5M",
+                        "refreshInterval": "PT5M",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 500000
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 2000000
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), 'systemAssigned')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "entAgents",
+                "count": "[length(variables('aiAgents'))]"
+              },
+              "condition": "[parameters('enableAi')]",
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), format('agent-{0}', variables('aiAgents')[copyIndex()].key))]",
+              "properties": {
+                "displayName": "[variables('aiAgents')[copyIndex()].display]",
+                "impact": "Standard",
+                "healthObjective": 99,
+                "canvasPosition": {
+                  "x": "[variables('aiAgents')[copyIndex()].x]",
+                  "y": "[variables('aiAgents')[copyIndex()].y]"
+                },
+                "icon": {
+                  "iconName": "ApplicationInsights"
+                },
+                "signalGroups": {
+                  "azureLogAnalytics": {
+                    "authenticationSetting": "[variables('authName')]",
+                    "logAnalyticsWorkspaceResourceId": "[parameters('appInsightsLawId')]",
+                    "signals": [
+                      {
+                        "name": "error-rate",
+                        "signalKind": "LogAnalyticsQuery",
+                        "displayName": "Error rate (%, 1h)",
+                        "dataUnit": "Percent",
+                        "refreshInterval": "PT5M",
+                        "valueColumnName": "ErrorPct",
+                        "queryText": "[format('AppDependencies | where TimeGenerated > ago(1h) | where tostring(Properties[''gen_ai.agent.name'']) == ''{0}'' | summarize total=count(), failures=countif(Success==false) | project ErrorPct=iff(total==0, 0.0, round(100.0*failures/total, 1))', variables('aiAgents')[copyIndex()].display)]",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 5
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 20
+                          }
+                        }
+                      },
+                      {
+                        "name": "cost-cents",
+                        "signalKind": "LogAnalyticsQuery",
+                        "displayName": "Estimated cost (US cents/hour)",
+                        "dataUnit": "Count",
+                        "refreshInterval": "PT5M",
+                        "valueColumnName": "CostCents",
+                        "queryText": "[format('AppDependencies | where TimeGenerated > ago(1h) | where tostring(Properties[''gen_ai.agent.name'']) == ''{0}'' | extend inTok=toint(Properties[''gen_ai.usage.input_tokens'']), outTok=toint(Properties[''gen_ai.usage.output_tokens'']), cachedTok=toint(Properties[''gen_ai.usage.cached_input_tokens'']) | extend freshIn=inTok-coalesce(cachedTok, 0) | summarize c=round((sum(freshIn)*0.25 + sum(coalesce(cachedTok, 0))*0.025 + sum(outTok)*2.0)/1000000.0*100, 2) | project CostCents=coalesce(c, 0.0)', variables('aiAgents')[copyIndex()].display)]",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 10
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 30
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), 'systemAssigned')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
               "type": "Microsoft.CloudHealth/healthmodels/relationships",
               "apiVersion": "2026-01-01-preview",
               "name": "[format('{0}/{1}', parameters('healthModelName'), 'frontend-to-root')]",
@@ -1825,6 +2093,55 @@
               "dependsOn": [
                 "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'platform')]",
                 "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'storage')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableAi')]",
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'ai-to-root')]",
+              "properties": {
+                "parentEntityName": "[variables('rootName')]",
+                "childEntityName": "aiworkload",
+                "displayName": "AI workload"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'aiworkload')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableAi')]",
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'foundry-to-ai')]",
+              "properties": {
+                "parentEntityName": "aiworkload",
+                "childEntityName": "foundry"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'aiworkload')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'foundry')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "relAgentsAi",
+                "count": "[length(variables('aiAgents'))]"
+              },
+              "condition": "[parameters('enableAi')]",
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-01-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), format('agent-{0}-to-ai', variables('aiAgents')[copyIndex()].key))]",
+              "properties": {
+                "parentEntityName": "aiworkload",
+                "childEntityName": "[format('agent-{0}', variables('aiAgents')[copyIndex()].key)]"
+              },
+              "dependsOn": [
+                "entAgents",
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'aiworkload')]",
                 "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
               ]
             }

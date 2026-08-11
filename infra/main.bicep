@@ -837,6 +837,10 @@ module healthModel 'modules/health-model.bicep' = {
     keyVaultId: keyVault.outputs.id
     storageAccountId: storageAccount.outputs.id
     actionGroupId: actionGroup.outputs.id
+    // Fold the AI (Foundry) workload into this model as a fourth tier when enabled.
+    enableAi: enableAi
+    foundryAccountId: enableAi ? foundry!.outputs.accountId : ''
+    appInsightsLawId: lawAppInsights.outputs.id
   }
 }
 
@@ -883,17 +887,6 @@ module aiObservability 'modules/ai-observability.bicep' = if (enableAi) {
   params: {
     location: aiLocation
     appInsightsId: appInsights.outputs.id
-    tags: commonTags
-  }
-}
-
-module aiHealthModel 'modules/ai-healthmodel.bicep' = if (enableAi) {
-  name: 'ai-healthmodel'
-  params: {
-    location: aiLocation
-    appInsightsId: appInsights.outputs.id
-    lawId: lawAppInsights.outputs.id
-    healthModelName: 'hm-${namePrefix}-ai'
     tags: commonTags
   }
 }

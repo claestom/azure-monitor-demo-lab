@@ -19,7 +19,7 @@ One resource group, wired end-to-end across the observability stack:
 | **Security** | Microsoft Sentinel onboarding, security-posture alert rules, granular workspace/table/row RBAC |
 | **Cost & data routing** | Daily caps, Basic/Analytics table plans, Summary Rules, Data Export, cost workbook |
 | **Reliability previews** | Service Groups + Health Models, SLIs/SLOs, Search Jobs + archive restore |
-| **GenAI observability** (optional AI stage) | Microsoft Foundry account + project, chat/embedding/optimization/**model-router** deployments, App Insights tracing, token anomaly + spike alerts, AI FinOps query pack + workbook, AI health model, agents + traffic simulator |
+| **GenAI observability** (optional AI stage) | Microsoft Foundry account + project, chat/embedding/optimization/**model-router** deployments, App Insights tracing, token anomaly + spike alerts, AI FinOps query pack + workbook, an AI tier folded into the workload health model, agents + traffic simulator |
 
 > Full resource-by-resource list: **[REFERENCE.md → What gets deployed](REFERENCE.md#what-gets-deployed)**.
 

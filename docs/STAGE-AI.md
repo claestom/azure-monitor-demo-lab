@@ -13,7 +13,7 @@
 | Tracing connection | Project → `appi-amlab` Application Insights connection | Lights up the Foundry portal Observability/Tracing tab and lands `gen_ai.*` spans in the lab App Insights. |
 | Token alerts | `alert-amlab-token-anomaly` (dynamic threshold) + `alert-amlab-token-spike` (static ceiling) on the account's `TotalTokens` metric, split per deployment | Anomaly detection + a hard guardrail for runaway token spend. Optional `ag-amlab-ai` action group when `alertEmail` is set. |
 | AI FinOps observability | `qp-ai-finops` query pack (14 GenAI KQL queries) + a shared **AI FinOps workbook** | Token usage, estimated cost by agent, cached-token ratio, model-router distribution, PTU break-even, latency/error percentiles. |
-| AI health model | `hm-amlab-ai` (CloudHealth preview) with discovery rules (App Insights topology + ARG) and 4 agent entities carrying error-rate + estimated-cost signals | Executive "service health" rollup for the AI workload; high cost or error rate turns an agent unhealthy. |
+| AI health tier | An **"AI" tier folded into the workload health model** (`hm-amlab-workload`): an `aiworkload` node → the Foundry account entity (Latency / TotalErrors / TotalTokens metric signals) + 4 agent entities carrying error-rate + estimated-cost Log Analytics signals | One health model for the whole estate — the AI workload rolls up next to frontend/compute/platform; high cost or error rate turns an agent unhealthy. A separate `ai-healthmodel.bicep` exists as an opt-in fallback for standalone A+AI deployments (no Stage E). |
 | Agents + traffic | 4 agents (`Support Triage`, `FinOps Q&A`, `Doc Summarizer`, `Context-Rich Assistant`) + a traffic simulator, provisioned by `scripts/setup-ai.ps1` | Generates the live token/trace/cost telemetry the queries, workbook, health model, and alerts consume. |
 
 > Cross-stage references: `appi-amlab` and its backing App Insights LAW (Stage A). No dependency on Stages B–E; the AI stage creates its own action group.
@@ -35,8 +35,8 @@
 5. **"Token alerts = guardrails before the bill."**
    Two alerts on `TotalTokens`: a dynamic-threshold anomaly detector that learns each deployment's baseline, and a static ceiling as a hard stop. Trigger it live by running the simulator hot (`--conversations 100 --interval 5`).
 
-6. **"Health model answers 'is my AI healthy AND affordable?'"**
-   The 4 agent entities carry both an error-rate signal and an estimated-cost signal — a cost breach alone turns an agent unhealthy. Frame the CloudHealth blade as executive dashboarding (preview; API still moving).
+6. **"One health model, AI included."**
+   The AI workload is folded into `hm-amlab-workload` as a fourth **AI** tier (alongside frontend/compute/platform). The 4 agent entities carry both an error-rate signal and an estimated-cost signal — a cost breach alone turns an agent unhealthy. Frame the CloudHealth blade as executive dashboarding (preview; API still moving).
 
 ## 3) Portal walkthrough (UI)
 
@@ -44,7 +44,7 @@
 2. **`appi-amlab` → Logs** — run a query from the `qp-ai-finops` pack (Queries hub), e.g. *Estimated cost by agent* or *Model router routed-model distribution*.
 3. **Monitor → Workbooks → Shared → "AI FinOps — Foundry Agents"** — time-range picker, token/cost tiles, PTU break-even, cost-share pie.
 4. **Monitor → Alerts → Alert rules** — `alert-amlab-token-anomaly` + `alert-amlab-token-spike`.
-5. **Monitor → Health models → `hm-amlab-ai`** *(preview)* — open the graph; show the 4 agent entities and the Foundry account/project discovered as entities, with health rollup.
+5. **Monitor → Health models → `hm-amlab-workload`** *(preview)* — open the graph; show the **AI** tier (`aiworkload` → Foundry account + 4 agent entities) rolling up alongside frontend/compute/platform.
 
 ## 4) CLI validation
 
@@ -77,7 +77,7 @@ az monitor app-insights query --app appi-amlab -g $rg --analytics-query "depende
 1. The Foundry account has **4** model deployments including `model-router`, all `GlobalStandard`.
 2. `qp-ai-finops` contains **14** saved queries and the AI FinOps workbook is visible under Monitor → Workbooks → Shared.
 3. `alert-amlab-token-anomaly` and `alert-amlab-token-spike` exist and are enabled.
-4. `hm-amlab-ai` renders in the Health Models preview blade with the 4 agent entities.
+4. `hm-amlab-workload` renders in the Health Models preview blade with an **AI** tier (`aiworkload` → Foundry + 4 agent entities) alongside the original frontend/compute/platform tiers.
 5. After `scripts/setup-ai.ps1`, App Insights `dependencies` shows `gen_ai.agent.name` spans for all agents plus Model Router.
 
 ## 6) Enable + run
