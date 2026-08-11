@@ -144,3 +144,30 @@ resource "azapi_resource" "stage_e" {
     }
   }
 }
+
+# Optional AI stage: Microsoft Foundry workload (account, project, chat/embed/optimize/
+# model-router deployments) + App Insights connection + token metric alerts. Pinned to
+# swedencentral (var.ai_location). References Stage A's App Insights ('appi-<prefix>'),
+# so it depends only on Stage A. Agents + traffic are provisioned by scripts/setup-ai.ps1.
+resource "azapi_resource" "stage_ai" {
+  count     = var.enable_stage_ai ? 1 : 0
+  type      = "Microsoft.Resources/deployments@2022-09-01"
+  name      = "stage-ai-foundry"
+  parent_id = data.azurerm_resource_group.lab.id
+
+  depends_on = [azapi_resource.stage_a]
+
+  body = {
+    properties = {
+      mode     = "Incremental"
+      template = sensitive(jsondecode(file("${path.module}/../infra/stages/50-ai.json")))
+      parameters = {
+        namePrefix         = { value = var.name_prefix }
+        aiLocation         = { value = var.ai_location }
+        alertEmail         = { value = var.alert_email }
+        ownerTag           = { value = var.owner_tag }
+        routerModelVersion = { value = var.router_model_version }
+      }
+    }
+  }
+}

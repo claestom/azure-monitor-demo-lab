@@ -1,0 +1,21 @@
+// CHART — Estimated cost by agent (bar)
+// -------------------------------------------------------------------
+// Purpose:  Visual chargeback chart. One bar per agent = estimated USD,
+//           making the cost concentration obvious.
+// Render:   Portal Logs / Workbook only (CLI ignores render).
+// Pricing:  gpt-5-mini GlobalStandard list price (input $0.25/1M,
+//           output $2.00/1M). Replace with your current per-model rates.
+// Caveat:   Token-derived ESTIMATE — excludes discounts/PTU/cached input;
+//           reconcile with Azure Cost Management.
+
+dependencies
+| where timestamp > ago(1d)
+      and isnotempty(tostring(customDimensions["gen_ai.agent.name"]))
+| extend inTok  = toint(customDimensions["gen_ai.usage.input_tokens"]),
+         outTok = toint(customDimensions["gen_ai.usage.output_tokens"]),
+         agent  = tostring(customDimensions["gen_ai.agent.name"])
+| summarize prompt=sum(inTok), completion=sum(outTok) by agent
+| extend est_usd = round(prompt/1000000.0*0.25 + completion/1000000.0*2.00, 4)
+| project agent, est_usd
+| order by est_usd desc
+| render barchart with (title="Estimated cost by agent (USD)", xtitle="USD")

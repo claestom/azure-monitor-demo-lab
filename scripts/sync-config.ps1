@@ -78,7 +78,9 @@ $subscriptionName = Coalesce $cfg.subscriptionName '<unset>'
 $forbiddenSubs    = if ($null -eq $cfg.forbiddenSubscriptionIds) { @() } else { @($cfg.forbiddenSubscriptionIds) }
 
 $stages = $cfg.stageToggles
-if ($null -eq $stages) { $stages = [pscustomobject]@{ enableStageA=$true; enableStageB=$true; enableStageC=$true; enableStageD=$true; enableStageE=$true } }
+if ($null -eq $stages) { $stages = [pscustomobject]@{ enableStageA=$true; enableStageB=$true; enableStageC=$true; enableStageD=$true; enableStageE=$true; enableStageAI=$false } }
+# AI stage is optional and defaults off when absent from the config.
+$enableStageAI = if ($null -eq $stages.enableStageAI) { $false } else { [bool]$stages.enableStageAI }
 
 # ---------------------------------------------------------------------------
 # Resolve target paths
@@ -121,6 +123,7 @@ $bicepParams = [ordered]@{
     'deployLinuxVm'   = @{ value = $deployLinuxVm }
     'dailyCapGb'      = @{ value = [int]$dailyCapGb }
     'aksNodeCount'    = @{ value = [int]$aksNodeCount }
+    'enableAi'        = @{ value = $enableStageAI }
   }
 }
 if (-not [string]::IsNullOrWhiteSpace($siemWebhookUrl)) {
@@ -156,6 +159,7 @@ $tfLines = @(
   "enable_stage_c = $((($stages.enableStageC -as [bool]).ToString()).ToLower())"
   "enable_stage_d = $((($stages.enableStageD -as [bool]).ToString()).ToLower())"
   "enable_stage_e = $((($stages.enableStageE -as [bool]).ToString()).ToLower())"
+  "enable_stage_ai = $($enableStageAI.ToString().ToLower())"
 )
 Set-Content -Path $tfVarsPath -Value ($tfLines -join "`r`n") -Encoding UTF8
 Write-Done "OK"

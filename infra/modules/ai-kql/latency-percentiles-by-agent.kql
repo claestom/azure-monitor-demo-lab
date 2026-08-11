@@ -1,0 +1,18 @@
+// Latency percentiles by agent (last 24h)
+// -------------------------------------------------------------------
+// Purpose:  Performance view. p50/p95/p99 end-to-end duration per agent —
+//           the UX signal, and a cost proxy (long generations = more output
+//           tokens). Tail latency (p95/p99) is what users actually feel.
+// Source:   Application Insights `dependencies`; native `duration` column
+//           is milliseconds. Attributable (agent) spans only.
+// Tip:      Add `| render columnchart` to visualize in the portal Logs blade.
+
+dependencies
+| where timestamp > ago(1d)
+      and isnotempty(tostring(customDimensions["gen_ai.agent.name"]))
+| extend agent = tostring(customDimensions["gen_ai.agent.name"])
+| summarize p50_ms=round(percentile(duration, 50), 0),
+            p95_ms=round(percentile(duration, 95), 0),
+            p99_ms=round(percentile(duration, 99), 0),
+            calls=count() by agent
+| order by p95_ms desc

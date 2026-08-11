@@ -19,6 +19,7 @@ One resource group, wired end-to-end across the observability stack:
 | **Security** | Microsoft Sentinel onboarding, security-posture alert rules, granular workspace/table/row RBAC |
 | **Cost & data routing** | Daily caps, Basic/Analytics table plans, Summary Rules, Data Export, cost workbook |
 | **Reliability previews** | Service Groups + Health Models, SLIs/SLOs, Search Jobs + archive restore |
+| **GenAI observability** (optional AI stage) | Microsoft Foundry account + project, chat/embedding/optimization/**model-router** deployments, App Insights tracing, token anomaly + spike alerts, AI FinOps query pack + workbook, AI health model, agents + traffic simulator |
 
 > Full resource-by-resource list: **[REFERENCE.md → What gets deployed](REFERENCE.md#what-gets-deployed)**.
 
@@ -98,6 +99,8 @@ The pre-flight validates *availability + quota*, not *live service capacity*. Tr
 
 - **One-shot** - `./scripts/deploy.ps1` deploys everything at once (fastest, internal demos).
 - **Staged workshop** - 5 progressive stages (A–E) you can pause between, toggled in `lab.config.json`. Step-by-step guides: [Bicep](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [Terraform](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md).
+
+> **Optional AI stage.** An extra, off-by-default stage adds a Microsoft Foundry GenAI workload (pinned to `swedencentral`) that emits token/trace/cost telemetry, plus token-spike alerts and an AI FinOps query pack/workbook. Enable it with `stageToggles.enableStageAI` (Bicep one-shot / Terraform `enable_stage_ai`), then run `./scripts/setup-ai.ps1` to create the demo agents and simulate traffic. Verify the Model Router version for your region first (`az cognitiveservices account list-models`).
 
 When you're done (cost guardrails of 1 GB/day are baked in either way):
 

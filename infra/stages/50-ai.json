@@ -1,0 +1,1080 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.37.4.10188",
+      "templateHash": "10003680393508789428"
+    }
+  },
+  "parameters": {
+    "namePrefix": {
+      "type": "string",
+      "defaultValue": "amlab",
+      "minLength": 3,
+      "maxLength": 8,
+      "metadata": {
+        "description": "Short prefix used to build resource names."
+      }
+    },
+    "aiLocation": {
+      "type": "string",
+      "defaultValue": "swedencentral",
+      "metadata": {
+        "description": "Region for the Foundry account + models. Pinned to swedencentral by default."
+      }
+    },
+    "alertEmail": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional email for the token anomaly/spike alerts. Empty = alerts without notifications."
+      }
+    },
+    "ownerTag": {
+      "type": "string",
+      "defaultValue": "demo-lab",
+      "metadata": {
+        "description": "Tag every resource with this owner."
+      }
+    },
+    "routerModelVersion": {
+      "type": "string",
+      "defaultValue": "2025-08-07",
+      "metadata": {
+        "description": "Model Router deployment version. VERIFY for your region before enabling this stage."
+      }
+    },
+    "enableObservability": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Deploy the AI FinOps query pack + workbook."
+      }
+    },
+    "enableHealthModel": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Deploy the AI health model (CloudHealth preview, region-limited)."
+      }
+    }
+  },
+  "variables": {
+    "appInsightsName": "[format('appi-{0}', parameters('namePrefix'))]",
+    "commonTags": {
+      "owner": "[parameters('ownerTag')]",
+      "purpose": "azure-monitor-demo-lab",
+      "costCenter": "demo"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "foundry",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('aiLocation')]"
+          },
+          "namePrefix": {
+            "value": "[parameters('namePrefix')]"
+          },
+          "appInsightsId": {
+            "value": "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
+          },
+          "routerModelVersion": {
+            "value": "[parameters('routerModelVersion')]"
+          },
+          "alertEmail": {
+            "value": "[parameters('alertEmail')]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "12749881853011620752"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region for the Foundry account + models. Pinned to swedencentral by the AI stage."
+              }
+            },
+            "namePrefix": {
+              "type": "string",
+              "defaultValue": "amlab",
+              "minLength": 3,
+              "maxLength": 8,
+              "metadata": {
+                "description": "Short prefix used to build resource names."
+              }
+            },
+            "appInsightsId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the lab Application Insights the project connects to (for tracing)."
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Connection string of the lab Application Insights."
+              }
+            },
+            "chatModel": {
+              "type": "string",
+              "defaultValue": "gpt-5-mini",
+              "metadata": {
+                "description": "Chat model, version and capacity (thousands TPM)."
+              }
+            },
+            "chatModelVersion": {
+              "type": "string",
+              "defaultValue": "2025-08-07"
+            },
+            "chatCapacity": {
+              "type": "int",
+              "defaultValue": 10
+            },
+            "embedModel": {
+              "type": "string",
+              "defaultValue": "text-embedding-3-small",
+              "metadata": {
+                "description": "Embedding model, version and capacity."
+              }
+            },
+            "embedModelVersion": {
+              "type": "string",
+              "defaultValue": "1"
+            },
+            "embedCapacity": {
+              "type": "int",
+              "defaultValue": 10
+            },
+            "optModel": {
+              "type": "string",
+              "defaultValue": "gpt-5.4",
+              "metadata": {
+                "description": "Optimization model (Agent Optimizer target), version and capacity."
+              }
+            },
+            "optModelVersion": {
+              "type": "string",
+              "defaultValue": "2026-03-05"
+            },
+            "optCapacity": {
+              "type": "int",
+              "defaultValue": 10
+            },
+            "routerModelVersion": {
+              "type": "string",
+              "defaultValue": "2025-08-07",
+              "metadata": {
+                "description": "Model Router deployment version and capacity. VERIFY the version for your region."
+              }
+            },
+            "routerCapacity": {
+              "type": "int",
+              "defaultValue": 10
+            },
+            "alertEmail": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional email. When set, an action group is created and attached to both token alerts."
+              }
+            },
+            "spikeThresholdTokens": {
+              "type": "int",
+              "defaultValue": 200000,
+              "metadata": {
+                "description": "Static spike ceiling: TotalTokens (prompt+completion) per 5-minute window, per deployment."
+              }
+            },
+            "anomalySensitivity": {
+              "type": "string",
+              "defaultValue": "Medium",
+              "allowedValues": [
+                "Low",
+                "Medium",
+                "High"
+              ],
+              "metadata": {
+                "description": "Dynamic-threshold sensitivity for the token anomaly alert."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "variables": {
+            "suffix": "[uniqueString(resourceGroup().id)]",
+            "accountName": "[toLower(format('ai{0}{1}', parameters('namePrefix'), take(variables('suffix'), 8)))]",
+            "projectName": "[format('{0}-ai-proj', parameters('namePrefix'))]",
+            "metricNamespace": "Microsoft.CognitiveServices/accounts",
+            "actions": "[if(empty(parameters('alertEmail')), createArray(), createArray(createObject('actionGroupId', resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-ai', parameters('namePrefix'))))))]",
+            "deploymentDimension": [
+              {
+                "name": "ModelDeploymentName",
+                "operator": "Include",
+                "values": [
+                  "*"
+                ]
+              }
+            ]
+          },
+          "resources": [
+            {
+              "type": "Microsoft.CognitiveServices/accounts",
+              "apiVersion": "2025-06-01",
+              "name": "[variables('accountName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "AIServices",
+              "sku": {
+                "name": "S0"
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "allowProjectManagement": true,
+                "customSubDomainName": "[variables('accountName')]",
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/projects",
+              "apiVersion": "2025-06-01",
+              "name": "[format('{0}/{1}', variables('accountName'), variables('projectName'))]",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "displayName": "Azure Monitor Demo Lab — AI",
+                "description": "GenAI workload generating token/trace/cost telemetry for the observability lab."
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('accountName'), 'model-router')]"
+              ]
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2025-06-01",
+              "name": "[format('{0}/{1}', variables('accountName'), parameters('chatModel'))]",
+              "sku": {
+                "name": "GlobalStandard",
+                "capacity": "[parameters('chatCapacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('chatModel')]",
+                  "version": "[parameters('chatModelVersion')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2025-06-01",
+              "name": "[format('{0}/{1}', variables('accountName'), parameters('embedModel'))]",
+              "sku": {
+                "name": "GlobalStandard",
+                "capacity": "[parameters('embedCapacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('embedModel')]",
+                  "version": "[parameters('embedModelVersion')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('accountName'), parameters('chatModel'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2025-06-01",
+              "name": "[format('{0}/{1}', variables('accountName'), parameters('optModel'))]",
+              "sku": {
+                "name": "GlobalStandard",
+                "capacity": "[parameters('optCapacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('optModel')]",
+                  "version": "[parameters('optModelVersion')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('accountName'), parameters('embedModel'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2025-06-01",
+              "name": "[format('{0}/{1}', variables('accountName'), 'model-router')]",
+              "sku": {
+                "name": "GlobalStandard",
+                "capacity": "[parameters('routerCapacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "model-router",
+                  "version": "[parameters('routerModelVersion')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('accountName'), parameters('optModel'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CognitiveServices/accounts/projects/connections",
+              "apiVersion": "2025-06-01",
+              "name": "[format('{0}/{1}/{2}', variables('accountName'), variables('projectName'), format('{0}-appinsights', parameters('namePrefix')))]",
+              "properties": {
+                "category": "AppInsights",
+                "target": "[parameters('appInsightsId')]",
+                "authType": "ApiKey",
+                "isSharedToAll": true,
+                "credentials": {
+                  "key": "[parameters('appInsightsConnectionString')]"
+                },
+                "metadata": {
+                  "ApiType": "Azure",
+                  "ResourceId": "[parameters('appInsightsId')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts/projects', variables('accountName'), variables('projectName'))]"
+              ]
+            },
+            {
+              "condition": "[not(empty(parameters('alertEmail')))]",
+              "type": "Microsoft.Insights/actionGroups",
+              "apiVersion": "2023-01-01",
+              "name": "[format('ag-{0}-ai', parameters('namePrefix'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "groupShortName": "amlabai",
+                "enabled": true,
+                "emailReceivers": [
+                  {
+                    "name": "owner",
+                    "emailAddress": "[parameters('alertEmail')]",
+                    "useCommonAlertSchema": true
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "[format('alert-{0}-token-anomaly', parameters('namePrefix'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Token consumption (TotalTokens) deviates from the learned normal pattern for a model deployment. Uses Azure Monitor dynamic thresholds.",
+                "severity": 2,
+                "enabled": true,
+                "scopes": [
+                  "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT15M",
+                "autoMitigate": true,
+                "targetResourceType": "[variables('metricNamespace')]",
+                "targetResourceRegion": "[parameters('location')]",
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.MultipleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "TokenAnomaly",
+                      "criterionType": "DynamicThresholdCriterion",
+                      "metricNamespace": "[variables('metricNamespace')]",
+                      "metricName": "TotalTokens",
+                      "operator": "GreaterThan",
+                      "timeAggregation": "Total",
+                      "alertSensitivity": "[parameters('anomalySensitivity')]",
+                      "failingPeriods": {
+                        "numberOfEvaluationPeriods": 4,
+                        "minFailingPeriodsToAlert": 3
+                      },
+                      "dimensions": "[variables('deploymentDimension')]"
+                    }
+                  ]
+                },
+                "actions": "[variables('actions')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]",
+                "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-ai', parameters('namePrefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/metricAlerts",
+              "apiVersion": "2018-03-01",
+              "name": "[format('alert-{0}-token-spike', parameters('namePrefix'))]",
+              "location": "global",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "description": "Token consumption (TotalTokens) for a model deployment exceeded the static ceiling in a 5-minute window.",
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                  "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]"
+                ],
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT5M",
+                "autoMitigate": true,
+                "criteria": {
+                  "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+                  "allOf": [
+                    {
+                      "name": "TokenSpike",
+                      "criterionType": "StaticThresholdCriterion",
+                      "metricNamespace": "[variables('metricNamespace')]",
+                      "metricName": "TotalTokens",
+                      "operator": "GreaterThan",
+                      "threshold": "[parameters('spikeThresholdTokens')]",
+                      "timeAggregation": "Total",
+                      "dimensions": "[variables('deploymentDimension')]"
+                    }
+                  ]
+                },
+                "actions": "[variables('actions')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]",
+                "[resourceId('Microsoft.Insights/actionGroups', format('ag-{0}-ai', parameters('namePrefix')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "accountName": {
+              "type": "string",
+              "value": "[variables('accountName')]"
+            },
+            "projectName": {
+              "type": "string",
+              "value": "[variables('projectName')]"
+            },
+            "projectEndpoint": {
+              "type": "string",
+              "value": "[format('https://{0}.services.ai.azure.com/api/projects/{1}', variables('accountName'), variables('projectName'))]"
+            },
+            "chatDeployment": {
+              "type": "string",
+              "value": "[parameters('chatModel')]"
+            },
+            "embedDeployment": {
+              "type": "string",
+              "value": "[parameters('embedModel')]"
+            },
+            "optimizeDeployment": {
+              "type": "string",
+              "value": "[parameters('optModel')]"
+            },
+            "routerDeployment": {
+              "type": "string",
+              "value": "model-router"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[parameters('enableObservability')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "ai-observability",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('aiLocation')]"
+          },
+          "appInsightsId": {
+            "value": "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "5646449761352576377"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for the query pack and workbook."
+              }
+            },
+            "appInsightsId": {
+              "type": "string",
+              "metadata": {
+                "description": "App Insights component resource id (workbook sourceId)."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "variables": {
+            "$fxv#0": "// Token usage by agent, model, and hour\r\n// -------------------------------------------------------------------\r\n// Purpose:  Raw token-monitoring view for the FinOps demo. Sums prompt\r\n//           (input) and completion (output) tokens plus call count for\r\n//           every agent/model, bucketed hourly.\r\n// Source:   Application Insights `dependencies` table (GenAI OpenTelemetry\r\n//           spans emitted by the demo agents / simulate_traffic.py).\r\n// Notes:    Rows where gen_ai.agent.name / gen_ai.request.model are empty\r\n//           are the auto-instrumented model-inference spans; their token\r\n//           totals mirror the agent-attributed spans, so do NOT add both\r\n//           populations or you double-count. Filter on isnotempty(agent)\r\n//           when you want attributable usage only (see cost-by-agent-daily.kql).\r\n// Run:      az monitor app-insights query --app <appName> -g <rg> \\\r\n//             --subscription <subId> --analytics-query \"<this query>\" -o table\r\n\r\ndependencies\r\n| where timestamp > ago(1d)\r\n| extend inTok = toint(customDimensions[\"gen_ai.usage.input_tokens\"]),\r\n         outTok = toint(customDimensions[\"gen_ai.usage.output_tokens\"]),\r\n         model  = tostring(customDimensions[\"gen_ai.request.model\"]),\r\n         agent  = tostring(customDimensions[\"gen_ai.agent.name\"])\r\n| summarize prompt=sum(inTok), completion=sum(outTok), calls=count()\r\n          by agent, model, bin(timestamp, 1h)\r\n| order by timestamp asc\r\n",
+            "$fxv#1": "// Estimated cost per agent (last 24h)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Chargeback / showback view. Converts per-agent token usage\r\n//           into an estimated USD cost so you can see which agent drives\r\n//           spend. This is the \"cost dashboard + chargeback\" tile.\r\n// Source:   Application Insights `dependencies` table (GenAI spans).\r\n// Filter:   isnotempty(gen_ai.agent.name) — keeps only attributable spans\r\n//           and drops the untagged auto-instrumentation bucket.\r\n// Pricing:  Placeholder rates are gpt-5-mini GlobalStandard list price:\r\n//             input  $0.25 / 1M tokens\r\n//             output $2.00 / 1M tokens\r\n//           Replace with your negotiated / current per-model rates. At\r\n//           these rates completion tokens are ~97% of the bill, so output\r\n//           verbosity is the main cost lever.\r\n// Caveat:   Token-derived ESTIMATE only — excludes EA/CSP discounts, PTU/\r\n//           reservations and cached-input pricing. Reconcile monthly with\r\n//           Azure Cost Management for the billed figure.\r\n\r\ndependencies\r\n| where timestamp > ago(1d)\r\n      and isnotempty(tostring(customDimensions[\"gen_ai.agent.name\"]))\r\n| extend inTok  = toint(customDimensions[\"gen_ai.usage.input_tokens\"]),\r\n         outTok = toint(customDimensions[\"gen_ai.usage.output_tokens\"]),\r\n         agent  = tostring(customDimensions[\"gen_ai.agent.name\"])\r\n| summarize prompt=sum(inTok), completion=sum(outTok), calls=count() by agent\r\n| extend est_usd = round(prompt/1000000.0*0.25 + completion/1000000.0*2.00, 4)\r\n| order by est_usd desc\r\n",
+            "$fxv#10": "// CHART — Tokens by agent (stacked column: prompt vs completion)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Visual token-monitoring chart. Stacked column per agent\r\n//           showing prompt (input) vs completion (output) tokens, so the\r\n//           output-heavy agents stand out at a glance.\r\n// Render:   Only draws in the Azure portal Logs / App Insights \"Logs\"\r\n//           blade (or a Workbook). The `az ... query` CLI ignores render\r\n//           and returns the table.\r\n// Source:   Application Insights `dependencies` (GenAI spans); attributable\r\n//           spans only (isnotempty(agent)).\r\n\r\ndependencies\r\n| where timestamp > ago(1d)\r\n      and isnotempty(tostring(customDimensions[\"gen_ai.agent.name\"]))\r\n| extend inTok  = toint(customDimensions[\"gen_ai.usage.input_tokens\"]),\r\n         outTok = toint(customDimensions[\"gen_ai.usage.output_tokens\"]),\r\n         agent  = tostring(customDimensions[\"gen_ai.agent.name\"])\r\n| summarize prompt=sum(inTok), completion=sum(outTok) by agent\r\n| order by completion desc\r\n| render columnchart with (kind=stacked, title=\"Tokens by agent (prompt vs completion)\", ytitle=\"tokens\")\r\n",
+            "$fxv#11": "// CHART — Estimated cost by agent (bar)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Visual chargeback chart. One bar per agent = estimated USD,\r\n//           making the cost concentration obvious.\r\n// Render:   Portal Logs / Workbook only (CLI ignores render).\r\n// Pricing:  gpt-5-mini GlobalStandard list price (input $0.25/1M,\r\n//           output $2.00/1M). Replace with your current per-model rates.\r\n// Caveat:   Token-derived ESTIMATE — excludes discounts/PTU/cached input;\r\n//           reconcile with Azure Cost Management.\r\n\r\ndependencies\r\n| where timestamp > ago(1d)\r\n      and isnotempty(tostring(customDimensions[\"gen_ai.agent.name\"]))\r\n| extend inTok  = toint(customDimensions[\"gen_ai.usage.input_tokens\"]),\r\n         outTok = toint(customDimensions[\"gen_ai.usage.output_tokens\"]),\r\n         agent  = tostring(customDimensions[\"gen_ai.agent.name\"])\r\n| summarize prompt=sum(inTok), completion=sum(outTok) by agent\r\n| extend est_usd = round(prompt/1000000.0*0.25 + completion/1000000.0*2.00, 4)\r\n| project agent, est_usd\r\n| order by est_usd desc\r\n| render barchart with (title=\"Estimated cost by agent (USD)\", xtitle=\"USD\")\r\n",
+            "$fxv#12": "// CHART — Cost share by agent (pie)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Visual showback chart. Each agent's slice = share of the\r\n//           estimated total spend, so the dominant consumer is obvious.\r\n// Render:   Portal Logs / Workbook only (CLI ignores render).\r\n// Pricing:  gpt-5-mini GlobalStandard list price (input $0.25/1M,\r\n//           output $2.00/1M). Replace with your current per-model rates.\r\n// Caveat:   Token-derived ESTIMATE — reconcile with Azure Cost Management.\r\n\r\ndependencies\r\n| where timestamp > ago(1d)\r\n      and isnotempty(tostring(customDimensions[\"gen_ai.agent.name\"]))\r\n| extend inTok  = toint(customDimensions[\"gen_ai.usage.input_tokens\"]),\r\n         outTok = toint(customDimensions[\"gen_ai.usage.output_tokens\"]),\r\n         agent  = tostring(customDimensions[\"gen_ai.agent.name\"])\r\n| summarize prompt=sum(inTok), completion=sum(outTok) by agent\r\n| extend est_usd = round(prompt/1000000.0*0.25 + completion/1000000.0*2.00, 4)\r\n| project agent, est_usd\r\n| render piechart with (title=\"Cost share by agent (USD)\")\r\n",
+            "$fxv#13": "// CHART — Completion-token trend per agent (timechart)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Visual trend chart. Completion tokens per hour, one line per\r\n//           agent, to spot bursts, steady load, or idle periods.\r\n// Render:   Portal Logs / Workbook only (CLI ignores render). timechart\r\n//           pivots the `agent` string column into one series per agent.\r\n// Source:   Application Insights `dependencies` (GenAI spans); attributable\r\n//           spans only. Widen ago(1d) / change bin() as needed.\r\n\r\ndependencies\r\n| where timestamp > ago(1d)\r\n      and isnotempty(tostring(customDimensions[\"gen_ai.agent.name\"]))\r\n| extend outTok = toint(customDimensions[\"gen_ai.usage.output_tokens\"]),\r\n         agent  = tostring(customDimensions[\"gen_ai.agent.name\"])\r\n| summarize completion=sum(outTok) by bin(timestamp, 1h), agent\r\n| render timechart with (title=\"Completion tokens per hour by agent\", ytitle=\"completion tokens\")\r\n",
+            "$fxv#14": "{\r\n  \"version\": \"Notebook/1.0\",\r\n  \"items\": [\r\n    {\r\n      \"type\": 1,\r\n      \"content\": {\r\n        \"json\": \"# AI FinOps — Foundry Agents\\nToken usage, estimated cost, chargeback and health for the demo agents.\\n\\n_Estimated cost uses gpt-5-mini GlobalStandard list price ($0.25/1M input, $2.00/1M output) — a token-derived estimate; reconcile with Azure Cost Management._\"\r\n      },\r\n      \"name\": \"title\"\r\n    },\r\n    {\r\n      \"type\": 9,\r\n      \"content\": {\r\n        \"version\": \"KqlParameterItem/1.0\",\r\n        \"parameters\": [\r\n          {\r\n            \"id\": \"p-timerange\",\r\n            \"version\": \"KqlParameterItem/1.0\",\r\n            \"name\": \"TimeRange\",\r\n            \"label\": \"Time range\",\r\n            \"type\": 4,\r\n            \"isRequired\": true,\r\n            \"value\": { \"durationMs\": 86400000 },\r\n            \"typeSettings\": {\r\n              \"selectableValues\": [\r\n                { \"durationMs\": 3600000 },\r\n                { \"durationMs\": 14400000 },\r\n                { \"durationMs\": 86400000 },\r\n                { \"durationMs\": 604800000 },\r\n                { \"durationMs\": 2592000000 }\r\n              ],\r\n              \"allowCustom\": true\r\n            }\r\n          },\r\n          {\r\n            \"id\": \"p-appinsights\",\r\n            \"version\": \"KqlParameterItem/1.0\",\r\n            \"name\": \"AppInsights\",\r\n            \"label\": \"Foundry App Insights\",\r\n            \"type\": 5,\r\n            \"isRequired\": true,\r\n            \"multiSelect\": false,\r\n            \"quote\": \"'\",\r\n            \"resourceType\": \"microsoft.insights/components\",\r\n            \"typeSettings\": {\r\n              \"resourceTypeFilter\": { \"microsoft.insights/components\": true }\r\n            },\r\n            \"value\": \"/subscriptions/794194cd-a4b7-4024-970c-9533c4babff0/resourceGroups/rg-aifinops-demo/providers/microsoft.insights/components/aifinops-appi-dbwgaja36l7lu\"\r\n          },\r\n          {\r\n            \"id\": \"p-gw-appinsights\",\r\n            \"version\": \"KqlParameterItem/1.0\",\r\n            \"name\": \"GatewayAppInsights\",\r\n            \"label\": \"Gateway App Insights (semantic cache)\",\r\n            \"type\": 5,\r\n            \"isRequired\": false,\r\n            \"multiSelect\": false,\r\n            \"quote\": \"'\",\r\n            \"resourceType\": \"microsoft.insights/components\",\r\n            \"typeSettings\": {\r\n              \"resourceTypeFilter\": { \"microsoft.insights/components\": true }\r\n            },\r\n            \"value\": \"/subscriptions/794194cd-a4b7-4024-970c-9533c4babff0/resourceGroups/rg-aifinops-citadel/providers/microsoft.insights/components/appi-apim-rt2cbgof7fnpm\"\r\n          }\r\n        ],\r\n        \"style\": \"pills\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\"\r\n      },\r\n      \"name\": \"parameters\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"## Cost & chargeback\" },\r\n      \"name\": \"hdr-cost\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Estimated cost by agent:** prompt and completion tokens, call count and estimated USD per agent; your chargeback breakdown.\" },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"desc-cost-by-agent\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Cost share by agent:** each agent's slice of estimated spend, so the biggest driver stands out.\" },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"desc-cost-share\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize prompt=sum(inTok), completion=sum(outTok), calls=count() by agent | extend est_usd=round(prompt/1000000.0*0.25 + completion/1000000.0*2.00,4) | order by est_usd desc\",\r\n        \"size\": 0,\r\n        \"title\": \"Estimated cost by agent\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"table\"\r\n      },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"cost-by-agent-grid\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize prompt=sum(inTok), completion=sum(outTok) by agent | extend est_usd=round(prompt/1000000.0*0.25 + completion/1000000.0*2.00,4) | project agent, est_usd | order by est_usd desc\",\r\n        \"size\": 0,\r\n        \"title\": \"Cost share by agent\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"piechart\"\r\n      },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"cost-share-pie\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Cost per successful request:** estimated USD divided by successful calls; the real unit cost of a useful answer.\" },\r\n      \"name\": \"desc-cost-per-success\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize prompt=sum(inTok), completion=sum(outTok), total=count(), ok=countif(success==true) by agent | extend est_usd=round(prompt/1000000.0*0.25 + completion/1000000.0*2.00,4), success_rate=round(100.0*ok/total,1) | extend usd_per_success=round(iff(ok>0, est_usd/ok, real(null)),6) | project agent, total, ok, success_rate, est_usd, usd_per_success | order by usd_per_success desc\",\r\n        \"size\": 0,\r\n        \"title\": \"Cost per successful request\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"table\"\r\n      },\r\n      \"name\": \"cost-per-success\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Daily estimated cost trend:** estimated spend per day; watch for spikes or a creeping climb.\" },\r\n      \"name\": \"desc-cost-trend\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend outTok=toint(customDimensions['gen_ai.usage.output_tokens']) | summarize completion=sum(outTok), calls=count() by bin(timestamp, 1d) | extend est_usd=round(0 + completion/1000000.0*2.00,4) | order by timestamp asc\",\r\n        \"size\": 0,\r\n        \"title\": \"Daily estimated cost trend\",\r\n        \"timeContext\": { \"durationMs\": 604800000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"barchart\"\r\n      },\r\n      \"name\": \"cost-trend-daily\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"## Token usage\" },\r\n      \"name\": \"hdr-tokens\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Tokens by agent:** prompt vs completion tokens; completion is 8x pricier here, so it drives cost.\" },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"desc-tokens-by-agent\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Completion tokens per hour:** hourly volume per agent, revealing load patterns and busy periods.\" },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"desc-tokens-hourly\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize prompt=sum(inTok), completion=sum(outTok) by agent | order by completion desc\",\r\n        \"size\": 0,\r\n        \"title\": \"Tokens by agent (prompt vs completion)\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"barchart\",\r\n        \"chartSettings\": { \"showLegend\": true }\r\n      },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"tokens-by-agent\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend outTok=toint(customDimensions['gen_ai.usage.output_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize completion=sum(outTok) by bin(timestamp, 1h), agent | order by timestamp asc\",\r\n        \"size\": 0,\r\n        \"title\": \"Completion tokens per hour by agent\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"timechart\"\r\n      },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"tokens-hourly\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"## Health & efficiency\" },\r\n      \"name\": \"hdr-health\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Latency percentiles:** p50, p95 and p99 per agent; the p95/p99 tail is what users actually feel.\" },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"desc-latency\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Truncated-response rate:** share cut off by the token cap (finish_reason = length); high means raise max_tokens or trim prompts.\" },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"desc-truncated\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend agent=tostring(customDimensions['gen_ai.agent.name']) | summarize p50_ms=round(percentile(duration,50),0), p95_ms=round(percentile(duration,95),0), p99_ms=round(percentile(duration,99),0), calls=count() by agent | order by p95_ms desc\",\r\n        \"size\": 0,\r\n        \"title\": \"Latency percentiles by agent (ms)\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"table\"\r\n      },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"latency-percentiles\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend agent=tostring(customDimensions['gen_ai.agent.name']), fr=tostring(customDimensions['gen_ai.response.finish_reasons']) | summarize total=count(), truncated=countif(fr has 'length') by agent | extend truncated_pct=round(100.0*truncated/total,1) | project agent, total, truncated, truncated_pct | order by truncated_pct desc\",\r\n        \"size\": 0,\r\n        \"title\": \"Truncated-response rate (finish_reason = length)\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"table\"\r\n      },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"truncated-rate\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Cached-input token ratio:** percent of input served from prompt cache and the estimated saving; higher is cheaper.\" },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"desc-cached\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Routed model distribution:** which model the router picked and its cost share; cheap models should handle easy prompts.\" },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"desc-router\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), cached=toint(customDimensions['gen_ai.usage.cached_input_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize input=sum(inTok), cached=sum(coalesce(cached,0)) by agent | extend cached_pct=round(100.0*todouble(cached)/iff(input>0,input,1),1) | extend est_savings_usd=round(todouble(cached)*(0.25-0.03)/1000000.0,4) | project agent, input, cached, cached_pct, est_savings_usd | order by cached_pct asc\",\r\n        \"size\": 0,\r\n        \"title\": \"Cached-input token ratio by agent\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"table\"\r\n      },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"cached-ratio\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where tostring(customDimensions['gen_ai.request.model'])=='model-router' | extend routed=tostring(customDimensions['gen_ai.response.model']), inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']) | summarize calls=count(), input=sum(inTok), output=sum(outTok) by routed | as T | extend pct_calls=round(100.0*calls/toscalar(T|summarize sum(calls)),1), est_cost_usd=round((input*0.25+output*2.0)/1000000.0,4) | project routed, calls, pct_calls, input, output, est_cost_usd | order by calls desc\",\r\n        \"size\": 0,\r\n        \"title\": \"Model router - routed model distribution\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"table\"\r\n      },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"model-router-distribution\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Tool error rate:** calls and failure rate per tool; stays empty until tool-using agents run.\" },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"desc-tool\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where tostring(customDimensions['gen_ai.operation.name'])=='execute_tool' or isnotempty(tostring(customDimensions['gen_ai.tool.name'])) | extend tool=tostring(customDimensions['gen_ai.tool.name']) | summarize calls=count(), failures=countif(success==false), avg_ms=round(avg(duration),0) by tool | extend error_rate_pct=round(100.0*failures/calls,1) | project tool, calls, failures, error_rate_pct, avg_ms | order by error_rate_pct desc, calls desc\",\r\n        \"size\": 0,\r\n        \"title\": \"Tool error rate (empty until tool-using agents run)\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"table\"\r\n      },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"tool-error-rate\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"## Provisioned Throughput (PTU) break-even\\n**PTU = reserved capacity billed at a fixed hourly rate no matter how many tokens you send; consumption (pay-go) is billed per token.** This tile takes the agents' *measured* token volume in the selected time range, projects it to a full day, and asks: *at this volume, would a PTU reservation be cheaper than pay-go?*\\n\\nSet **PTU reserved** and **USD per PTU-hour** below, then read the row:\\n- **tokens_per_day** — current volume projected to 24h.\\n- **breakeven_tokens_day** — the volume where PTU and pay-go cost the same. Below it → consumption wins; above it → PTU wins.\\n- **consumption_usd_day** — projected pay-go cost/day at current volume.\\n- **ptu_usd_day** — fixed PTU cost/day = PTU × hourly rate × 24 (paid even at zero traffic).\\n- **verdict** — which option is cheaper right now.\\n\\n_Estimate only: PTU has per-deployment minimums (often 15–50 PTU) and monthly/annual reservations are cheaper than hourly. Short sampling windows extrapolate aggressively — widen the time range for a stable number._\\n\\n**Setting the _USD per PTU-hour_ value** (enter a plain number, no $): it's what you pay to reserve one PTU for one hour, which depends on the billing model — reservations are far cheaper than hourly:\\n- **Hourly (no commitment):** ~1.0\\n- **Monthly reservation:** ~0.35 (= $ per PTU-month ÷ 730)\\n- **Annual reservation:** ~0.30 (= $ per PTU-year ÷ 8760)\\n\\nRates vary by model and deployment type (Global / Data Zone / Regional Provisioned) and change over time — confirm on the Azure OpenAI pricing page or your EA/CSP price sheet. The default **1.0** is the worst-case (hourly); if consumption still wins at 1.0 it wins even harder at reservation rates._\" },\r\n      \"name\": \"hdr-ptu\"\r\n    },\r\n    {\r\n      \"type\": 9,\r\n      \"content\": {\r\n        \"version\": \"KqlParameterItem/1.0\",\r\n        \"parameters\": [\r\n          { \"id\": \"p-ptu-count\", \"version\": \"KqlParameterItem/1.0\", \"name\": \"PTU_Count\", \"label\": \"PTU reserved\", \"type\": 1, \"isRequired\": true, \"value\": \"15\" },\r\n          { \"id\": \"p-ptu-price\", \"version\": \"KqlParameterItem/1.0\", \"name\": \"PTU_HourlyUSD\", \"label\": \"USD per PTU-hour (hourly ~1.0, monthly-reservation ~0.35)\", \"type\": 1, \"isRequired\": true, \"value\": \"1.0\" }\r\n        ],\r\n        \"style\": \"pills\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\"\r\n      },\r\n      \"name\": \"ptu-parameters\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**PTU vs consumption break-even:** at the measured volume, compares pay-go against a PTU reservation and flags the cheaper option.\" },\r\n      \"name\": \"desc-ptu\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']) | summarize prompt=sum(inTok), completion=sum(outTok), firstT=min(timestamp), lastT=max(timestamp) | extend windowHours=max_of(todouble(datetime_diff('second', lastT, firstT))/3600.0, 1.0), total_tokens=prompt+completion, consumption_usd=prompt/1000000.0*0.25 + completion/1000000.0*2.00 | extend tokens_per_day=round(total_tokens/windowHours*24,0), consumption_usd_day=round(consumption_usd/windowHours*24,2), ptu_usd_day=round(toreal({PTU_Count})*toreal({PTU_HourlyUSD})*24,2), price_per_token=consumption_usd/iff(total_tokens>0,total_tokens,1) | extend breakeven_tokens_day=round(ptu_usd_day/iff(price_per_token>0,price_per_token,1.0),0), verdict=iff(consumption_usd_day>=ptu_usd_day,'PTU cheaper at current volume','Consumption cheaper — stay pay-go') | project tokens_per_day, breakeven_tokens_day, consumption_usd_day, ptu_usd_day, verdict\",\r\n        \"size\": 0,\r\n        \"title\": \"PTU vs consumption break-even\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{AppInsights}\"\r\n        ],\r\n        \"visualization\": \"table\"\r\n      },\r\n      \"name\": \"ptu-breakeven\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"## Semantic cache (AI gateway)\\nAPIM LLM **semantic caching** on the citadel gateway serves repeated/rephrased prompts from Redis instead of re-billing the model. Each **hit** is one model call — and its tokens — avoided. Metrics come from the `emit-metric` in the cache policy (namespace `semantic-cache`), landing in the gateway's Application Insights.\\n\\n_Empty until the `cache-demo` API receives traffic (run `demo/semantic-caching/demo-semantic-cache.ps1`)._\" },\r\n      \"name\": \"hdr-semantic-cache\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Cache hit-rate and calls avoided:** hits, misses and hit-rate; every hit is one model call (and its tokens) saved.\" },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"desc-cache-summary\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Cache hit-rate over time:** hourly hit-rate; it climbs as the cache warms up with repeated questions.\" },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"desc-cache-trend\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"customMetrics | where name == 'SemanticCache' | extend result = tostring(customDimensions.result) | summarize cache_hits = sumif(valueCount, result == 'hit'), cache_misses = sumif(valueCount, result == 'miss'), total_requests = sum(valueCount) | extend hit_rate_pct = round(100.0 * cache_hits / total_requests, 1), model_calls_avoided = cache_hits | project total_requests, cache_hits, cache_misses, hit_rate_pct, model_calls_avoided\",\r\n        \"size\": 0,\r\n        \"title\": \"Cache hit-rate & model calls avoided\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{GatewayAppInsights}\"\r\n        ],\r\n        \"visualization\": \"table\"\r\n      },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"semantic-cache-summary\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"customMetrics | where name == 'SemanticCache' | extend result = tostring(customDimensions.result) | summarize hits = sumif(valueCount, result == 'hit'), total = sum(valueCount) by bin(timestamp, 1h) | extend hit_rate_pct = round(100.0 * hits / total, 1) | project timestamp, hit_rate_pct | order by timestamp asc\",\r\n        \"size\": 0,\r\n        \"title\": \"Cache hit-rate over time (%)\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{GatewayAppInsights}\"\r\n        ],\r\n        \"visualization\": \"timechart\"\r\n      },\r\n      \"customWidth\": \"50\",\r\n      \"name\": \"semantic-cache-hitrate-trend\"\r\n    },\r\n    {\r\n      \"type\": 1,\r\n      \"content\": { \"json\": \"**Hits vs misses:** proportion of gateway requests served from cache versus forwarded to the model.\" },\r\n      \"name\": \"desc-cache-pie\"\r\n    },\r\n    {\r\n      \"type\": 3,\r\n      \"content\": {\r\n        \"version\": \"KqlItem/1.0\",\r\n        \"query\": \"customMetrics | where name == 'SemanticCache' | extend result = tostring(customDimensions.result) | summarize requests = sum(valueCount) by result | order by requests desc\",\r\n        \"size\": 0,\r\n        \"title\": \"Hits vs misses\",\r\n        \"timeContext\": { \"durationMs\": 86400000 },\r\n        \"timeContextFromParameter\": \"TimeRange\",\r\n        \"queryType\": 0,\r\n        \"resourceType\": \"microsoft.insights/components\",\r\n        \"crossComponentResources\": [\r\n          \"{GatewayAppInsights}\"\r\n        ],\r\n        \"visualization\": \"piechart\"\r\n      },\r\n      \"name\": \"semantic-cache-hits-vs-misses\"\r\n    }\r\n  ],\r\n  \"styleSettings\": {},\r\n  \"$schema\": \"https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json\"\r\n}\r\n",
+            "$fxv#2": "// Estimated cost trend, per day (last 7 days)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Daily spend trend for the FinOps demo — total tokens, calls\r\n//           and estimated USD per day across all agents. Use it to spot\r\n//           day-over-day growth or spikes and to seed a budget threshold.\r\n// Source:   Application Insights `dependencies` table (GenAI spans).\r\n// Filter:   isnotempty(gen_ai.agent.name) — attributable spans only.\r\n// Pricing:  gpt-5-mini GlobalStandard list price (input $0.25/1M,\r\n//           output $2.00/1M). Replace with your current per-model rates.\r\n// Caveat:   Token-derived ESTIMATE — excludes discounts/PTU/cached input;\r\n//           reconcile with Azure Cost Management. Widen ago(7d) as needed.\r\n\r\ndependencies\r\n| where timestamp > ago(7d)\r\n      and isnotempty(tostring(customDimensions[\"gen_ai.agent.name\"]))\r\n| extend inTok  = toint(customDimensions[\"gen_ai.usage.input_tokens\"]),\r\n         outTok = toint(customDimensions[\"gen_ai.usage.output_tokens\"])\r\n| summarize prompt=sum(inTok), completion=sum(outTok), calls=count()\r\n          by day=bin(timestamp, 1d)\r\n| extend est_usd = round(prompt/1000000.0*0.25 + completion/1000000.0*2.00, 4)\r\n| order by day asc\r\n",
+            "$fxv#3": "// Cost per successful request, by agent (last 24h)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Unit economics that join COST + RELIABILITY. Failed/retried\r\n//           calls still burn tokens, so this divides estimated spend by the\r\n//           number of *successful* requests — the true price of a good answer.\r\n// Source:   Application Insights `dependencies` (GenAI spans). Uses the\r\n//           native `success` column for pass/fail.\r\n// Pricing:  gpt-5-mini GlobalStandard list price (input $0.25/1M,\r\n//           output $2.00/1M). Replace with your per-model rates.\r\n// Caveat:   Token-derived ESTIMATE; reconcile with Azure Cost Management.\r\n\r\ndependencies\r\n| where timestamp > ago(1d)\r\n      and isnotempty(tostring(customDimensions[\"gen_ai.agent.name\"]))\r\n| extend inTok  = toint(customDimensions[\"gen_ai.usage.input_tokens\"]),\r\n         outTok = toint(customDimensions[\"gen_ai.usage.output_tokens\"]),\r\n         agent  = tostring(customDimensions[\"gen_ai.agent.name\"])\r\n| summarize prompt=sum(inTok), completion=sum(outTok),\r\n            total=count(), ok=countif(success == true) by agent\r\n| extend est_usd        = round(prompt/1000000.0*0.25 + completion/1000000.0*2.00, 4),\r\n         success_rate   = round(100.0 * ok / total, 1)\r\n| extend usd_per_success = round(iff(ok > 0, est_usd / ok, real(null)), 6)\r\n| project agent, total, ok, success_rate, est_usd, usd_per_success\r\n| order by usd_per_success desc\r\n",
+            "$fxv#4": "// Cached-input token ratio, by agent (last 24h)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Savings lever. Prompt caching bills cached input tokens at a\r\n//           large discount (~88% off). A LOW cached % on agents with big,\r\n//           repeated system prompts = money left on the table.\r\n// Source:   Application Insights `dependencies` (GenAI spans).\r\n// Pricing:  gpt-5-mini Global (Azure OpenAI pricing) input $0.25/1M,\r\n//           cached input $0.03/1M -> each cached token saves $0.22/1M.\r\n//           https://azure.microsoft.com/en-us/pricing/details/azure-openai/\r\n// Notes:    `gen_ai.usage.cached_input_tokens` is only emitted when the\r\n//           model/SDK reports cache hits. If the column is absent it reads\r\n//           as 0 -> cached_pct 0 (i.e., no caching in effect = opportunity).\r\n\r\ndependencies\r\n| where timestamp > ago(1d)\r\n      and isnotempty(tostring(customDimensions[\"gen_ai.agent.name\"]))\r\n| extend inTok   = toint(customDimensions[\"gen_ai.usage.input_tokens\"]),\r\n         cached  = toint(customDimensions[\"gen_ai.usage.cached_input_tokens\"]),\r\n         agent   = tostring(customDimensions[\"gen_ai.agent.name\"])\r\n| summarize input=sum(inTok), cached=sum(coalesce(cached, 0)) by agent\r\n| extend cached_pct = round(100.0 * todouble(cached) / iff(input > 0, input, 1), 1)\r\n// Savings = cached tokens billed at $0.03/1M instead of $0.25/1M.\r\n| extend est_savings_usd = round(todouble(cached) * (0.25 - 0.03) / 1000000.0, 4)\r\n| project agent, input, cached, cached_pct, est_savings_usd\r\n| order by cached_pct asc\r\n",
+            "$fxv#5": "// Model router — routed-model distribution (last 24h)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Show which underlying model the Foundry Model Router picked\r\n//           per request — the portal guidance's \"split metrics by the\r\n//           underlying model\". A healthy Balanced router sends easy prompts\r\n//           to cheap models and only escalates hard ones.\r\n//           https://learn.microsoft.com/azure/foundry/openai/how-to/model-router#monitor-model-router-metrics\r\n// Source:   Application Insights `dependencies` (GenAI spans).\r\n//   gen_ai.request.model  = 'model-router'   (the deployment that was called)\r\n//   gen_ai.response.model = <routed model>   (who actually answered)\r\n// Pricing:  placeholder gpt-5-mini rates for the est. cost column.\r\ndependencies\r\n| where timestamp > ago(1d)\r\n      and tostring(customDimensions[\"gen_ai.request.model\"]) == \"model-router\"\r\n| extend routed  = tostring(customDimensions[\"gen_ai.response.model\"]),\r\n         inTok   = toint(customDimensions[\"gen_ai.usage.input_tokens\"]),\r\n         outTok  = toint(customDimensions[\"gen_ai.usage.output_tokens\"])\r\n| summarize calls = count(), input = sum(inTok), output = sum(outTok) by routed\r\n| as T\r\n| extend pct_calls    = round(100.0 * calls / toscalar(T | summarize sum(calls)), 1),\r\n         est_cost_usd = round((input * 0.25 + output * 2.0) / 1000000.0, 4)\r\n| project routed, calls, pct_calls, input, output, est_cost_usd\r\n| order by calls desc\r\n",
+            "$fxv#6": "// Truncated-response rate (finish_reason = \"length\"), by agent (last 24h)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Token-waste + quality signal. A high share of responses that\r\n//           stop because they hit the max-output-token limit (\"length\")\r\n//           means answers are being cut off AND you're paying for the\r\n//           maximum output every time — the verbosity red flag.\r\n// Source:   Application Insights `dependencies` (GenAI spans),\r\n//           `gen_ai.response.finish_reasons` (JSON array serialized to text).\r\n// Action:   High % -> raise max_tokens OR (better) make the agent terser.\r\n\r\ndependencies\r\n| where timestamp > ago(1d)\r\n      and isnotempty(tostring(customDimensions[\"gen_ai.agent.name\"]))\r\n| extend agent = tostring(customDimensions[\"gen_ai.agent.name\"]),\r\n         fr    = tostring(customDimensions[\"gen_ai.response.finish_reasons\"])\r\n| summarize total=count(), truncated=countif(fr has \"length\") by agent\r\n| extend truncated_pct = round(100.0 * truncated / total, 1)\r\n| project agent, total, truncated, truncated_pct\r\n| order by truncated_pct desc\r\n",
+            "$fxv#7": "// Latency percentiles by agent (last 24h)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Performance view. p50/p95/p99 end-to-end duration per agent —\r\n//           the UX signal, and a cost proxy (long generations = more output\r\n//           tokens). Tail latency (p95/p99) is what users actually feel.\r\n// Source:   Application Insights `dependencies`; native `duration` column\r\n//           is milliseconds. Attributable (agent) spans only.\r\n// Tip:      Add `| render columnchart` to visualize in the portal Logs blade.\r\n\r\ndependencies\r\n| where timestamp > ago(1d)\r\n      and isnotempty(tostring(customDimensions[\"gen_ai.agent.name\"]))\r\n| extend agent = tostring(customDimensions[\"gen_ai.agent.name\"])\r\n| summarize p50_ms=round(percentile(duration, 50), 0),\r\n            p95_ms=round(percentile(duration, 95), 0),\r\n            p99_ms=round(percentile(duration, 99), 0),\r\n            calls=count() by agent\r\n| order by p95_ms desc\r\n",
+            "$fxv#8": "// Tool call volume & error rate, by tool (last 24h)\r\n// -------------------------------------------------------------------\r\n// Purpose:  Agent-specific health. Which tools are hot, and which fail —\r\n//           a high tool error rate usually means a poor tool/parameter\r\n//           description (an Agent-Optimizer 'tool optimization' target) and\r\n//           drives wasted retries + tokens.\r\n// Source:   Application Insights `dependencies`; tool-execution GenAI spans\r\n//           (gen_ai.operation.name == \"execute_tool\" or gen_ai.tool.name set).\r\n// Note:     Only populates when agents actually call tools. The basic demo\r\n//           agents have no tools, so expect empty until tool-using agents run.\r\n\r\ndependencies\r\n| where timestamp > ago(1d)\r\n| where tostring(customDimensions[\"gen_ai.operation.name\"]) == \"execute_tool\"\r\n      or isnotempty(tostring(customDimensions[\"gen_ai.tool.name\"]))\r\n| extend tool = tostring(customDimensions[\"gen_ai.tool.name\"])\r\n| summarize calls=count(), failures=countif(success == false),\r\n            avg_ms=round(avg(duration), 0) by tool\r\n| extend error_rate_pct = round(100.0 * failures / calls, 1)\r\n| project tool, calls, failures, error_rate_pct, avg_ms\r\n| order by error_rate_pct desc, calls desc\r\n",
+            "$fxv#9": "// PTU vs consumption break-even (last window)\r\n// -------------------------------------------------------------------\r\n// Purpose:  The core PTU FinOps decision. Takes the ACTUAL token volume\r\n//           the agents are producing, projects it to a full day, and\r\n//           compares consumption (pay-go) cost/day against the fixed cost\r\n//           of a Provisioned Throughput (PTU) reservation — and reports the\r\n//           token/day break-even where PTU becomes the cheaper option.\r\n// Source:   Application Insights `dependencies` (GenAI spans).\r\n// Tune:     Edit the four `let` values below. ptuHourlyUsd/ptuCount drive\r\n//           the fixed side; inPrice/outPrice the consumption side.\r\n// Reality:  At the current demo volume (~$0.27/day) you are FAR below PTU\r\n//           break-even — small/bursty workloads belong on consumption;\r\n//           steady high-volume belongs on PTU. That contrast IS the lesson.\r\n// Caveat:   Estimate only. Real PTU pricing has minimums (often 15-50 PTU/\r\n//           deployment) and monthly/annual reservations are cheaper than\r\n//           hourly. Reconcile with Azure pricing + Cost Management.\r\n\r\nlet ptuCount      = 15;     // PTU reserved (typical per-deployment minimum)\r\nlet ptuHourlyUsd  = 1.0;    // ~list hourly $/PTU; use your reservation rate\r\nlet inPrice       = 0.25;   // consumption price: USD / 1M input tokens\r\nlet outPrice      = 2.00;   // consumption price: USD / 1M output tokens\r\ndependencies\r\n| where isnotempty(tostring(customDimensions[\"gen_ai.agent.name\"]))\r\n| extend inTok  = toint(customDimensions[\"gen_ai.usage.input_tokens\"]),\r\n         outTok = toint(customDimensions[\"gen_ai.usage.output_tokens\"])\r\n| summarize prompt=sum(inTok), completion=sum(outTok),\r\n            firstT=min(timestamp), lastT=max(timestamp)\r\n| extend windowHours     = max_of(todouble(datetime_diff('second', lastT, firstT)) / 3600.0, 1.0),\r\n         total_tokens    = prompt + completion,\r\n         consumption_usd = prompt/1000000.0*inPrice + completion/1000000.0*outPrice\r\n| extend tokens_per_day        = round(total_tokens / windowHours * 24, 0),\r\n         consumption_usd_day   = round(consumption_usd / windowHours * 24, 2),\r\n         ptu_usd_day           = round(ptuCount * ptuHourlyUsd * 24, 2),\r\n         price_per_token       = consumption_usd / iff(total_tokens > 0, total_tokens, 1)\r\n| extend breakeven_tokens_day  = round(ptu_usd_day / iff(price_per_token > 0, price_per_token, 1.0), 0),\r\n         verdict               = iff(consumption_usd_day >= ptu_usd_day,\r\n                                     'PTU cheaper at current volume',\r\n                                     'Consumption cheaper — stay pay-go')\r\n| project tokens_per_day, breakeven_tokens_day, consumption_usd_day, ptu_usd_day, verdict\r\n",
+            "queries": [
+              {
+                "key": "token-usage-by-agent-hourly",
+                "display": "Token usage by agent (hourly)",
+                "body": "[variables('$fxv#0')]"
+              },
+              {
+                "key": "cost-by-agent-daily",
+                "display": "Estimated cost by agent",
+                "body": "[variables('$fxv#1')]"
+              },
+              {
+                "key": "cost-trend-daily-7d",
+                "display": "Estimated cost trend (7d)",
+                "body": "[variables('$fxv#2')]"
+              },
+              {
+                "key": "cost-per-successful-request",
+                "display": "Cost per successful request",
+                "body": "[variables('$fxv#3')]"
+              },
+              {
+                "key": "cached-token-ratio",
+                "display": "Cached-input token ratio",
+                "body": "[variables('$fxv#4')]"
+              },
+              {
+                "key": "model-router-distribution",
+                "display": "Model router routed-model distribution",
+                "body": "[variables('$fxv#5')]"
+              },
+              {
+                "key": "finish-reason-length-rate",
+                "display": "Truncated-response rate",
+                "body": "[variables('$fxv#6')]"
+              },
+              {
+                "key": "latency-percentiles-by-agent",
+                "display": "Latency percentiles by agent",
+                "body": "[variables('$fxv#7')]"
+              },
+              {
+                "key": "tool-error-rate",
+                "display": "Tool error rate",
+                "body": "[variables('$fxv#8')]"
+              },
+              {
+                "key": "ptu-breakeven",
+                "display": "PTU vs consumption break-even",
+                "body": "[variables('$fxv#9')]"
+              },
+              {
+                "key": "chart-tokens-by-agent-stacked",
+                "display": "Chart: tokens by agent (stacked)",
+                "body": "[variables('$fxv#10')]"
+              },
+              {
+                "key": "chart-cost-by-agent-bar",
+                "display": "Chart: cost by agent (bar)",
+                "body": "[variables('$fxv#11')]"
+              },
+              {
+                "key": "chart-cost-share-pie",
+                "display": "Chart: cost share (pie)",
+                "body": "[variables('$fxv#12')]"
+              },
+              {
+                "key": "chart-tokens-trend-timechart",
+                "display": "Chart: completion tokens per hour",
+                "body": "[variables('$fxv#13')]"
+              }
+            ]
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/queryPacks",
+              "apiVersion": "2019-09-01",
+              "name": "qp-ai-finops",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {}
+            },
+            {
+              "copy": {
+                "name": "packQueries",
+                "count": "[length(variables('queries'))]"
+              },
+              "type": "Microsoft.OperationalInsights/queryPacks/queries",
+              "apiVersion": "2019-09-01",
+              "name": "[format('{0}/{1}', 'qp-ai-finops', guid(resourceId('Microsoft.OperationalInsights/queryPacks', 'qp-ai-finops'), variables('queries')[copyIndex()].key))]",
+              "properties": {
+                "displayName": "[variables('queries')[copyIndex()].display]",
+                "body": "[variables('queries')[copyIndex()].body]",
+                "related": {
+                  "categories": [
+                    "applications"
+                  ],
+                  "resourceTypes": [
+                    "microsoft.insights/components"
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/queryPacks', 'qp-ai-finops')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/workbooks",
+              "apiVersion": "2023-06-01",
+              "name": "[guid(resourceGroup().id, 'ai-finops-workbook')]",
+              "location": "[parameters('location')]",
+              "kind": "shared",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "displayName": "AI FinOps — Foundry Agents",
+                "serializedData": "[variables('$fxv#14')]",
+                "category": "workbook",
+                "sourceId": "[toLower(parameters('appInsightsId'))]",
+                "version": "1.0"
+              }
+            }
+          ],
+          "outputs": {
+            "queryPackName": {
+              "type": "string",
+              "value": "qp-ai-finops"
+            },
+            "workbookId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/workbooks', guid(resourceGroup().id, 'ai-finops-workbook'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[parameters('enableHealthModel')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "ai-healthmodel",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('aiLocation')]"
+          },
+          "appInsightsId": {
+            "value": "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+          },
+          "lawId": {
+            "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').WorkspaceResourceId]"
+          },
+          "healthModelName": {
+            "value": "[format('hm-{0}-ai', parameters('namePrefix'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "16995790499446618241"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Location for the health model (pinned to a CloudHealth-supported region)."
+              }
+            },
+            "appInsightsId": {
+              "type": "string",
+              "metadata": {
+                "description": "App Insights component resource id (source for topology discovery)."
+              }
+            },
+            "lawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace resource id backing App Insights (source for custom agent signals)."
+              }
+            },
+            "healthModelName": {
+              "type": "string",
+              "metadata": {
+                "description": "Name of the health model."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "variables": {
+            "rg": "[toLower(resourceGroup().name)]",
+            "authSettingName": "managed-identity",
+            "readerRoleId": "acdd72a7-3385-48ef-bd42-f606fba81ae7",
+            "monitoringReaderRoleId": "43d0d8ad-25c7-4714-9337-8ba259a9fe05",
+            "logAnalyticsReaderRoleId": "73c42c96-874c-492b-b04d-ab87d138a893",
+            "agents": [
+              {
+                "key": "support-triage",
+                "display": "Support Triage",
+                "x": 100,
+                "y": 100
+              },
+              {
+                "key": "finops-qa",
+                "display": "FinOps Q&A",
+                "x": 420,
+                "y": 100
+              },
+              {
+                "key": "doc-summarizer",
+                "display": "Doc Summarizer",
+                "x": 100,
+                "y": 320
+              },
+              {
+                "key": "context-rich-assistant",
+                "display": "Context-Rich Assistant",
+                "x": 420,
+                "y": 320
+              }
+            ]
+          },
+          "resources": [
+            {
+              "type": "Microsoft.CloudHealth/healthmodels",
+              "apiVersion": "2026-05-01-preview",
+              "name": "[parameters('healthModelName')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {}
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/authenticationsettings",
+              "apiVersion": "2026-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), variables('authSettingName'))]",
+              "properties": {
+                "displayName": "Managed identity",
+                "authenticationKind": "ManagedIdentity",
+                "managedIdentityName": "SystemAssigned"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/discoveryrules",
+              "apiVersion": "2026-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'agents-topology')]",
+              "properties": {
+                "displayName": "Agents (App Insights topology)",
+                "authenticationSetting": "[variables('authSettingName')]",
+                "addRecommendedSignals": "Enabled",
+                "addResourceHealthSignal": "Enabled",
+                "discoverRelationships": "Enabled",
+                "specification": {
+                  "kind": "ApplicationInsightsTopology",
+                  "applicationInsightsResourceId": "[parameters('appInsightsId')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), variables('authSettingName'))]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/discoveryrules",
+              "apiVersion": "2026-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'foundry-account')]",
+              "properties": {
+                "displayName": "Foundry account",
+                "authenticationSetting": "[variables('authSettingName')]",
+                "addRecommendedSignals": "Enabled",
+                "addResourceHealthSignal": "Enabled",
+                "discoverRelationships": "Enabled",
+                "specification": {
+                  "kind": "ResourceGraphQuery",
+                  "resourceGraphQuery": "[format('resources | where resourceGroup =~ ''{0}'' and type =~ ''microsoft.cognitiveservices/accounts'' | project id, name', variables('rg'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), variables('authSettingName'))]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/discoveryrules",
+              "apiVersion": "2026-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'foundry-projects')]",
+              "properties": {
+                "displayName": "Foundry projects",
+                "authenticationSetting": "[variables('authSettingName')]",
+                "addRecommendedSignals": "Enabled",
+                "addResourceHealthSignal": "Enabled",
+                "discoverRelationships": "Enabled",
+                "specification": {
+                  "kind": "ResourceGraphQuery",
+                  "resourceGraphQuery": "[format('resources | where resourceGroup =~ ''{0}'' and type =~ ''microsoft.cognitiveservices/accounts/projects'' | project id, name', variables('rg'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), variables('authSettingName'))]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.CloudHealth/healthmodels/discoveryrules",
+              "apiVersion": "2026-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'observability-services')]",
+              "properties": {
+                "displayName": "Observability services",
+                "authenticationSetting": "[variables('authSettingName')]",
+                "addRecommendedSignals": "Enabled",
+                "addResourceHealthSignal": "Enabled",
+                "discoverRelationships": "Enabled",
+                "specification": {
+                  "kind": "ResourceGraphQuery",
+                  "resourceGraphQuery": "[format('resources | where resourceGroup =~ ''{0}'' and type in~ (''microsoft.insights/components'', ''microsoft.operationalinsights/workspaces'') | project id, name', variables('rg'))]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), variables('authSettingName'))]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), variables('readerRoleId'))]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), '2026-05-01-preview', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('readerRoleId'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), variables('monitoringReaderRoleId'))]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), '2026-05-01-preview', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('monitoringReaderRoleId'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceGroup().id, resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), variables('logAnalyticsReaderRoleId'))]",
+              "properties": {
+                "principalId": "[reference(resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName')), '2026-05-01-preview', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('logAnalyticsReaderRoleId'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "agentEntities",
+                "count": "[length(variables('agents'))]"
+              },
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), format('agent-{0}', variables('agents')[copyIndex()].key))]",
+              "properties": {
+                "displayName": "[variables('agents')[copyIndex()].display]",
+                "impact": "Standard",
+                "healthObjective": 99,
+                "canvasPosition": {
+                  "x": "[variables('agents')[copyIndex()].x]",
+                  "y": "[variables('agents')[copyIndex()].y]"
+                },
+                "signalGroups": {
+                  "azureLogAnalytics": {
+                    "authenticationSetting": "[variables('authSettingName')]",
+                    "logAnalyticsWorkspaceResourceId": "[parameters('lawId')]",
+                    "signals": [
+                      {
+                        "name": "error-rate",
+                        "signalKind": "LogAnalyticsQuery",
+                        "displayName": "Error rate (%, 1h)",
+                        "dataUnit": "Percent",
+                        "refreshInterval": "PT5M",
+                        "valueColumnName": "ErrorPct",
+                        "queryText": "[format('AppDependencies | where TimeGenerated > ago(1h) | where tostring(Properties[''gen_ai.agent.name'']) == ''{0}'' | summarize total=count(), failures=countif(Success==false) | project ErrorPct=iff(total==0, 0.0, round(100.0*failures/total, 1))', variables('agents')[copyIndex()].display)]",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 5
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 20
+                          }
+                        }
+                      },
+                      {
+                        "name": "cost-cents",
+                        "signalKind": "LogAnalyticsQuery",
+                        "displayName": "Estimated cost (US cents/hour)",
+                        "dataUnit": "Count",
+                        "refreshInterval": "PT5M",
+                        "valueColumnName": "CostCents",
+                        "queryText": "[format('AppDependencies | where TimeGenerated > ago(1h) | where tostring(Properties[''gen_ai.agent.name'']) == ''{0}'' | extend inTok=toint(Properties[''gen_ai.usage.input_tokens'']), outTok=toint(Properties[''gen_ai.usage.output_tokens'']), cachedTok=toint(Properties[''gen_ai.usage.cached_input_tokens'']) | extend freshIn=inTok-coalesce(cachedTok, 0) | summarize c=round((sum(freshIn)*0.25 + sum(coalesce(cachedTok, 0))*0.025 + sum(outTok)*2.0)/1000000.0*100, 2) | project CostCents=coalesce(c, 0.0)', variables('agents')[copyIndex()].display)]",
+                        "evaluationRules": {
+                          "degradedRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 10
+                          },
+                          "unhealthyRule": {
+                            "operator": "GreaterThan",
+                            "threshold": 30
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), variables('authSettingName'))]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "healthModelName": {
+              "type": "string",
+              "value": "[parameters('healthModelName')]"
+            },
+            "healthModelId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "foundryAccountName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.accountName.value]"
+    },
+    "foundryProjectName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.projectName.value]"
+    },
+    "projectEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.projectEndpoint.value]"
+    },
+    "chatDeployment": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.chatDeployment.value]"
+    },
+    "routerDeployment": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.routerDeployment.value]"
+    },
+    "appInsightsName": {
+      "type": "string",
+      "value": "[variables('appInsightsName')]"
+    }
+  }
+}

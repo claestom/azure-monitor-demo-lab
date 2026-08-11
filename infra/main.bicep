@@ -69,6 +69,12 @@ param enablePlatformLogsDcr bool = false
 @description('Enable the metrics-export DCR (scenario 52, GA). Off by default — the DCR and central LAW must be in the same region.')
 param enableMetricsExportDcr bool = false
 
+@description('Enable the optional AI stage — Microsoft Foundry workload (account, project, chat/embed/optimize/model-router deployments) + App Insights connection + token alerts + query pack/workbook/health model. Off by default (billable models, region-limited).')
+param enableAi bool = false
+
+@description('Model Router deployment version for the AI feature. VERIFY for your region with "az cognitiveservices account list-models".')
+param routerModelVersion string = '2025-08-07'
+
 // ---------------------------------------------------------------------------------
 // Naming
 // ---------------------------------------------------------------------------------
@@ -100,6 +106,10 @@ var securityWorkbookName = 'wb-${namePrefix}-security'
 var sliUamiName         = 'id-sli-${namePrefix}'
 var platformLogsDcrName = 'dcr-${namePrefix}-platformlogs'
 var metricsExportDcrName = 'dcr-${namePrefix}-metricsexport'
+
+// AI feature (Foundry) is pinned to swedencentral, independent of the lab region —
+// the gpt-5-* / model-router SKUs + Foundry portal + CloudHealth preview are region-limited.
+var aiLocation = 'swedencentral'
 
 var commonTags = {
   owner: ownerTag
@@ -849,6 +859,46 @@ module sliIdentity 'modules/sli-identity.bicep' = {
 }
 
 // ---------------------------------------------------------------------------------
+// Optional AI feature — Microsoft Foundry GenAI workload (account, project,
+// chat/embed/optimize/model-router deployments) + App Insights connection + token
+// metric alerts, plus the AI FinOps query pack/workbook and health model. Pinned to
+// swedencentral (aiLocation), independent of the lab region. Off by default.
+// After deploy, run scripts/setup-ai.ps1 to create the agents and simulate traffic.
+// ---------------------------------------------------------------------------------
+module foundry 'modules/foundry.bicep' = if (enableAi) {
+  name: 'foundry'
+  params: {
+    location: aiLocation
+    namePrefix: namePrefix
+    appInsightsId: appInsights.outputs.id
+    appInsightsConnectionString: appInsights.outputs.connectionString
+    routerModelVersion: routerModelVersion
+    alertEmail: alertEmail
+    tags: commonTags
+  }
+}
+
+module aiObservability 'modules/ai-observability.bicep' = if (enableAi) {
+  name: 'ai-observability'
+  params: {
+    location: aiLocation
+    appInsightsId: appInsights.outputs.id
+    tags: commonTags
+  }
+}
+
+module aiHealthModel 'modules/ai-healthmodel.bicep' = if (enableAi) {
+  name: 'ai-healthmodel'
+  params: {
+    location: aiLocation
+    appInsightsId: appInsights.outputs.id
+    lawId: lawAppInsights.outputs.id
+    healthModelName: 'hm-${namePrefix}-ai'
+    tags: commonTags
+  }
+}
+
+// ---------------------------------------------------------------------------------
 // Outputs (consumed by post-deploy scripts)
 // ---------------------------------------------------------------------------------
 output centralLawId string         = lawCentral.outputs.id
@@ -907,6 +957,13 @@ output securityWorkbookId string       = securityWorkbook.outputs.id
 output healthModelName string          = healthModel.outputs.healthModelName
 output healthModelId string            = healthModel.outputs.healthModelId
 output healthModelPrincipalId string   = healthModel.outputs.healthModelPrincipalId
+
+// Optional AI feature (empty unless enableAi = true)
+output aiEnabled bool                  = enableAi
+output aiFoundryAccountName string     = enableAi ? foundry!.outputs.accountName : ''
+output aiProjectEndpoint string        = enableAi ? foundry!.outputs.projectEndpoint : ''
+output aiChatDeployment string         = enableAi ? foundry!.outputs.chatDeployment : ''
+output aiRouterDeployment string       = enableAi ? foundry!.outputs.routerDeployment : ''
 
 // NEW — Alert Processing Rules nightly window
 output nightlyMaintenanceRuleName string = alertProcessingRules.outputs.nightlyMaintenanceRuleName

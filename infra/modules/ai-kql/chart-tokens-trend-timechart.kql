@@ -1,0 +1,16 @@
+// CHART — Completion-token trend per agent (timechart)
+// -------------------------------------------------------------------
+// Purpose:  Visual trend chart. Completion tokens per hour, one line per
+//           agent, to spot bursts, steady load, or idle periods.
+// Render:   Portal Logs / Workbook only (CLI ignores render). timechart
+//           pivots the `agent` string column into one series per agent.
+// Source:   Application Insights `dependencies` (GenAI spans); attributable
+//           spans only. Widen ago(1d) / change bin() as needed.
+
+dependencies
+| where timestamp > ago(1d)
+      and isnotempty(tostring(customDimensions["gen_ai.agent.name"]))
+| extend outTok = toint(customDimensions["gen_ai.usage.output_tokens"]),
+         agent  = tostring(customDimensions["gen_ai.agent.name"])
+| summarize completion=sum(outTok) by bin(timestamp, 1h), agent
+| render timechart with (title="Completion tokens per hour by agent", ytitle="completion tokens")

@@ -40,6 +40,7 @@ Deploy in this order.
 3. Stage C - Alerts and auto-mitigation
 4. Stage D - Security posture scenarios
 5. Stage E - Optional advanced/security add-ons
+6. Stage AI - Optional Microsoft Foundry GenAI workload (off by default)
 
 ## 4) Stage details (scenarios + deployed services)
 
@@ -52,6 +53,7 @@ Use this as the workshop script: each stage adds a bounded set of capabilities a
 | Stage C - Alerts and response | Add actionable detection and automated response controls. | 7, 8, 12, 15, 17, 19, 23, 37 | Action Group, metric alerts, scheduled query alerts, activity log alerts (service/resource health), AMBA baseline alerts, dynamic thresholds, VMSS predictive autoscale assets, alert processing rules, auto-mitigation Logic App webhook path. |
 | Stage D - Security posture (Azure Monitor native) | Build non-SIEM security posture detections directly in Azure Monitor. | 27, 47, 48, 49 | Log Analytics RBAC model (workspace/table/row scope), AzureActivity routing prerequisite, scheduled query alerts for control-plane drift, role assignment changes, and exfil early-warning correlation, alert routing via existing Action Group. |
 | Stage E - Optional advanced/security add-ons | Layer advanced SOC and reliability preview capabilities. | 43, 44, 45, 46 | Optional Sentinel onboarding + analytics rule, search job/restore script workflow enablement, health model resources, SLI identity prerequisites and helper scripts, optional service-group/SLI setup flow. |
+| Stage AI - Optional GenAI workload | Add a Microsoft Foundry workload emitting token/trace/cost telemetry, with AI FinOps observability. Off by default (billable models, region-limited). | - | Foundry (AI Services) account + project pinned to swedencentral, four model deployments (gpt-5-mini, text-embedding-3-small, gpt-5.4, model-router), App Insights connection, token anomaly + spike metric alerts, AI FinOps query pack + workbook, AI health model. Agents + traffic via scripts/setup-ai.ps1. |
 
 ### Stage dependency chain
 
@@ -60,6 +62,7 @@ Use this as the workshop script: each stage adds a bounded set of capabilities a
 3. Stage C depends on Stage B resources for alert scopes.
 4. Stage D depends on Stage A ingestion and Stage C action routing.
 5. Stage E depends on prior stages, especially LAW and monitoring identities.
+6. Stage AI depends only on Stage A (it connects to `appi-amlab`); deploy it any time after Stage A.
 
 ### Stage acceptance criteria (high level)
 
@@ -134,6 +137,15 @@ az monitor diagnostic-settings subscription create --name amlab-activity-to-law 
 
 ```powershell
 az deployment group create -g rg-azure-monitor-lab --name stage-e-optional --template-file infra/main.bicep --parameters @infra/main.parameters.json enableSentinel=true
+```
+
+### Stage AI deploy (optional)
+
+Deploys the Foundry GenAI workload (pinned to swedencentral) directly from the stage template, then creates the demo agents and simulates traffic. Verify the Model Router version for your region first with `az cognitiveservices account list-models`.
+
+```powershell
+az deployment group create -g rg-azure-monitor-lab --name stage-ai-foundry --template-file infra/stages/50-ai.bicep --parameters namePrefix=amlab alertEmail=your.alias@example.com
+./scripts/setup-ai.ps1   # pip install + create agents + simulate traffic
 ```
 
 ## 6) Recommended repo evolution for clean staging

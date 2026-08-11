@@ -19,6 +19,7 @@ This one-pager helps customers decide how far to go in a workshop or pilot.
 | Stage C - Alerts and response | Alerting, Action Group, auto-mitigation, processing rules (scenarios 7, 8, 12, 15, 17, 19, 23, 37) | 5-12 min | EUR 0-10 | Alert evaluations, action executions, extra logs from tests |
 | Stage D - Security posture | Monitor-native detections for drift, IAM changes, exfil signals (scenarios 27, 47, 48, 49) | 5-12 min | EUR 0-15 | AzureActivity ingestion and scheduled query alerts |
 | Stage E - Optional advanced add-ons | Sentinel/reliability/archival extras (scenarios 43, 44, 45, 46) | 10-20 min | EUR 0-40 | Sentinel analytics usage, archive/restore/search workloads, preview feature telemetry |
+| Stage AI - Optional GenAI workload | Microsoft Foundry account + models (chat/embed/optimize/router), token alerts, AI FinOps observability | 5-10 min + traffic | EUR 5-30 | Per-token model usage while the traffic simulator runs (small at capacity 10; stop it to zero it out); minimal idle cost |
 
 ## Cumulative monthly range by stop point
 
@@ -29,6 +30,7 @@ This one-pager helps customers decide how far to go in a workshop or pilot.
 | Stage C | EUR 100-180 |
 | Stage D | EUR 105-195 |
 | Stage E | EUR 105-235 |
+| Stage AI (add-on) | + EUR 5-30 while traffic runs |
 
 ## Practical guidance for customer conversations
 
@@ -36,6 +38,7 @@ This one-pager helps customers decide how far to go in a workshop or pilot.
 2. Add Stage C when on-call and response workflow are in scope.
 3. Add Stage D for security posture outcomes without requiring SIEM.
 4. Add Stage E only when customer explicitly wants Sentinel/reliability-preview and accepts extra complexity.
+5. Add Stage AI when the customer wants a GenAI/FinOps observability story (token/cost telemetry, model-router, token-spike alerts). It is independent of Stages B-E and only needs Stage A.
 
 ## Cost optimization notes
 

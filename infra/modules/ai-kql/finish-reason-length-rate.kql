@@ -1,0 +1,19 @@
+// Truncated-response rate (finish_reason = "length"), by agent (last 24h)
+// -------------------------------------------------------------------
+// Purpose:  Token-waste + quality signal. A high share of responses that
+//           stop because they hit the max-output-token limit ("length")
+//           means answers are being cut off AND you're paying for the
+//           maximum output every time — the verbosity red flag.
+// Source:   Application Insights `dependencies` (GenAI spans),
+//           `gen_ai.response.finish_reasons` (JSON array serialized to text).
+// Action:   High % -> raise max_tokens OR (better) make the agent terser.
+
+dependencies
+| where timestamp > ago(1d)
+      and isnotempty(tostring(customDimensions["gen_ai.agent.name"]))
+| extend agent = tostring(customDimensions["gen_ai.agent.name"]),
+         fr    = tostring(customDimensions["gen_ai.response.finish_reasons"])
+| summarize total=count(), truncated=countif(fr has "length") by agent
+| extend truncated_pct = round(100.0 * truncated / total, 1)
+| project agent, total, truncated, truncated_pct
+| order by truncated_pct desc

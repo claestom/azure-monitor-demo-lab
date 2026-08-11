@@ -291,4 +291,21 @@ Write-Step "Provisioning demo SLIs (scenario 46)"
 $setupSli = Join-Path $PSScriptRoot 'setup-slis.ps1'
 & $setupSli -ResourceGroup $ResourceGroup
 
+# 6. Optional AI feature — create the demo agents + simulate GenAI traffic, but only
+#    when lab.config.json enabled it (stageToggles.enableStageAI -> Bicep enableAi).
+$aiEnabled = $false
+if ($null -ne $labCfg -and $null -ne $labCfg.stageToggles -and $null -ne $labCfg.stageToggles.enableStageAI) {
+  $aiEnabled = [bool]$labCfg.stageToggles.enableStageAI
+}
+if ($aiEnabled) {
+  Write-Step "AI feature enabled — creating agents + simulating traffic (scripts/setup-ai.ps1)"
+  $setupAi = Join-Path $PSScriptRoot 'setup-ai.ps1'
+  try {
+    & $setupAi -ResourceGroup $ResourceGroup
+  } catch {
+    Write-Host "  AI setup failed: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "  Re-run manually once Python + az are ready: ./scripts/setup-ai.ps1" -ForegroundColor Yellow
+  }
+}
+
 Write-Host "`n✅ Lab is up. See README.md for the demo flow." -ForegroundColor Green

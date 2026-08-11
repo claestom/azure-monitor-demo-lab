@@ -27,6 +27,7 @@
     "enableStageB": true,
     "enableStageC": true,
     "enableStageD": true,
-    "enableStageE": true
+    "enableStageE": true,
+    "enableStageAI": false
   }
 }

@@ -29,6 +29,15 @@ enable_stage_c = false  # Alerting (metric/log/health alerts, action groups, AMB
 enable_stage_d = false  # Security posture (Sentinel, custom logs, exfil early warning)
 enable_stage_e = false  # Optional advanced (auto-mitigation Logic App, availability test, etc.)
 
+# Optional AI stage - Microsoft Foundry GenAI workload (account, project, chat/embed/
+# optimize/model-router deployments) + App Insights connection + token metric alerts.
+# Pinned to swedencentral (ai_location) independent of `location`; depends on Stage A.
+# Off by default: it deploys billable AI models and needs region-confirmed model versions.
+# After apply, run scripts/setup-ai.ps1 to create the demo agents and simulate traffic.
+enable_stage_ai      = false            # AI (Foundry + models + token alerts)
+ai_location          = "swedencentral"  # region for the Foundry account + models
+router_model_version = "2025-08-07"     # VERIFY: az cognitiveservices account list-models
+
 # Optional preview/GA telemetry features (part of Stage E). Off by default because
 # the DCR and the central LAW must be in the same region and the platform-logs DCR
 # is still in public preview (region-limited). Flip to true once you've confirmed

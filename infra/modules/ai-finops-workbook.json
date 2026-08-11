@@ -1,0 +1,482 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "# AI FinOps — Foundry Agents\nToken usage, estimated cost, chargeback and health for the demo agents.\n\n_Estimated cost uses gpt-5-mini GlobalStandard list price ($0.25/1M input, $2.00/1M output) — a token-derived estimate; reconcile with Azure Cost Management._"
+      },
+      "name": "title"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "p-timerange",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "label": "Time range",
+            "type": 4,
+            "isRequired": true,
+            "value": { "durationMs": 86400000 },
+            "typeSettings": {
+              "selectableValues": [
+                { "durationMs": 3600000 },
+                { "durationMs": 14400000 },
+                { "durationMs": 86400000 },
+                { "durationMs": 604800000 },
+                { "durationMs": 2592000000 }
+              ],
+              "allowCustom": true
+            }
+          },
+          {
+            "id": "p-appinsights",
+            "version": "KqlParameterItem/1.0",
+            "name": "AppInsights",
+            "label": "Foundry App Insights",
+            "type": 5,
+            "isRequired": true,
+            "multiSelect": false,
+            "quote": "'",
+            "resourceType": "microsoft.insights/components",
+            "typeSettings": {
+              "resourceTypeFilter": { "microsoft.insights/components": true }
+            },
+            "value": "/subscriptions/794194cd-a4b7-4024-970c-9533c4babff0/resourceGroups/rg-aifinops-demo/providers/microsoft.insights/components/aifinops-appi-dbwgaja36l7lu"
+          },
+          {
+            "id": "p-gw-appinsights",
+            "version": "KqlParameterItem/1.0",
+            "name": "GatewayAppInsights",
+            "label": "Gateway App Insights (semantic cache)",
+            "type": 5,
+            "isRequired": false,
+            "multiSelect": false,
+            "quote": "'",
+            "resourceType": "microsoft.insights/components",
+            "typeSettings": {
+              "resourceTypeFilter": { "microsoft.insights/components": true }
+            },
+            "value": "/subscriptions/794194cd-a4b7-4024-970c-9533c4babff0/resourceGroups/rg-aifinops-citadel/providers/microsoft.insights/components/appi-apim-rt2cbgof7fnpm"
+          }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "parameters"
+    },
+    {
+      "type": 1,
+      "content": { "json": "## Cost & chargeback" },
+      "name": "hdr-cost"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Estimated cost by agent:** prompt and completion tokens, call count and estimated USD per agent; your chargeback breakdown." },
+      "customWidth": "50",
+      "name": "desc-cost-by-agent"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Cost share by agent:** each agent's slice of estimated spend, so the biggest driver stands out." },
+      "customWidth": "50",
+      "name": "desc-cost-share"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize prompt=sum(inTok), completion=sum(outTok), calls=count() by agent | extend est_usd=round(prompt/1000000.0*0.25 + completion/1000000.0*2.00,4) | order by est_usd desc",
+        "size": 0,
+        "title": "Estimated cost by agent",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "table"
+      },
+      "customWidth": "50",
+      "name": "cost-by-agent-grid"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize prompt=sum(inTok), completion=sum(outTok) by agent | extend est_usd=round(prompt/1000000.0*0.25 + completion/1000000.0*2.00,4) | project agent, est_usd | order by est_usd desc",
+        "size": 0,
+        "title": "Cost share by agent",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "piechart"
+      },
+      "customWidth": "50",
+      "name": "cost-share-pie"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Cost per successful request:** estimated USD divided by successful calls; the real unit cost of a useful answer." },
+      "name": "desc-cost-per-success"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize prompt=sum(inTok), completion=sum(outTok), total=count(), ok=countif(success==true) by agent | extend est_usd=round(prompt/1000000.0*0.25 + completion/1000000.0*2.00,4), success_rate=round(100.0*ok/total,1) | extend usd_per_success=round(iff(ok>0, est_usd/ok, real(null)),6) | project agent, total, ok, success_rate, est_usd, usd_per_success | order by usd_per_success desc",
+        "size": 0,
+        "title": "Cost per successful request",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "table"
+      },
+      "name": "cost-per-success"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Daily estimated cost trend:** estimated spend per day; watch for spikes or a creeping climb." },
+      "name": "desc-cost-trend"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend outTok=toint(customDimensions['gen_ai.usage.output_tokens']) | summarize completion=sum(outTok), calls=count() by bin(timestamp, 1d) | extend est_usd=round(0 + completion/1000000.0*2.00,4) | order by timestamp asc",
+        "size": 0,
+        "title": "Daily estimated cost trend",
+        "timeContext": { "durationMs": 604800000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "barchart"
+      },
+      "name": "cost-trend-daily"
+    },
+    {
+      "type": 1,
+      "content": { "json": "## Token usage" },
+      "name": "hdr-tokens"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Tokens by agent:** prompt vs completion tokens; completion is 8x pricier here, so it drives cost." },
+      "customWidth": "50",
+      "name": "desc-tokens-by-agent"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Completion tokens per hour:** hourly volume per agent, revealing load patterns and busy periods." },
+      "customWidth": "50",
+      "name": "desc-tokens-hourly"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize prompt=sum(inTok), completion=sum(outTok) by agent | order by completion desc",
+        "size": 0,
+        "title": "Tokens by agent (prompt vs completion)",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "barchart",
+        "chartSettings": { "showLegend": true }
+      },
+      "customWidth": "50",
+      "name": "tokens-by-agent"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend outTok=toint(customDimensions['gen_ai.usage.output_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize completion=sum(outTok) by bin(timestamp, 1h), agent | order by timestamp asc",
+        "size": 0,
+        "title": "Completion tokens per hour by agent",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "timechart"
+      },
+      "customWidth": "50",
+      "name": "tokens-hourly"
+    },
+    {
+      "type": 1,
+      "content": { "json": "## Health & efficiency" },
+      "name": "hdr-health"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Latency percentiles:** p50, p95 and p99 per agent; the p95/p99 tail is what users actually feel." },
+      "customWidth": "50",
+      "name": "desc-latency"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Truncated-response rate:** share cut off by the token cap (finish_reason = length); high means raise max_tokens or trim prompts." },
+      "customWidth": "50",
+      "name": "desc-truncated"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend agent=tostring(customDimensions['gen_ai.agent.name']) | summarize p50_ms=round(percentile(duration,50),0), p95_ms=round(percentile(duration,95),0), p99_ms=round(percentile(duration,99),0), calls=count() by agent | order by p95_ms desc",
+        "size": 0,
+        "title": "Latency percentiles by agent (ms)",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "table"
+      },
+      "customWidth": "50",
+      "name": "latency-percentiles"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend agent=tostring(customDimensions['gen_ai.agent.name']), fr=tostring(customDimensions['gen_ai.response.finish_reasons']) | summarize total=count(), truncated=countif(fr has 'length') by agent | extend truncated_pct=round(100.0*truncated/total,1) | project agent, total, truncated, truncated_pct | order by truncated_pct desc",
+        "size": 0,
+        "title": "Truncated-response rate (finish_reason = length)",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "table"
+      },
+      "customWidth": "50",
+      "name": "truncated-rate"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Cached-input token ratio:** percent of input served from prompt cache and the estimated saving; higher is cheaper." },
+      "customWidth": "50",
+      "name": "desc-cached"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Routed model distribution:** which model the router picked and its cost share; cheap models should handle easy prompts." },
+      "customWidth": "50",
+      "name": "desc-router"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), cached=toint(customDimensions['gen_ai.usage.cached_input_tokens']), agent=tostring(customDimensions['gen_ai.agent.name']) | summarize input=sum(inTok), cached=sum(coalesce(cached,0)) by agent | extend cached_pct=round(100.0*todouble(cached)/iff(input>0,input,1),1) | extend est_savings_usd=round(todouble(cached)*(0.25-0.03)/1000000.0,4) | project agent, input, cached, cached_pct, est_savings_usd | order by cached_pct asc",
+        "size": 0,
+        "title": "Cached-input token ratio by agent",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "table"
+      },
+      "customWidth": "50",
+      "name": "cached-ratio"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where tostring(customDimensions['gen_ai.request.model'])=='model-router' | extend routed=tostring(customDimensions['gen_ai.response.model']), inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']) | summarize calls=count(), input=sum(inTok), output=sum(outTok) by routed | as T | extend pct_calls=round(100.0*calls/toscalar(T|summarize sum(calls)),1), est_cost_usd=round((input*0.25+output*2.0)/1000000.0,4) | project routed, calls, pct_calls, input, output, est_cost_usd | order by calls desc",
+        "size": 0,
+        "title": "Model router - routed model distribution",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "table"
+      },
+      "customWidth": "50",
+      "name": "model-router-distribution"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Tool error rate:** calls and failure rate per tool; stays empty until tool-using agents run." },
+      "customWidth": "50",
+      "name": "desc-tool"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where tostring(customDimensions['gen_ai.operation.name'])=='execute_tool' or isnotempty(tostring(customDimensions['gen_ai.tool.name'])) | extend tool=tostring(customDimensions['gen_ai.tool.name']) | summarize calls=count(), failures=countif(success==false), avg_ms=round(avg(duration),0) by tool | extend error_rate_pct=round(100.0*failures/calls,1) | project tool, calls, failures, error_rate_pct, avg_ms | order by error_rate_pct desc, calls desc",
+        "size": 0,
+        "title": "Tool error rate (empty until tool-using agents run)",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "table"
+      },
+      "customWidth": "50",
+      "name": "tool-error-rate"
+    },
+    {
+      "type": 1,
+      "content": { "json": "## Provisioned Throughput (PTU) break-even\n**PTU = reserved capacity billed at a fixed hourly rate no matter how many tokens you send; consumption (pay-go) is billed per token.** This tile takes the agents' *measured* token volume in the selected time range, projects it to a full day, and asks: *at this volume, would a PTU reservation be cheaper than pay-go?*\n\nSet **PTU reserved** and **USD per PTU-hour** below, then read the row:\n- **tokens_per_day** — current volume projected to 24h.\n- **breakeven_tokens_day** — the volume where PTU and pay-go cost the same. Below it → consumption wins; above it → PTU wins.\n- **consumption_usd_day** — projected pay-go cost/day at current volume.\n- **ptu_usd_day** — fixed PTU cost/day = PTU × hourly rate × 24 (paid even at zero traffic).\n- **verdict** — which option is cheaper right now.\n\n_Estimate only: PTU has per-deployment minimums (often 15–50 PTU) and monthly/annual reservations are cheaper than hourly. Short sampling windows extrapolate aggressively — widen the time range for a stable number._\n\n**Setting the _USD per PTU-hour_ value** (enter a plain number, no $): it's what you pay to reserve one PTU for one hour, which depends on the billing model — reservations are far cheaper than hourly:\n- **Hourly (no commitment):** ~1.0\n- **Monthly reservation:** ~0.35 (= $ per PTU-month ÷ 730)\n- **Annual reservation:** ~0.30 (= $ per PTU-year ÷ 8760)\n\nRates vary by model and deployment type (Global / Data Zone / Regional Provisioned) and change over time — confirm on the Azure OpenAI pricing page or your EA/CSP price sheet. The default **1.0** is the worst-case (hourly); if consumption still wins at 1.0 it wins even harder at reservation rates._" },
+      "name": "hdr-ptu"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          { "id": "p-ptu-count", "version": "KqlParameterItem/1.0", "name": "PTU_Count", "label": "PTU reserved", "type": 1, "isRequired": true, "value": "15" },
+          { "id": "p-ptu-price", "version": "KqlParameterItem/1.0", "name": "PTU_HourlyUSD", "label": "USD per PTU-hour (hourly ~1.0, monthly-reservation ~0.35)", "type": 1, "isRequired": true, "value": "1.0" }
+        ],
+        "style": "pills",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "ptu-parameters"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**PTU vs consumption break-even:** at the measured volume, compares pay-go against a PTU reservation and flags the cheaper option." },
+      "name": "desc-ptu"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "dependencies | where isnotempty(tostring(customDimensions['gen_ai.agent.name'])) | extend inTok=toint(customDimensions['gen_ai.usage.input_tokens']), outTok=toint(customDimensions['gen_ai.usage.output_tokens']) | summarize prompt=sum(inTok), completion=sum(outTok), firstT=min(timestamp), lastT=max(timestamp) | extend windowHours=max_of(todouble(datetime_diff('second', lastT, firstT))/3600.0, 1.0), total_tokens=prompt+completion, consumption_usd=prompt/1000000.0*0.25 + completion/1000000.0*2.00 | extend tokens_per_day=round(total_tokens/windowHours*24,0), consumption_usd_day=round(consumption_usd/windowHours*24,2), ptu_usd_day=round(toreal({PTU_Count})*toreal({PTU_HourlyUSD})*24,2), price_per_token=consumption_usd/iff(total_tokens>0,total_tokens,1) | extend breakeven_tokens_day=round(ptu_usd_day/iff(price_per_token>0,price_per_token,1.0),0), verdict=iff(consumption_usd_day>=ptu_usd_day,'PTU cheaper at current volume','Consumption cheaper — stay pay-go') | project tokens_per_day, breakeven_tokens_day, consumption_usd_day, ptu_usd_day, verdict",
+        "size": 0,
+        "title": "PTU vs consumption break-even",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{AppInsights}"
+        ],
+        "visualization": "table"
+      },
+      "name": "ptu-breakeven"
+    },
+    {
+      "type": 1,
+      "content": { "json": "## Semantic cache (AI gateway)\nAPIM LLM **semantic caching** on the citadel gateway serves repeated/rephrased prompts from Redis instead of re-billing the model. Each **hit** is one model call — and its tokens — avoided. Metrics come from the `emit-metric` in the cache policy (namespace `semantic-cache`), landing in the gateway's Application Insights.\n\n_Empty until the `cache-demo` API receives traffic (run `demo/semantic-caching/demo-semantic-cache.ps1`)._" },
+      "name": "hdr-semantic-cache"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Cache hit-rate and calls avoided:** hits, misses and hit-rate; every hit is one model call (and its tokens) saved." },
+      "customWidth": "50",
+      "name": "desc-cache-summary"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Cache hit-rate over time:** hourly hit-rate; it climbs as the cache warms up with repeated questions." },
+      "customWidth": "50",
+      "name": "desc-cache-trend"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customMetrics | where name == 'SemanticCache' | extend result = tostring(customDimensions.result) | summarize cache_hits = sumif(valueCount, result == 'hit'), cache_misses = sumif(valueCount, result == 'miss'), total_requests = sum(valueCount) | extend hit_rate_pct = round(100.0 * cache_hits / total_requests, 1), model_calls_avoided = cache_hits | project total_requests, cache_hits, cache_misses, hit_rate_pct, model_calls_avoided",
+        "size": 0,
+        "title": "Cache hit-rate & model calls avoided",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{GatewayAppInsights}"
+        ],
+        "visualization": "table"
+      },
+      "customWidth": "50",
+      "name": "semantic-cache-summary"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customMetrics | where name == 'SemanticCache' | extend result = tostring(customDimensions.result) | summarize hits = sumif(valueCount, result == 'hit'), total = sum(valueCount) by bin(timestamp, 1h) | extend hit_rate_pct = round(100.0 * hits / total, 1) | project timestamp, hit_rate_pct | order by timestamp asc",
+        "size": 0,
+        "title": "Cache hit-rate over time (%)",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{GatewayAppInsights}"
+        ],
+        "visualization": "timechart"
+      },
+      "customWidth": "50",
+      "name": "semantic-cache-hitrate-trend"
+    },
+    {
+      "type": 1,
+      "content": { "json": "**Hits vs misses:** proportion of gateway requests served from cache versus forwarded to the model." },
+      "name": "desc-cache-pie"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "customMetrics | where name == 'SemanticCache' | extend result = tostring(customDimensions.result) | summarize requests = sum(valueCount) by result | order by requests desc",
+        "size": 0,
+        "title": "Hits vs misses",
+        "timeContext": { "durationMs": 86400000 },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components",
+        "crossComponentResources": [
+          "{GatewayAppInsights}"
+        ],
+        "visualization": "piechart"
+      },
+      "name": "semantic-cache-hits-vs-misses"
+    }
+  ],
+  "styleSettings": {},
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}

@@ -1,0 +1,21 @@
+// Tool call volume & error rate, by tool (last 24h)
+// -------------------------------------------------------------------
+// Purpose:  Agent-specific health. Which tools are hot, and which fail —
+//           a high tool error rate usually means a poor tool/parameter
+//           description (an Agent-Optimizer 'tool optimization' target) and
+//           drives wasted retries + tokens.
+// Source:   Application Insights `dependencies`; tool-execution GenAI spans
+//           (gen_ai.operation.name == "execute_tool" or gen_ai.tool.name set).
+// Note:     Only populates when agents actually call tools. The basic demo
+//           agents have no tools, so expect empty until tool-using agents run.
+
+dependencies
+| where timestamp > ago(1d)
+| where tostring(customDimensions["gen_ai.operation.name"]) == "execute_tool"
+      or isnotempty(tostring(customDimensions["gen_ai.tool.name"]))
+| extend tool = tostring(customDimensions["gen_ai.tool.name"])
+| summarize calls=count(), failures=countif(success == false),
+            avg_ms=round(avg(duration), 0) by tool
+| extend error_rate_pct = round(100.0 * failures / calls, 1)
+| project tool, calls, failures, error_rate_pct, avg_ms
+| order by error_rate_pct desc, calls desc

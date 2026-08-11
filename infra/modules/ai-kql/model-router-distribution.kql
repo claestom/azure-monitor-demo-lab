@@ -1,0 +1,23 @@
+// Model router — routed-model distribution (last 24h)
+// -------------------------------------------------------------------
+// Purpose:  Show which underlying model the Foundry Model Router picked
+//           per request — the portal guidance's "split metrics by the
+//           underlying model". A healthy Balanced router sends easy prompts
+//           to cheap models and only escalates hard ones.
+//           https://learn.microsoft.com/azure/foundry/openai/how-to/model-router#monitor-model-router-metrics
+// Source:   Application Insights `dependencies` (GenAI spans).
+//   gen_ai.request.model  = 'model-router'   (the deployment that was called)
+//   gen_ai.response.model = <routed model>   (who actually answered)
+// Pricing:  placeholder gpt-5-mini rates for the est. cost column.
+dependencies
+| where timestamp > ago(1d)
+      and tostring(customDimensions["gen_ai.request.model"]) == "model-router"
+| extend routed  = tostring(customDimensions["gen_ai.response.model"]),
+         inTok   = toint(customDimensions["gen_ai.usage.input_tokens"]),
+         outTok  = toint(customDimensions["gen_ai.usage.output_tokens"])
+| summarize calls = count(), input = sum(inTok), output = sum(outTok) by routed
+| as T
+| extend pct_calls    = round(100.0 * calls / toscalar(T | summarize sum(calls)), 1),
+         est_cost_usd = round((input * 0.25 + output * 2.0) / 1000000.0, 4)
+| project routed, calls, pct_calls, input, output, est_cost_usd
+| order by calls desc

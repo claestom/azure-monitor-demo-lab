@@ -1,0 +1,20 @@
+// CHART — Tokens by agent (stacked column: prompt vs completion)
+// -------------------------------------------------------------------
+// Purpose:  Visual token-monitoring chart. Stacked column per agent
+//           showing prompt (input) vs completion (output) tokens, so the
+//           output-heavy agents stand out at a glance.
+// Render:   Only draws in the Azure portal Logs / App Insights "Logs"
+//           blade (or a Workbook). The `az ... query` CLI ignores render
+//           and returns the table.
+// Source:   Application Insights `dependencies` (GenAI spans); attributable
+//           spans only (isnotempty(agent)).
+
+dependencies
+| where timestamp > ago(1d)
+      and isnotempty(tostring(customDimensions["gen_ai.agent.name"]))
+| extend inTok  = toint(customDimensions["gen_ai.usage.input_tokens"]),
+         outTok = toint(customDimensions["gen_ai.usage.output_tokens"]),
+         agent  = tostring(customDimensions["gen_ai.agent.name"])
+| summarize prompt=sum(inTok), completion=sum(outTok) by agent
+| order by completion desc
+| render columnchart with (kind=stacked, title="Tokens by agent (prompt vs completion)", ytitle="tokens")

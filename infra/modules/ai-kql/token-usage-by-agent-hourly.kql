@@ -1,0 +1,24 @@
+// Token usage by agent, model, and hour
+// -------------------------------------------------------------------
+// Purpose:  Raw token-monitoring view for the FinOps demo. Sums prompt
+//           (input) and completion (output) tokens plus call count for
+//           every agent/model, bucketed hourly.
+// Source:   Application Insights `dependencies` table (GenAI OpenTelemetry
+//           spans emitted by the demo agents / simulate_traffic.py).
+// Notes:    Rows where gen_ai.agent.name / gen_ai.request.model are empty
+//           are the auto-instrumented model-inference spans; their token
+//           totals mirror the agent-attributed spans, so do NOT add both
+//           populations or you double-count. Filter on isnotempty(agent)
+//           when you want attributable usage only (see cost-by-agent-daily.kql).
+// Run:      az monitor app-insights query --app <appName> -g <rg> \
+//             --subscription <subId> --analytics-query "<this query>" -o table
+
+dependencies
+| where timestamp > ago(1d)
+| extend inTok = toint(customDimensions["gen_ai.usage.input_tokens"]),
+         outTok = toint(customDimensions["gen_ai.usage.output_tokens"]),
+         model  = tostring(customDimensions["gen_ai.request.model"]),
+         agent  = tostring(customDimensions["gen_ai.agent.name"])
+| summarize prompt=sum(inTok), completion=sum(outTok), calls=count()
+          by agent, model, bin(timestamp, 1h)
+| order by timestamp asc

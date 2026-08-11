@@ -24,6 +24,12 @@ terraform/*.plan
 # Real inputs (mirrors main.parameters.json) — use stages.tfvars.example as template
 terraform/stages.tfvars
 
+# AI workload local files (secrets + generated agent ids)
+workloads/ai/.env
+workloads/ai/agents.json
+workloads/ai/.venv/
+workloads/ai/__pycache__/
+
 # Ad-hoc compiled JSON from test deployments
 infra/*.terraform-test.json
 

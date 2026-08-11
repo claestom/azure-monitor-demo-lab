@@ -41,6 +41,7 @@ For workshop planning and customer expectation-setting, use:
 3. Stage C - Alerts and response
 4. Stage D - Security posture (47/48/49)
 5. Stage E - Optional advanced add-ons
+6. Stage AI - Optional Microsoft Foundry GenAI workload (off by default)
 
 Keeping stage boundaries identical across Bicep and Terraform avoids customer confusion.
 
@@ -55,6 +56,7 @@ Use this matrix in customer sessions so Terraform users see exactly what each ap
 | Stage C - Alerts and response | Introduce detection, routing, and auto-response controls. | 7, 8, 12, 15, 17, 19, 23, 37 | Action Group with email + Logic App + optional SIEM webhook, metric/log/AKS/App alerts, AMBA baseline alert set, Service/Resource Health alerts, alert processing rules, VMSS with predictive autoscale. |
 | Stage D - Security posture | Deliver Azure Monitor-native security detections without requiring SIEM. | 27, 47, 48, 49 | LAW granular RBAC roles + ABAC assignments, scheduled query alerts for control-plane drift, privilege-escalation watch, and exfil early warning. |
 | Stage E - Optional advanced add-ons | Add optional SOC and reliability preview capabilities. | 43, 44, 45, 46 | Optional Sentinel onboarding and analytics rule, Heartbeat data export, Managed Prometheus rule group, availability tests, health model, SLI identity prerequisites. |
+| Stage AI - Optional GenAI workload | Add a Microsoft Foundry workload that emits token/trace/cost telemetry, with AI FinOps observability. Off by default (billable models, region-limited). | - | Foundry (AI Services) account + project pinned to swedencentral, four model deployments (gpt-5-mini chat, text-embedding-3-small, gpt-5.4, model-router), Application Insights connection, token anomaly + spike metric alerts, AI FinOps query pack + workbook, AI health model. Agents + traffic via scripts/setup-ai.ps1. |
 
 ### Dependency and apply order
 
@@ -83,6 +85,7 @@ This repo ships a working staged Terraform scaffold at `terraform/` and pre-comp
 | `enable_stage_c` | `infra/stages/20-alerting.json` |
 | `enable_stage_d` | `infra/stages/30-security-posture.json` |
 | `enable_stage_e` | `infra/stages/40-optional-advanced.json` |
+| `enable_stage_ai` | `infra/stages/50-ai.json` |
 
 Each toggle gates its own `azapi_resource "Microsoft.Resources/deployments@2022-09-01"` block, so flipping a flag truly adds or removes only that stage's deployment.
 
@@ -103,6 +106,7 @@ az bicep build --file infra/stages/10-workloads.bicep         --outfile infra/st
 az bicep build --file infra/stages/20-alerting.bicep          --outfile infra/stages/20-alerting.json
 az bicep build --file infra/stages/30-security-posture.bicep  --outfile infra/stages/30-security-posture.json
 az bicep build --file infra/stages/40-optional-advanced.bicep --outfile infra/stages/40-optional-advanced.json
+az bicep build --file infra/stages/50-ai.bicep               --outfile infra/stages/50-ai.json
 ```
 
 The legacy `infra/main.bicep` continues to work unchanged for the original Bicep-only deployment path.
@@ -143,6 +147,7 @@ enable_stage_b = false
 enable_stage_c = false
 enable_stage_d = false
 enable_stage_e = false
+enable_stage_ai = false   # optional Foundry GenAI workload (swedencentral)
 ```
 
 > Note: if `lab.config.json` exists, running `scripts/deploy.ps1` will auto-overwrite `terraform/stages.tfvars` on its next invocation. Pick **one** workflow (central config OR hand-edit) and stick with it.

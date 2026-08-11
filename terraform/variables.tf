@@ -94,3 +94,20 @@ variable "enable_stage_b" { type = bool }
 variable "enable_stage_c" { type = bool }
 variable "enable_stage_d" { type = bool }
 variable "enable_stage_e" { type = bool }
+
+variable "enable_stage_ai" {
+  type    = bool
+  default = false
+}
+
+variable "ai_location" {
+  type        = string
+  default     = "swedencentral"
+  description = "Region for the optional AI stage's Foundry account + models. Pinned to swedencentral (gpt-5-* / model-router SKUs + Foundry portal features are region-limited), independent of var.location."
+}
+
+variable "router_model_version" {
+  type        = string
+  default     = "2025-08-07"
+  description = "Model Router deployment version for the AI stage. VERIFY for your region with 'az cognitiveservices account list-models' before enabling the stage."
+}
