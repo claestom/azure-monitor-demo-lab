@@ -63,7 +63,7 @@ resource workbook 'Microsoft.Insights/workbooks@2023-06-01' = {
   tags: tags
   properties: {
     displayName: 'AI FinOps — Foundry Agents'
-    serializedData: loadTextContent('ai-finops-workbook.json')
+    serializedData: replace(replace(loadTextContent('ai-finops-workbook.json'), '__APPINSIGHTS_ID__', appInsightsId), '__GATEWAY_APPINSIGHTS_ID__', '')
     category: 'workbook'
     sourceId: toLower(appInsightsId)
     version: '1.0'

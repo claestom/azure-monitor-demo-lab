@@ -45,7 +45,7 @@
             "typeSettings": {
               "resourceTypeFilter": { "microsoft.insights/components": true }
             },
-            "value": "/subscriptions/794194cd-a4b7-4024-970c-9533c4babff0/resourceGroups/rg-aifinops-demo/providers/microsoft.insights/components/aifinops-appi-dbwgaja36l7lu"
+            "value": "__APPINSIGHTS_ID__"
           },
           {
             "id": "p-gw-appinsights",
@@ -60,7 +60,7 @@
             "typeSettings": {
               "resourceTypeFilter": { "microsoft.insights/components": true }
             },
-            "value": "/subscriptions/794194cd-a4b7-4024-970c-9533c4babff0/resourceGroups/rg-aifinops-citadel/providers/microsoft.insights/components/appi-apim-rt2cbgof7fnpm"
+            "value": "__GATEWAY_APPINSIGHTS_ID__"
           }
         ],
         "style": "pills",
