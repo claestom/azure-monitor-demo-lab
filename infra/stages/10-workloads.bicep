@@ -50,6 +50,9 @@ var dcrVmInsightsName = 'dcr-${namePrefix}-vminsights'
 var dcrPrometheusName = 'dcr-${namePrefix}-prometheus'
 var dceName = 'dce-${namePrefix}'
 var storageAccountName = 'st${namePrefix}${take(suffix, 8)}'
+// Dedicated storage co-located with the App Service (westeurope) for its archive diag
+// setting — storage diag destinations must match the source region.
+var appDiagStorageName = 'stapp${namePrefix}${take(suffix, 8)}'
 var eventHubNsName = 'evhns-${namePrefix}-${take(suffix, 5)}'
 
 var commonTags = {
@@ -156,6 +159,18 @@ module grafana '../modules/grafana.bicep' = {
   }
 }
 
+// Dedicated storage for the App Service archive-to-blob diag setting, co-located with
+// the App Service in westeurope (storage diag destinations must match the source region).
+module appDiagStorage '../modules/storage-account.bicep' = {
+  name: 'app-diag-storage'
+  params: {
+    name: appDiagStorageName
+    location: appServiceLocation
+    centralLawId: lawCentral.id
+    tags: commonTags
+  }
+}
+
 module appService '../modules/appservice.bicep' = {
   name: 'appservice'
   params: {
@@ -165,7 +180,7 @@ module appService '../modules/appservice.bicep' = {
     appInsightsConnectionString: appInsights.properties.ConnectionString
     appInsightsInstrumentationKey: appInsights.properties.InstrumentationKey
     centralLawId: lawCentral.id
-    diagStorageAccountId: storageAccount.id
+    diagStorageAccountId: appDiagStorage.outputs.id
     diagEventHubAuthRuleId: eventHubAuthRule.id
     diagEventHubName: 'diagstream'
     tags: commonTags

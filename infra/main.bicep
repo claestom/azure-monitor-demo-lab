@@ -99,6 +99,9 @@ var dcrPrometheusName   = 'dcr-${namePrefix}-prometheus'
 var dceName             = 'dce-${namePrefix}'
 var vmssName            = 'vmss-${namePrefix}'
 var storageAccountName  = 'st${namePrefix}${take(suffix, 8)}'
+// Dedicated storage co-located with the App Service (westeurope) for its archive diag
+// setting — storage diag destinations must match the source region.
+var appDiagStorageName  = 'stapp${namePrefix}${take(suffix, 8)}'
 var eventHubNsName      = 'evhns-${namePrefix}-${take(suffix, 5)}'
 var keyVaultName        = 'kv-${namePrefix}-${take(suffix, 5)}'
 var costWorkbookName    = 'wb-${namePrefix}-cost'
@@ -207,6 +210,18 @@ module storageAccount 'modules/storage-account.bicep' = {
   params: {
     name: storageAccountName
     location: location
+    centralLawId: lawCentral.outputs.id
+    tags: commonTags
+  }
+}
+
+// Dedicated storage for the App Service archive-to-blob diag setting, co-located with
+// the App Service in westeurope (storage diag destinations must match the source region).
+module appDiagStorage 'modules/storage-account.bicep' = {
+  name: 'app-diag-storage'
+  params: {
+    name: appDiagStorageName
+    location: appServiceLocation
     centralLawId: lawCentral.outputs.id
     tags: commonTags
   }
@@ -414,7 +429,7 @@ module appService 'modules/appservice.bicep' = {
     appInsightsInstrumentationKey: appInsights.outputs.instrumentationKey
     centralLawId: lawCentral.outputs.id
     // FEATURE — multi-destination diagnostic settings fan-out
-    diagStorageAccountId: storageAccount.outputs.id
+    diagStorageAccountId: appDiagStorage.outputs.id
     diagEventHubAuthRuleId: eventHub.outputs.sendRuleId
     diagEventHubName: eventHub.outputs.hubName
     tags: commonTags

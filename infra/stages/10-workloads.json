@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "15882601043407706591"
+      "templateHash": "6985087869596234590"
     }
   },
   "parameters": {
@@ -99,6 +99,7 @@
     "dcrPrometheusName": "[format('dcr-{0}-prometheus', parameters('namePrefix'))]",
     "dceName": "[format('dce-{0}', parameters('namePrefix'))]",
     "storageAccountName": "[format('st{0}{1}', parameters('namePrefix'), take(variables('suffix'), 8))]",
+    "appDiagStorageName": "[format('stapp{0}{1}', parameters('namePrefix'), take(variables('suffix'), 8))]",
     "eventHubNsName": "[format('evhns-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
     "commonTags": {
       "owner": "[parameters('ownerTag')]",
@@ -1038,6 +1039,191 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
+      "name": "app-diag-storage",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('appDiagStorageName')]"
+          },
+          "location": {
+            "value": "[variables('appServiceLocation')]"
+          },
+          "centralLawId": {
+            "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawCentralName'))]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "8258136283443655457"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account name (must be globally unique, 3-24 lowercase)."
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region."
+              }
+            },
+            "centralLawId": {
+              "type": "string",
+              "metadata": {
+                "description": "Central LAW resource ID — used so the SA itself reports to LAW for Storage Insights."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2024-01-01",
+              "name": "[parameters('name')]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "accessTier": "Hot",
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2",
+                "supportsHttpsTrafficOnly": true,
+                "publicNetworkAccess": "Enabled",
+                "networkAcls": {
+                  "defaultAction": "Allow",
+                  "bypass": "AzureServices, Logging, Metrics"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('name'), 'default')]",
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', 'law-export')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('name'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}/{2}', parameters('name'), 'default', 'diag-archive')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('name'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('name'))]",
+              "name": "send-to-central-law",
+              "properties": {
+                "workspaceId": "[parameters('centralLawId')]",
+                "metrics": [
+                  {
+                    "category": "Transaction",
+                    "enabled": true
+                  },
+                  {
+                    "category": "Capacity",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/diagnosticSettings",
+              "apiVersion": "2021-05-01-preview",
+              "scope": "[format('Microsoft.Storage/storageAccounts/{0}/blobServices/{1}', parameters('name'), 'default')]",
+              "name": "send-to-central-law",
+              "properties": {
+                "workspaceId": "[parameters('centralLawId')]",
+                "logs": [
+                  {
+                    "categoryGroup": "audit",
+                    "enabled": true
+                  },
+                  {
+                    "categoryGroup": "allLogs",
+                    "enabled": false
+                  }
+                ],
+                "metrics": [
+                  {
+                    "category": "Transaction",
+                    "enabled": true
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('name'), 'default')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "exportContainerName": {
+              "type": "string",
+              "value": "law-export"
+            },
+            "archiveContainerName": {
+              "type": "string",
+              "value": "diag-archive"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
       "name": "appservice",
       "properties": {
         "expressionEvaluationOptions": {
@@ -1064,7 +1250,7 @@
             "value": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('lawCentralName'))]"
           },
           "diagStorageAccountId": {
-            "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'app-diag-storage'), '2022-09-01').outputs.id.value]"
           },
           "diagEventHubAuthRuleId": {
             "value": "[resourceId('Microsoft.EventHub/namespaces/authorizationRules', variables('eventHubNsName'), 'RootManageSharedAccessKey')]"
@@ -1344,7 +1530,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'app-diag-storage')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
