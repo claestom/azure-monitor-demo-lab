@@ -214,12 +214,15 @@ module storageAccount 'modules/storage-account.bicep' = {
 
 // ---------------------------------------------------------------------------------
 // FEATURE — Event Hub Namespace (diag fan-out destination + data-export option).
+// Pinned to the App Service region (westeurope): its only consumer is the App Service
+// 'stream-to-eventhub' diag setting, and Event Hub diag destinations MUST be in the
+// same region as the monitored resource.
 // ---------------------------------------------------------------------------------
 module eventHub 'modules/eventhub.bicep' = {
   name: 'eventhub'
   params: {
     namespaceName: eventHubNsName
-    location: location
+    location: appServiceLocation
     centralLawId: lawCentral.outputs.id
     tags: commonTags
   }

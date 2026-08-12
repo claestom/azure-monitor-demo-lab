@@ -41,6 +41,12 @@ var commonTags = {
   costCenter: 'demo'
 }
 
+// App Service (Stage B) is pinned to westeurope (no Basic App Service quota in
+// northeurope on the sponsored subs). The Event Hub below is the App Service's
+// diagnostic fan-out target, and Event Hub diag destinations MUST be in the same
+// region as the monitored resource — so it is co-located in westeurope too.
+var appServiceLocation = 'westeurope'
+
 module lawCentral '../modules/law.bicep' = {
   name: 'law-central'
   params: {
@@ -123,7 +129,7 @@ module eventHub '../modules/eventhub.bicep' = {
   name: 'eventhub'
   params: {
     namespaceName: eventHubNsName
-    location: location
+    location: appServiceLocation
     centralLawId: lawCentral.outputs.id
     tags: commonTags
   }

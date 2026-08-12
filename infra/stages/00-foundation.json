@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "10735443741671823532"
+      "templateHash": "224020983441514714"
     }
   },
   "parameters": {
@@ -73,7 +73,8 @@
       "owner": "[parameters('ownerTag')]",
       "purpose": "azure-monitor-demo-lab",
       "costCenter": "demo"
-    }
+    },
+    "appServiceLocation": "westeurope"
   },
   "resources": [
     {
@@ -988,7 +989,7 @@
             "value": "[variables('eventHubNsName')]"
           },
           "location": {
-            "value": "[parameters('location')]"
+            "value": "[variables('appServiceLocation')]"
           },
           "centralLawId": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"

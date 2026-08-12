@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "5663763513880133572"
+      "templateHash": "3999164359081439312"
     }
   },
   "parameters": {
@@ -1200,7 +1200,7 @@
             "value": "[variables('eventHubNsName')]"
           },
           "location": {
-            "value": "[parameters('location')]"
+            "value": "[variables('appServiceLocation')]"
           },
           "centralLawId": {
             "value": "[reference('lawCentral').outputs.id.value]"
