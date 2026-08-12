@@ -38,3 +38,6 @@ infra/*.terraform-test.json
 
 # Ad-hoc scratch scripts (not for source control)
 scripts/temp.ps1
+
+# WIP — excluded until fixed (security dashboard/workbook)
+infra/modules/security-workbook.bicep
