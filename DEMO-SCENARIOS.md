@@ -6,26 +6,26 @@ A curated set of demo scenarios you can run with this lab. Each one has a **stor
 
 ---
 
-## 📚 Demo scenarios — organized by workload
+## Demo scenarios — organized by workload
 
-Pick a workload (or theme) and run only those scenarios. Each row links to the numbered scenario below. ⭐ = added in the most recent build.
+Pick a workload (or theme) and run only those scenarios. Each row links to the numbered scenario below.
 
 | Workload / theme | Scenarios |
 |---|---|
-| 🚦 **Cross-stack — single pane of glass** | [1](#s1) Traffic-Lights workbook |
-| 🌳 **Workload health (Service Groups + Health Models, preview)** | ⭐[45](#s45) Service Group + Health Model · ⭐[46](#s46) SLIs / SLOs |
-| 📊 **App Service (.NET web app — `app-amlab-*`)** | [3](#s3) Code-less App Insights · [22](#s22) Availability Tests · [13](#s13) Smart Detection · [18](#s18) Code Optimizations · [25](#s25) Change Analysis · ⭐[28](#s28) Custom TrackMetric · ⭐[29](#s29) Profiler + Snapshot · ⭐[33](#s33) Release annotations |
-| ☸️ **AKS (`aks-amlab`)** | [4](#s4) Container Insights + Prom + Grafana · [14](#s14) OTel tracing AKS→App Service · ⭐[30](#s30) Node.js OTel · ⭐[31](#s31) Prom rule group · ⭐[32](#s32) Grafana alert rule |
-| 🖥️ **Azure VMs (Linux + Windows)** | [2](#s2) VM Insights cross-OS |
-| 🚀 **VMSS (`vmss-amlab`)** | [19](#s19) Predictive autoscale |
-| 🌐 **Networking (VNet + NSG)** | ⭐[34](#s34) Connection Monitor · ⭐[35](#s35) Flow Logs + Traffic Analytics · ⭐[50](#s50) Network Insights |
-| 🔑 **Platform resources (Key Vault, Storage)** | ⭐[36](#s36) Key Vault + Storage Insights |
-| 🚨 **Alerts & incident response** | [7](#s7) Alerts + Action Group · [12](#s12) AMBA · [17](#s17) Dynamic Thresholds · [23](#s23) Processing Rules · [15](#s15) Auto-mitigation · [8](#s8) Break the lab · ⭐[37](#s37) Nightly maintenance · ⭐[38](#s38) SIEM webhook |
-| 💰 **Cost & data routing** | [9](#s9) Daily caps · [11](#s11) DCR Transform · [20](#s20) Basic vs Analytics · [21](#s21) Summary Rules · ⭐[39](#s39) Data Export · ⭐[40](#s40) Diag fan-out · ⭐[41](#s41) LAW replication · ⭐[42](#s42) Cost workbook · ⭐[51](#s51) Platform logs at scale (DCR) · ⭐[52](#s52) Metrics Export (DCR) |
-| 🔐 **Security** | [27](#s27) Granular RBAC · ⭐[43](#s43) Sentinel · ⭐[44](#s44) Search jobs + Restore · ⭐[47](#s47) Control-plane drift watch · ⭐[48](#s48) Privilege escalation watch · ⭐[49](#s49) Exfil early warning |
-| 🧠 **AI / ML in Azure Monitor** | [16](#s16) Copilot · [13](#s13) Smart Detection · [17](#s17) Dynamic Thresholds · [18](#s18) Code Optimizations · [19](#s19) Predictive autoscale |
-| 🤖 **GenAI observability (optional AI stage)** | ⭐[53](#s53) AI FinOps — token / trace / cost |
-| 🛠️ **Platform foundations** | [5](#s5) Policy auto-onboard · [6](#s6) Cross-workspace KQL · [24](#s24) Custom Logs Ingestion API · [26](#s26) KQL Functions · ⭐[51](#s51) Platform logs at scale (DCR) |
+| **Cross-stack — single pane of glass** | [1](#s1) Traffic-Lights workbook |
+| **Workload health (Service Groups + Health Models, preview)** | [45](#s45) Service Group + Health Model · [46](#s46) SLIs / SLOs |
+| **App Service (.NET web app — `app-amlab-*`)** | [3](#s3) Code-less App Insights · [22](#s22) Availability Tests · [13](#s13) Smart Detection · [18](#s18) Code Optimizations · [25](#s25) Change Analysis · [28](#s28) Custom TrackMetric · [29](#s29) Profiler + Snapshot · [33](#s33) Release annotations |
+| **AKS (`aks-amlab`)** | [4](#s4) Container Insights + Prom + Grafana · [14](#s14) OTel tracing AKS→App Service · [30](#s30) Node.js OTel · [31](#s31) Prom rule group · [32](#s32) Grafana alert rule |
+| **Azure VMs (Linux + Windows)** | [2](#s2) VM Insights cross-OS |
+| **VMSS (`vmss-amlab`)** | [19](#s19) Predictive autoscale |
+| **Networking (VNet + NSG)** | [34](#s34) Connection Monitor · [35](#s35) Flow Logs + Traffic Analytics · [50](#s50) Network Insights |
+| **Platform resources (Key Vault, Storage)** | [36](#s36) Key Vault + Storage Insights |
+| **Alerts & incident response** | [7](#s7) Alerts + Action Group · [12](#s12) AMBA · [17](#s17) Dynamic Thresholds · [23](#s23) Processing Rules · [15](#s15) Auto-mitigation · [8](#s8) Break the lab · [37](#s37) Nightly maintenance · [38](#s38) SIEM webhook |
+| **Cost & data routing** | [9](#s9) Daily caps · [11](#s11) DCR Transform · [20](#s20) Basic vs Analytics · [21](#s21) Summary Rules · [39](#s39) Data Export · [40](#s40) Diag fan-out · [41](#s41) LAW replication · [42](#s42) Cost workbook · [51](#s51) Platform logs at scale (DCR) · [52](#s52) Metrics Export (DCR) |
+| **Security** | [27](#s27) Granular RBAC · [43](#s43) Sentinel · [44](#s44) Search jobs + Restore · [47](#s47) Control-plane drift watch · [48](#s48) Privilege escalation watch · [49](#s49) Exfil early warning |
+| **AI / ML in Azure Monitor** | [16](#s16) Copilot · [13](#s13) Smart Detection · [17](#s17) Dynamic Thresholds · [18](#s18) Code Optimizations · [19](#s19) Predictive autoscale |
+| **GenAI observability (optional AI stage)** | [53](#s53) AI FinOps — token / trace / cost |
+| **Platform foundations** | [5](#s5) Policy auto-onboard · [6](#s6) Cross-workspace KQL · [24](#s24) Custom Logs Ingestion API · [26](#s26) KQL Functions · [51](#s51) Platform logs at scale (DCR) |
 
 > **Suggested 25-min "by-workload" demos:** App Service → 3, 22, 28, 29, 33 · AKS → 4, 14, 30, 31 · Cost → 9, 11, 20, 39, 42 · Security → 27, 47, 48 · Workload health → 1 + 45 + 46.
 
@@ -41,7 +41,7 @@ Open the resource group → expand the resource list → **show the count**: ~30
 ---
 
 <a id="s1"></a>
-## 1 · 🚦 Traffic-Lights Workbook — the "single pane of glass"
+## 1 · Traffic-Lights Workbook — the "single pane of glass"
 
 **Audience:** anyone (ops leads, business stakeholders, architects).
 **Time:** 3–5 min.
@@ -52,7 +52,7 @@ Modern teams don't want to chain through 10 portal blades to know "is anything b
 ### Click-path
 1. **Monitor → Workbooks** → search **"Azure Monitor Demo Lab"** → open *Traffic Lights*.
 2. Read the **legend table** out loud (Green/Orange/Red thresholds per resource type).
-3. Click any 🔴 or 🟠 row → scroll down to the matching detail pane (VM heartbeat / AKS pods / App Service status codes / App Insights timechart).
+3. Click any Red or Orange row → scroll down to the matching detail pane (VM heartbeat / AKS pods / App Service status codes / App Insights timechart).
 4. Change the time-range pill (15 min / 1 hour / 24 h) and re-run.
 
 ### Killer line
@@ -61,7 +61,7 @@ Modern teams don't want to chain through 10 portal blades to know "is anything b
 ---
 
 <a id="s2"></a>
-## 2 · 🖥️ VM Insights — cross-OS, agent-based monitoring
+## 2 · VM Insights — cross-OS, agent-based monitoring
 
 **Audience:** infra / Ops teams.
 **Time:** 5 min.
@@ -80,7 +80,7 @@ A single agent (Azure Monitor Agent) + a Data Collection Rule = full perf, heart
 ---
 
 <a id="s3"></a>
-## 3 · 📊 Application Insights — code-less .NET auto-instrumentation
+## 3 · Application Insights — code-less .NET auto-instrumentation
 
 **Audience:** developers, app owners.
 **Time:** 5–8 min.
@@ -102,7 +102,7 @@ A small .NET 8 web app (`AmlabHello`) is running on Linux App Service. We did **
 ---
 
 <a id="s4"></a>
-## 4 · ☸️ Kubernetes monitoring — Container Insights + Managed Prometheus + Managed Grafana
+## 4 · Kubernetes monitoring — Container Insights + Managed Prometheus + Managed Grafana
 
 **Audience:** platform / SRE teams.
 **Time:** 7–10 min.
@@ -124,7 +124,7 @@ AKS gets two parallel telemetry pipelines out of the box:
 ---
 
 <a id="s5"></a>
-## 5 · 🔄 Diagnostic Settings via Policy — "auto-onboard every new resource"
+## 5 · Diagnostic Settings via Policy — "auto-onboard every new resource"
 
 **Audience:** governance / cloud center of excellence.
 **Time:** 5 min.
@@ -144,7 +144,7 @@ Manually setting diagnostic settings on every new resource doesn't scale. We ass
 ---
 
 <a id="s6"></a>
-## 6 · 🔍 Cross-workspace KQL — cross-team collaboration
+## 6 · Cross-workspace KQL — cross-team collaboration
 
 **Audience:** ops + dev, joint session.
 **Time:** 5 min.
@@ -164,7 +164,7 @@ Ops owns the infra workspace, devs own App Insights. But during an incident you 
 ---
 
 <a id="s7"></a>
-## 7 · 🚨 Alerts — Action Group fan-out
+## 7 · Alerts — Action Group fan-out
 
 **Audience:** on-call / SRE.
 **Time:** 3 min.
@@ -190,7 +190,7 @@ Seven alerts are wired to a single Action Group (`ag-amlab-email` → `<your-ale
 ---
 
 <a id="s8"></a>
-## 8 · 💥 Break the lab — show the workbook turn Red live
+## 8 · Break the lab — show the workbook turn Red live
 
 **Audience:** anyone (highest "wow" factor).
 **Time:** 5 min + 2-min wait.
@@ -206,16 +206,16 @@ Watch what a real incident looks like end-to-end: agents stop reporting, alerts 
    ```
    This deallocates both VMs, crashloops the AKS frontend, and cranks the load-gen failure rate to 80%.
 3. Wait 2–3 min. Refresh the workbook:
-   - 🔴 **VM (Linux)** and **VM (Windows)** — heartbeat ages out.
-   - 🔴 **AKS Cluster** — pod restart spike.
-   - 🔴 **App Service** — 5xx surge.
-   - 🔴 **App Insights** — failed requests > 10.
+   - **VM (Linux)** and **VM (Windows)** — heartbeat ages out.
+   - **AKS Cluster** — pod restart spike.
+   - **App Service** — 5xx surge.
+   - **App Insights** — failed requests > 10.
 4. Email alerts arrive (Service Health may not, the others should).
 5. Recover:
    ```powershell
    ./scripts/restore-the-lab.ps1 -ResourceGroup rg-azure-monitor-lab
    ```
-6. Workbook returns to 🟢 within ~3 min.
+6. Workbook returns to Green within ~3 min.
 
 ### Killer line
 > *"This is not slides. This is live telemetry, real alerts, real auto-mitigation hooks you could plug into."*
@@ -223,7 +223,7 @@ Watch what a real incident looks like end-to-end: agents stop reporting, alerts 
 ---
 
 <a id="s9"></a>
-## 9 · 💰 Cost control — daily caps + change visibility
+## 9 · Cost control — daily caps + change visibility
 
 **Audience:** FinOps / cloud architects.
 **Time:** 3 min.
@@ -242,7 +242,7 @@ Observability can become an unbounded bill. We capped both LAWs at **1 GB/day** 
 ---
 
 <a id="s10"></a>
-## 10 · 🧪 Bonus: extend the lab during the demo
+## 10 · Bonus: extend the lab during the demo
 
 If you have time, ad-hoc additions show the platform's elasticity:
 
@@ -256,7 +256,7 @@ If you have time, ad-hoc additions show the platform's elasticity:
 ---
 
 <a id="s11"></a>
-## 11 · 💸 DCR Workspace Transformation — cost control at the source
+## 11 · DCR Workspace Transformation — cost control at the source
 
 **Audience:** FinOps, platform architects.
 **Time:** 5 min.
@@ -355,7 +355,7 @@ Force a few activity-log events (e.g. `az group show -n rg-azure-monitor-lab`) a
 ---
 
 <a id="s12"></a>
-## 12 · ✅ AMBA-aligned baseline alerts — best practice as code
+## 12 · AMBA-aligned baseline alerts — best practice as code
 
 **Audience:** SRE leads, operations managers.
 **Time:** 3 min.
@@ -378,7 +378,7 @@ Force a few activity-log events (e.g. `az group show -n rg-azure-monitor-lab`) a
 ---
 
 <a id="s13"></a>
-## 13 · 🤖 Smart Detection ramp — anomaly detection with no alert rule
+## 13 · Smart Detection ramp — anomaly detection with no alert rule
 
 **Audience:** developers, AIOps-curious customers.
 **Time:** 3 min setup + ~15 min wait, then 2 min closure.
@@ -404,7 +404,7 @@ Some signals are too noisy or subtle to set thresholds for. App Insights **Smart
 ---
 
 <a id="s14"></a>
-## 14 · 🔗 OpenTelemetry distributed tracing — AKS → App Service
+## 14 · OpenTelemetry distributed tracing — AKS → App Service
 
 **Audience:** developers, modern app teams.
 **Time:** 4 min.
@@ -414,8 +414,8 @@ One App Insights instance, two different runtimes (Python on AKS + .NET on App S
 
 ### Click-path
 1. **`appi-amlab` → Application Map** → 2 nodes:
-   - 🟠 `demo.otel-caller-aks` (the AKS pod)
-   - 🟢 `app-amlab-<suffix>` (the App Service)
+   - `demo.otel-caller-aks` (the AKS pod)
+   - `app-amlab-<suffix>` (the App Service)
    - …with an arrow showing the cross-service dependency.
 2. Click the arrow → see latency stats + a sample end-to-end trace.
 3. **Investigate → End-to-end transaction details** → expand one trace → see both sides of the call (request on App Service + outbound dependency from AKS) **with the same Operation Id**.
@@ -427,7 +427,7 @@ One App Insights instance, two different runtimes (Python on AKS + .NET on App S
 ---
 
 <a id="s15"></a>
-## 15 · 🛠️ Auto-mitigation — Logic App reacts to alerts
+## 15 · Auto-mitigation — Logic App reacts to alerts
 
 **Audience:** SRE, on-call, automation-as-code.
 **Time:** 5 min.
@@ -441,9 +441,9 @@ Three lab alerts touch VMs, but only **one** fires when you simply `az vm deallo
 
 | Alert rule | Type | Fires on a deallocation? | Why |
 |---|---|:---:|---|
-| `alert-resource-health` | Activity-log alert (RG scope) | ✅ **Yes** | Azure platform health writes a `ResourceHealth` event with `currentHealthStatus = Unavailable` (cause `UserInitiated`). The condition `category == ResourceHealth AND currentHealthStatus in (Unavailable, Degraded)` matches → alert fires within **2-10 minutes**. |
-| `alert-vm-cpu-high` | Multi-resource metric alert (CPU > 80% / 5 min) | ❌ No | A deallocated VM emits **no** Azure Monitor metrics. CPU is `null`, not 100%. This alert only fires under real CPU pressure. |
-| `amba-vm-available-memory-low` | Multi-resource metric alert (free memory < 200 MB / 5 min) | ❌ No | Same as above — no host emitting → no metric → no evaluation. |
+| `alert-resource-health` | Activity-log alert (RG scope) | **Yes** | Azure platform health writes a `ResourceHealth` event with `currentHealthStatus = Unavailable` (cause `UserInitiated`). The condition `category == ResourceHealth AND currentHealthStatus in (Unavailable, Degraded)` matches → alert fires within **2-10 minutes**. |
+| `alert-vm-cpu-high` | Multi-resource metric alert (CPU > 80% / 5 min) | No | A deallocated VM emits **no** Azure Monitor metrics. CPU is `null`, not 100%. This alert only fires under real CPU pressure. |
+| `amba-vm-available-memory-low` | Multi-resource metric alert (free memory < 200 MB / 5 min) | No | Same as above — no host emitting → no metric → no evaluation. |
 
 So the demo path is:
 
@@ -534,7 +534,7 @@ VM is running again → next ResourceHealth event flips back to Available.
 ---
 
 <a id="s16"></a>
-## 16 · 🧠 AI in Azure Monitor — Copilot, natural language KQL, and intelligent diagnostics
+## 16 · AI in Azure Monitor — Copilot, natural language KQL, and intelligent diagnostics
 
 **Audience:** everyone — especially skeptics who think "AI in ops" is marketing.
 **Time:** 5–7 min.
@@ -550,7 +550,7 @@ Azure Monitor now has AI woven into every blade. You don't need to memorize KQL 
 
 #### A) Natural Language → KQL in Log Analytics (2 min)
 
-1. **`law-amlab-central` → Logs** → click the **Copilot** button (✨ icon) in the query editor toolbar.
+1. **`law-amlab-central` → Logs** → click the **Copilot** button in the query editor toolbar.
 2. Type a plain-English question:
    > *"Show me the top 5 VMs by average CPU in the last hour"*
 3. Copilot generates KQL — review it, then **Run**.
@@ -623,7 +623,7 @@ Copilot in Azure
 
 | Feature | Where | What it does |
 |---|---|---|
-| **NL → KQL** | Log Analytics → Copilot (✨) | Converts plain English to runnable KQL queries |
+| **NL → KQL** | Log Analytics → Copilot | Converts plain English to runnable KQL queries |
 | **Explain query** | Log Analytics → select query → Explain | Breaks down complex KQL into plain English |
 | **Alert summary** | Fired alert → Summarize | AI-generated context + next steps |
 | **Investigate** | App Insights → Investigate | AI-driven root cause analysis across telemetry |
@@ -640,7 +640,7 @@ Copilot in Azure
 ---
 
 <a id="s17"></a>
-## 17 · 📊 Dynamic Thresholds — ML-learned baselines, zero manual tuning
+## 17 · Dynamic Thresholds — ML-learned baselines, zero manual tuning
 
 **Audience:** SRE, ops teams tired of alert fatigue.
 **Time:** 3–4 min.
@@ -681,9 +681,9 @@ A **static** alert (`alert-vm-cpu-high`, threshold 80%) is deployed alongside it
 
 | Scenario | Static threshold | Dynamic threshold |
 |---|---|---|
-| Weekend traffic drop | ❌ CPU at 15% — static threshold 80% never fires, but a sudden jump to 40% (anomalous for a weekend) goes unnoticed | ✅ ML band narrows on weekends → 40% spike triggers alert |
-| Black Friday traffic surge | ❌ CPU at 85% — static threshold 80% fires every minute for hours (alert fatigue) | ✅ ML band widens during expected surges → only alerts on *unexpected* deviation above the surge |
-| Gradual memory leak | ❌ Creeps from 60% → 79% over days — never hits 80% | ✅ Trend detection flags the anomalous upward drift |
+| Weekend traffic drop | CPU at 15% — static threshold 80% never fires, but a sudden jump to 40% (anomalous for a weekend) goes unnoticed | ML band narrows on weekends → 40% spike triggers alert |
+| Black Friday traffic surge | CPU at 85% — static threshold 80% fires every minute for hours (alert fatigue) | ML band widens during expected surges → only alerts on *unexpected* deviation above the surge |
+| Gradual memory leak | Creeps from 60% → 79% over days — never hits 80% | Trend detection flags the anomalous upward drift |
 
 ### Killer line
 > *"You set the sensitivity — the ML sets the threshold. It learns your workload's rhythm, and it adapts when the rhythm changes."*
@@ -691,7 +691,7 @@ A **static** alert (`alert-vm-cpu-high`, threshold 80%) is deployed alongside it
 ---
 
 <a id="s18"></a>
-## 18 · 🔬 Code Optimizations — AI finds your .NET performance bottlenecks
+## 18 · Code Optimizations — AI finds your .NET performance bottlenecks
 
 **Audience:** .NET developers, performance engineers.
 **Time:** 3–4 min.
@@ -743,7 +743,7 @@ The script publishes the updated webapp (so `/api/inefficient` is live), then ru
 ---
 
 <a id="s19"></a>
-## 19 · 🚀 Predictive Autoscale — ML pre-scales VMSS before the traffic arrives
+## 19 · Predictive Autoscale — ML pre-scales VMSS before the traffic arrives
 
 **Audience:** infra architects, capacity planners, cost-conscious ops.
 **Time:** 3–4 min.
@@ -823,7 +823,7 @@ ML model (same engine as dynamic thresholds)
 ---
 
 <a id="s20"></a>
-## 20 · 💲 Basic vs Analytics Logs — 8× cheaper ingestion with one toggle
+## 20 · Basic vs Analytics Logs — 8× cheaper ingestion with one toggle
 
 **Audience:** FinOps, platform architects, cost-conscious ops.
 **Time:** 3–4 min.
@@ -867,7 +867,7 @@ Not every log table needs full KQL power. **Basic Logs** costs ~8× less per GB 
 ---
 
 <a id="s21"></a>
-## 21 · 📊 Summary Rules — pre-aggregate data, pay less, query faster
+## 21 · Summary Rules — pre-aggregate data, pay less, query faster
 
 **Audience:** FinOps, platform architects, dashboard builders.
 **Time:** 4–5 min.
@@ -923,7 +923,7 @@ Dashboards that scan millions of raw `Perf` rows every refresh are slow and expe
 ---
 
 <a id="s22"></a>
-## 22 · 🌐 Availability Tests — synthetic monitoring from 5 global locations
+## 22 · Availability Tests — synthetic monitoring from 5 global locations
 
 **Audience:** app owners, SRE, business stakeholders.
 **Time:** 3–4 min.
@@ -965,7 +965,7 @@ Real users are spread across the world. **Availability Tests** ping your app fro
 ---
 
 <a id="s23"></a>
-## 23 · 🔕 Alert Processing Rules — enterprise-grade alert management
+## 23 · Alert Processing Rules — enterprise-grade alert management
 
 **Audience:** SRE leads, on-call engineers, operations managers.
 **Time:** 3–4 min.
@@ -1016,7 +1016,7 @@ Alert rules define *what* to detect. **Alert Processing Rules** define *what hap
 ---
 
 <a id="s24"></a>
-## 24 · 📡 Custom Logs via Ingestion API — any system can ship logs to LAW
+## 24 · Custom Logs via Ingestion API — any system can ship logs to LAW
 
 **Audience:** platform engineers, security teams, integration architects.
 **Time:** 5–7 min.
@@ -1065,7 +1065,7 @@ Log Analytics isn't just for Azure resources. The **Logs Ingestion API** lets an
 ---
 
 <a id="s25"></a>
-## 25 · 🔄 Change Analysis — correlate config changes with failures
+## 25 · Change Analysis — correlate config changes with failures
 
 **Audience:** on-call engineers, developers, SRE.
 **Time:** 3–4 min.
@@ -1096,7 +1096,7 @@ The first question in any incident: *"did anything change?"*. **Change Analysis*
 ---
 
 <a id="s26"></a>
-## 26 · 🔧 KQL Functions — reusable query abstractions
+## 26 · KQL Functions — reusable query abstractions
 
 **Audience:** KQL power users, platform teams, workbook builders.
 **Time:** 3–4 min.
@@ -1136,7 +1136,7 @@ Three saved functions in `law-amlab-central`:
 ---
 
 <a id="s27"></a>
-## 27 · 🔐 Log Analytics Granular RBAC — table and row-level access with ABAC conditions
+## 27 · Log Analytics Granular RBAC — table and row-level access with ABAC conditions
 
 **Audience:** security teams, compliance officers, platform architects.
 **Time:** 5–7 min.
@@ -1185,7 +1185,7 @@ Not everyone should see everything. Log Analytics now has **Granular RBAC** (GA 
      --condition "((!(ActionMatches{'Microsoft.OperationalInsights/workspaces/tables/data/read'})) OR (@Resource[Microsoft.OperationalInsights/workspaces/tables:name] StringEquals 'SecurityAudit_CL'))" `
      --condition-version "2.0"
    ```
-5. **What the user experiences:** `SecurityAudit_CL | take 10` ✅ but `Heartbeat | take 10` → **0 rows** ❌.
+5. **What the user experiences:** `SecurityAudit_CL | take 10` returns rows, but `Heartbeat | take 10` → **0 rows**.
 
 #### C) Row-level: ABAC condition filtering by column value (3 min)
 
@@ -1207,9 +1207,9 @@ Not everyone should see everything. Log Analytics now has **Granular RBAC** (GA 
       │
       ▼
    Log Analytics data plane checks ABAC condition per row:
-      ├── Severity == "Critical" → ✅ returned
-      ├── Severity == "Warning"  → ❌ filtered out silently
-      └── Severity == "Info"     → ❌ filtered out silently
+      ├── Severity == "Critical" → returned
+      ├── Severity == "Warning"  → filtered out silently
+      └── Severity == "Info"     → filtered out silently
    ```
 4. Point out: you can filter on **any column** — `UserPrincipal`, `SourceIP`, `EventType`, etc.
 
@@ -1257,7 +1257,7 @@ Not everyone should see everything. Log Analytics now has **Granular RBAC** (GA 
 ---
 
 <a id="s28"></a>
-## 28 · 📊 App Insights — Custom TrackMetric + custom events (`/api/checkout`)
+## 28 · App Insights — Custom TrackMetric + custom events (`/api/checkout`)
 
 **Audience:** developers, app owners — anyone who's heard "auto-instrumentation isn't enough".
 **Time:** 4–5 min.
@@ -1315,7 +1315,7 @@ app.MapPost("/api/checkout", (HttpRequest req, TelemetryClient telemetry) =>
 ---
 
 <a id="s29"></a>
-## 29 · 📊 App Insights — Profiler + Snapshot Debugger
+## 29 · App Insights — Profiler + Snapshot Debugger
 
 **Audience:** .NET developers, performance engineers, support escalation.
 **Time:** 3–4 min.
@@ -1354,7 +1354,7 @@ The lab's App Service `app-amlab-<suffix>` has both turned on via `infra/modules
 ---
 
 <a id="s30"></a>
-## 30 · ☸️ AKS — Node.js auto-instrumentation (`@azure/monitor-opentelemetry`)
+## 30 · AKS — Node.js auto-instrumentation (`@azure/monitor-opentelemetry`)
 
 **Audience:** developers running Node.js services, polyglot platform teams.
 **Time:** 3–4 min.
@@ -1378,8 +1378,8 @@ Scenario 14 showed Python + .NET wired into the same App Insights via OpenTeleme
    kubectl -n demo logs -l app=nodeapp-otel --tail=20
    ```
 2. **`appi-amlab` → Application Map** → now **three** cloud-role-name nodes:
-   - 🟢 `app-amlab-<suffix>` (.NET on App Service)
-   - 🟠 `demo.otel-caller-aks` (Python on AKS)
+   - `app-amlab-<suffix>` (.NET on App Service)
+   - `demo.otel-caller-aks` (Python on AKS)
    - 🟣 `demo.nodeapp-otel-aks` (Node.js on AKS) ← **new**
 3. Click the arrow `demo.nodeapp-otel-aks → app-amlab-<suffix>` → end-to-end transaction → both sides correlated by `operation_Id`.
 4. **`appi-amlab` → Logs** → `dependencies | where cloud_RoleName == "demo.nodeapp-otel-aks" | take 50` — every outbound HTTP call captured.
@@ -1390,7 +1390,7 @@ Scenario 14 showed Python + .NET wired into the same App Insights via OpenTeleme
 ---
 
 <a id="s31"></a>
-## 31 · ☸️ AKS — Managed Prometheus rule group (recording + alerting)
+## 31 · AKS — Managed Prometheus rule group (recording + alerting)
 
 **Audience:** SRE teams that already love PromQL.
 **Time:** 3–4 min.
@@ -1427,7 +1427,7 @@ Rule group **`amlab-prom-rules`** on `amw-amlab`:
 ---
 
 <a id="s32"></a>
-## 32 · ☸️ AKS — Grafana alert rule via data-plane API
+## 32 · AKS — Grafana alert rule via data-plane API
 
 **Audience:** SRE teams centralising notifications inside Grafana.
 **Time:** 3 min.
@@ -1463,7 +1463,7 @@ You can deploy ARM resources with Bicep. You **cannot** deploy Grafana folders, 
 ---
 
 <a id="s33"></a>
-## 33 · 📊 App Insights — Release annotations on deploy / break / restore
+## 33 · App Insights — Release annotations on deploy / break / restore
 
 **Audience:** SRE, dev, change-management — everyone who's asked "what changed at 14:03?"
 **Time:** 2 min.
@@ -1499,7 +1499,7 @@ All three call `scripts/send-release-annotation.ps1` which PUTs to `…/Annotati
 ---
 
 <a id="s34"></a>
-## 34 · 🌐 Network — Connection Monitor (VMs → App Service hop-by-hop)
+## 34 · Network — Connection Monitor (VMs → App Service hop-by-hop)
 
 **Audience:** network engineers, hybrid-cloud architects, anyone debugging "is it the app or the network?"
 **Time:** 4 min.
@@ -1536,7 +1536,7 @@ The module is scoped to the singleton **`NetworkWatcher_northeurope`** in `Netwo
 ---
 
 <a id="s35"></a>
-## 35 · 🌐 Network — VNet Flow Logs + Traffic Analytics
+## 35 · Network — VNet Flow Logs + Traffic Analytics
 
 **Audience:** security teams, network engineers, FinOps (egress is expensive).
 **Time:** 3–4 min.
@@ -1561,7 +1561,7 @@ The module is scoped to the singleton **`NetworkWatcher_northeurope`** in `Netwo
 3. **`law-amlab-central` → Logs** → run saved query **`24 — Network · Traffic Analytics top-talkers (Flow Logs)`** — top inbound/outbound IP pairs by flow count.
 4. Run **Traffic Analytics dashboard** (`Network Watcher → Traffic Analytics`) — geo map, top conversations, expected vs blocked. Use this **standalone dashboard**, not the *Network Insights → Traffic* tab — see the gotcha box below.
 
-> ⚠️ **Known portal gap (May 2026):** the *Network Insights → Traffic* tab still queries the **legacy `AzureNetworkAnalytics_CL`** table populated by NSG flow logs (being retired 30-Sep-2027). VNet flow logs only populate the modern **`NTANetAnalytics`** table, so that tab will read "No results found" in this lab. That is **expected**, not a deployment bug. The data is fully visible in the standalone Traffic Analytics dashboard (step 4) and via saved query 24 (step 3). Microsoft docs confirm: *"NTANetAnalytics in virtual network flow logs replaces AzureNetworkAnalytics_CL used in network security group flow logs."*
+> **Known portal gap (May 2026):** the *Network Insights → Traffic* tab still queries the **legacy `AzureNetworkAnalytics_CL`** table populated by NSG flow logs (being retired 30-Sep-2027). VNet flow logs only populate the modern **`NTANetAnalytics`** table, so that tab will read "No results found" in this lab. That is **expected**, not a deployment bug. The data is fully visible in the standalone Traffic Analytics dashboard (step 4) and via saved query 24 (step 3). Microsoft docs confirm: *"NTANetAnalytics in virtual network flow logs replaces AzureNetworkAnalytics_CL used in network security group flow logs."*
 
 ### Killer line
 > *"NSG rules tell you what you **allowed**. Traffic Analytics tells you what actually **happened** — including the legitimate flows you forgot to whitelist and the noisy chatter you didn't know you were paying egress for."*
@@ -1569,7 +1569,7 @@ The module is scoped to the singleton **`NetworkWatcher_northeurope`** in `Netwo
 ---
 
 <a id="s36"></a>
-## 36 · 🔑 Platform — Key Vault & Storage Insights
+## 36 · Platform — Key Vault & Storage Insights
 
 **Audience:** security operations, governance.
 **Time:** 3 min.
@@ -1594,7 +1594,7 @@ Both `keyvault-amlab-*` and `st<prefix>...` ship `allLogs` to the central LAW vi
 ---
 
 <a id="s37"></a>
-## 37 · 🚨 Alerts — Nightly maintenance suppression rule
+## 37 · Alerts — Nightly maintenance suppression rule
 
 **Audience:** SRE leads, change-management.
 **Time:** 2 min.
@@ -1623,7 +1623,7 @@ Lab nights (02:00–04:00 UTC) are when synthetic load-gen pauses, summary rules
 ---
 
 <a id="s38"></a>
-## 38 · 🚨 Alerts — Common Alert Schema 2nd webhook (SIEM forwarder)
+## 38 · Alerts — Common Alert Schema 2nd webhook (SIEM forwarder)
 
 **Audience:** security operations, integration architects.
 **Time:** 2 min.
@@ -1659,7 +1659,7 @@ When `siemWebhookUrl` is non-empty, `ag-amlab-email` ends up with three webhooks
 ---
 
 <a id="s39"></a>
-## 39 · 💰 Cost — LAW continuous Data Export to Storage
+## 39 · Cost — LAW continuous Data Export to Storage
 
 **Audience:** compliance, long-term retention, FinOps.
 **Time:** 3 min.
@@ -1700,7 +1700,7 @@ LAW retention costs money. For **compliance retention** of low-query tables, the
 ---
 
 <a id="s40"></a>
-## 40 · 💰 Cost — Diagnostic settings fan-out (Storage archive + Event Hub stream)
+## 40 · Cost — Diagnostic settings fan-out (Storage archive + Event Hub stream)
 
 **Audience:** SecOps, FinOps, architects designing SIEM ingestion.
 **Time:** 3 min.
@@ -1728,7 +1728,7 @@ The App Service has **three** diagnostic settings stacked on it — same source 
 ---
 
 <a id="s41"></a>
-## 41 · 💰 Cost — LAW cross-region replication (BCDR knob)
+## 41 · Cost — LAW cross-region replication (BCDR knob)
 
 **Audience:** BCDR architects, regulated industries.
 **Time:** 2 min — fact-check + click-path.
@@ -1772,7 +1772,7 @@ When `enableReplication = true`, the property `replication: { enabled: true, loc
 ---
 
 <a id="s42"></a>
-## 42 · 💰 Cost — Cost-of-monitoring workbook
+## 42 · Cost — Cost-of-monitoring workbook
 
 **Audience:** FinOps, platform owners.
 **Time:** 3 min.
@@ -1803,7 +1803,7 @@ Every workbook in the lab so far has been about **the workload's** health. This 
 ---
 
 <a id="s43"></a>
-## 43 · 🔐 Security — Microsoft Sentinel onboarding + analytics rule
+## 43 · Security — Microsoft Sentinel onboarding + analytics rule
 
 **Audience:** SecOps, SOC analysts.
 **Time:** 4 min.
@@ -1900,7 +1900,7 @@ If check #1 shows no setting pointing at `law-amlab-central`, run the bootstrap 
 ---
 
 <a id="s44"></a>
-## 44 · 🔐 Security — Search jobs + restore archived logs
+## 44 · Security — Search jobs + restore archived logs
 
 **Audience:** incident responders, compliance/legal.
 **Time:** 3 min.
@@ -1945,7 +1945,7 @@ The lab ships two ready-to-run scripts.
 ---
 
 <a id="s45"></a>
-## 45 · 🌳 Health Models — workload-level health on top of Service Groups (preview)
+## 45 · Health Models — workload-level health on top of Service Groups (preview)
 
 **Audience:** SRE leads, platform owners, anyone who manages a *workload* (not just resources).
 **Time:** 5–6 min.
@@ -2034,10 +2034,10 @@ Health Model alert: *"Root entity health = Unhealthy for 10 min"* — **one** al
 
 | Need | Service Groups | Management Groups | Resource Groups | Tags |
 |---|---|---|---|---|
-| Cross-subscription grouping | ✅ | ✅ (above subs) | ❌ | ✅ |
-| Multiple membership per resource | ✅ | ❌ (one parent) | ❌ | ✅ |
-| Permission inheritance | ❌ (parent/child SG only) | ✅ (policies + RBAC) | ✅ | ❌ |
-| Designed for data-aggregation / views | ✅ | ❌ | ❌ | metadata only |
+| Cross-subscription grouping | Yes | Yes (above subs) | No | Yes |
+| Multiple membership per resource | Yes | No (one parent) | No | Yes |
+| Permission inheritance | No (parent/child SG only) | Yes (policies + RBAC) | Yes | No |
+| Designed for data-aggregation / views | Yes | No | No | metadata only |
 
 Health Models *require* Service Groups precisely because the same resource may have **different** roles (and therefore different signals + thresholds) in different workloads — that's something the RG / MG hierarchy can't express.
 
@@ -2056,7 +2056,7 @@ Health Models *require* Service Groups precisely because the same resource may h
 ---
 
 <a id="s46"></a>
-## 46 · 🎯 Service Level Indicators (SLIs / SLOs) — error budgets on the workload (preview)
+## 46 · Service Level Indicators (SLIs / SLOs) — error budgets on the workload (preview)
 
 **Audience:** SRE leads, platform owners — same crowd as #45, one layer up from "healthy yes/no".
 **Time:** 4–5 min.
@@ -2150,7 +2150,7 @@ scripts/teardown.ps1               Tears SLIs down before deleting the RG (idemp
 ---
 
 <a id="s47"></a>
-## 47 · 🔐 Security posture — control-plane drift watch (without SIEM)
+## 47 · Security posture — control-plane drift watch (without SIEM)
 
 **Audience:** cloud governance, platform security, incident responders.
 **Time:** 5 min.
@@ -2190,7 +2190,7 @@ Many Azure breaches start with a tiny control-plane change: someone disables dia
 ---
 
 <a id="s48"></a>
-## 48 · 🔐 Security posture — privilege escalation watch with Activity Log
+## 48 · Security posture — privilege escalation watch with Activity Log
 
 **Audience:** identity engineers, cloud security, platform owners.
 **Time:** 4 min.
@@ -2224,7 +2224,7 @@ Role assignment changes are one of the highest-signal events in Azure. A single 
 ---
 
 <a id="s49"></a>
-## 49 · 🔐 Security posture — data exfiltration early warning (egress + sensitive reads)
+## 49 · Security posture — data exfiltration early warning (egress + sensitive reads)
 
 **Audience:** SecOps, data governance, platform SRE.
 **Time:** 6 min.
@@ -2268,7 +2268,7 @@ Exfiltration usually has two phases: prep and pull. Prep appears as policy/firew
 ---
 
 <a id="s50"></a>
-## 50 · 🌐 Network — Network Insights (single pane of glass for everything network)
+## 50 · Network — Network Insights (single pane of glass for everything network)
 
 **Audience:** network engineers, platform SREs, anyone who has ever asked *"why am I jumping between five blades to triage a network issue?"*.
 **Time:** 4–5 min.
@@ -2308,7 +2308,7 @@ Scenarios [34](#s34) (Connection Monitor) and [35](#s35) (Flow Logs + Traffic An
 ---
 
 <a id="s51"></a>
-## 51 · 💰 Cost — Platform logs at scale with DCRs (public preview)
+## 51 · Cost — Platform logs at scale with DCRs (public preview)
 
 **Audience:** platform teams, FinOps, architects managing telemetry across 1,000+ resources.
 **Time:** 4 min.
@@ -2357,7 +2357,7 @@ The lab ships the DCR as code but **off by default** — the DCR and the central
 ---
 
 <a id="s52"></a>
-## 52 · 💰 Cost — Azure Monitor Metrics Export via DCRs (GA)
+## 52 · Cost — Azure Monitor Metrics Export via DCRs (GA)
 
 **Audience:** FinOps, SRE, architects building metrics pipelines.
 **Time:** 3 min.
@@ -2408,7 +2408,7 @@ The export DCR ships as code but **off by default** — the DCR and the central 
 ---
 
 <a id="s53"></a>
-## 53 · 🤖 AI FinOps — GenAI token / trace / cost observability (optional AI stage)
+## 53 · AI FinOps — GenAI token / trace / cost observability (optional AI stage)
 
 **Audience:** FinOps, AI platform teams, architects putting GenAI into production.
 **Time:** 5 min.
@@ -2454,28 +2454,28 @@ Every other scenario watches infra/platform telemetry. This one points the **exa
 | 0–2 | 0. Elevator pitch + RG overview |
 | 2–6 | 1. Traffic-Lights Workbook |
 | 6–11 | 4. Kubernetes monitoring (Container Insights + Grafana) |
-| 11–14 | **14. OTel distributed tracing (Application Map)** + ⭐30. Node.js OTel pod |
-| 14–18 | 3. Application Insights live (Failures, Performance) + ⭐28. /api/checkout custom metric |
+| 11–14 | **14. OTel distributed tracing (Application Map)** + 30. Node.js OTel pod |
+| 14–18 | 3. Application Insights live (Failures, Performance) + 28. /api/checkout custom metric |
 | 18–21 | 5. Diagnostic Settings via Policy |
 | 21–24 | 6. Cross-workspace KQL (queries 10 + 11) |
 | 24–27 | **11. DCR transformation cost story** |
 | 27–29 | **12. AMBA + 15. Auto-mitigation walk-through** |
 | 29–34 | **16. AI in Azure Monitor (NL→KQL, alert summary, Investigate)** |
-| 34–36 | **17. Dynamic Thresholds + 18. Code Optimizations + ⭐29. Profiler** |
+| 34–36 | **17. Dynamic Thresholds + 18. Code Optimizations + 29. Profiler** |
 | 36–38 | **19. Predictive Autoscale (VMSS walkthrough)** |
-| 38–40 | ⭐31. Managed Prometheus rule group + ⭐34. Connection Monitor |
-| 40–43 | **20. Basic vs Analytics Logs (cost toggle)** + ⭐42. Cost workbook |
+| 38–40 | 31. Managed Prometheus rule group + 34. Connection Monitor |
+| 40–43 | **20. Basic vs Analytics Logs (cost toggle)** + 42. Cost workbook |
 | 43–46 | **21. Summary Rules + 22. Availability Tests** |
-| 46–48 | **23. Alert Processing Rules** + ⭐37. Nightly maintenance |
-| 48–52 | **24. Custom Logs (Ingestion API demo)** + ⭐35. Flow Logs |
-| 52–55 | **26. KQL Functions** + ⭐36. KV / Storage Insights |
-| 55–58 | **27. RBAC (three tiers walkthrough)** + ⭐43. Sentinel |
-| 58–62 | 8. **Break the lab** (live failure) + ⭐33. release annotations + restore + ⭐45. Health Model flips Unhealthy |
+| 46–48 | **23. Alert Processing Rules** + 37. Nightly maintenance |
+| 48–52 | **24. Custom Logs (Ingestion API demo)** + 35. Flow Logs |
+| 52–55 | **26. KQL Functions** + 36. KV / Storage Insights |
+| 55–58 | **27. RBAC (three tiers walkthrough)** + 43. Sentinel |
+| 58–62 | 8. **Break the lab** (live failure) + 33. release annotations + restore + 45. Health Model flips Unhealthy |
 
 > Pick 30 min of scenarios for shorter sessions. Scenarios 20–21, 42 (cost) and 27, 43 (security) are strong closers.
 > Scenario **25** (Change Analysis) is a portal-only demo — insert it ad-hoc when the audience is dev-heavy.
-> ⭐44 (Search jobs / Restore), ⭐41 (LAW replication), and ⭐45 (Health Models / Service Groups) are best done as **bonus** content for audiences who ask about archiving, BCDR, or workload-level health.
-> ⭐46 (SLIs / SLOs) pairs naturally with #45 — run them back-to-back for an SRE-leaning audience.
+> 44 (Search jobs / Restore), 41 (LAW replication), and 45 (Health Models / Service Groups) are best done as **bonus** content for audiences who ask about archiving, BCDR, or workload-level health.
+> 46 (SLIs / SLOs) pairs naturally with #45 — run them back-to-back for an SRE-leaning audience.
 
 ### "By-workload" short demos (≈25 min each)
 
@@ -2486,7 +2486,7 @@ Every other scenario watches infra/platform telemetry. This one points the **exa
 | **Infra ops (VM + network)** | 2 → 50 → 34 → 35 → 7 → 12 → 15 |
 | **FinOps** | 9 → 11 → 20 → 21 → 39 → 42 → 51 → 52 |
 | **SecOps** | 27 → 47 → 48 → 49 → 44 |
-| **AI/ML curious** | 16 → 13 → 17 → 18 → 19 → ⭐53 |
+| **AI/ML curious** | 16 → 13 → 17 → 18 → 19 → 53 |
 | **Workload owners / SRE leads** | 1 → 45 → 12 → 7 → 8 (Root entity flips Unhealthy) |
 
 ## Reset between demos
