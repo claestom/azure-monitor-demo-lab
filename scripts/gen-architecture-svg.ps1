@@ -31,6 +31,9 @@ $iconPaths = @{
   ag       = 'management_governance/Alerts.svg'
   logic    = 'integration/Logic_Apps.svg'
   sent     = 'security/Azure_Sentinel.svg'
+  foundry  = 'ai_machine_learning/AI_Foundry.svg'
+  agents   = 'ai_machine_learning/Bot_Services.svg'
+  router   = 'general/Gear.svg'
 }
 
 $repoRoot = Split-Path $PSScriptRoot -Parent
@@ -64,6 +67,7 @@ $nodes = [ordered]@{
   AKS   = @{ col = 'WL';   i = 2; lines = @('AKS','Container Insights');       icons = @('aks') }
   APP   = @{ col = 'WL';   i = 3; lines = @('.NET 8 App Service','auto-instrumented'); icons = @('app') }
   NET   = @{ col = 'WL';   i = 4; lines = @('VNet / NSG','Connection Monitor'); icons = @('net') }
+  FDRY  = @{ col = 'WL';   i = 5; lines = @('GenAI · Foundry + agents','chat/embed/router · optional'); icons = @('foundry','agents','router') }
 
   AMA   = @{ col = 'COL';  i = 0; lines = @('Azure Monitor Agent','DCRs · DCE'); icons = @('ama') }
   FLOW  = @{ col = 'COL';  i = 1; lines = @('NSG Flow Logs');                   icons = @('flow') }
@@ -76,22 +80,22 @@ $nodes = [ordered]@{
   PLAT  = @{ col = 'DATA'; i = 4; lines = @('Storage · Event Hub · Key Vault');  icons = @('storage','eventhub','keyvault') }
 
   GRAF  = @{ col = 'USE';  i = 0; lines = @('Managed Grafana');                  icons = @('graf') }
-  WB    = @{ col = 'USE';  i = 1; lines = @('Workbooks','Traffic Lights · Cost · Security'); icons = @('wb') }
-  AG    = @{ col = 'USE';  i = 2; lines = @('Action Group','Alerts · AMBA');     icons = @('ag') }
+  WB    = @{ col = 'USE';  i = 1; lines = @('Workbooks','Traffic Lights · Cost · AI FinOps'); icons = @('wb') }
+  AG    = @{ col = 'USE';  i = 2; lines = @('Action Group','Alerts · AMBA · token spikes');     icons = @('ag') }
   LOGIC = @{ col = 'USE';  i = 3; lines = @('Logic App','auto-mitigation');      icons = @('logic') }
   SENT  = @{ col = 'USE';  i = 4; lines = @('Microsoft Sentinel');               icons = @('sent') }
 }
 
 # --- edges (source -> target) ---------------------------------------------------------
 $edges = @(
-  @('VM','AMA'), @('VMSS','AMA'), @('AKS','AMA'), @('AKS','AMW'), @('APP','AI'), @('NET','FLOW'),
+  @('VM','AMA'), @('VMSS','AMA'), @('AKS','AMA'), @('AKS','AMW'), @('APP','AI'), @('NET','FLOW'), @('FDRY','AI'),
   @('AMA','LAW'), @('AMA','AMW'), @('FLOW','PLAT'), @('POL','LAW'), @('AI','LAWAI'), @('PLAT','LAW'),
   @('LAW','WB'), @('LAWAI','WB'), @('AMW','GRAF'), @('LAW','AG'), @('AI','AG'), @('AG','LOGIC'), @('LAW','SENT')
 )
 
 # --- geometry -------------------------------------------------------------------------
-$W = 1320; $H = 600
-$grpY = 60; $grpH = 475
+$W = 1320; $H = 680
+$grpY = 60; $grpH = 560
 $cellH = 66; $cellStep = 84; $firstTop = 108
 function NodeTop($n) { $firstTop + ($n.i * $cellStep) }
 function ColOf($n)   { $cols[$n.col] }
@@ -100,7 +104,8 @@ function Esc($s)     { $s -replace '&','&amp;' -replace '<','&lt;' -replace '>',
 $sb = New-Object System.Text.StringBuilder
 [void]$sb.AppendLine("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 $W $H' font-family='Segoe UI, Helvetica, Arial, sans-serif'>")
 [void]$sb.AppendLine("<rect x='0' y='0' width='$W' height='$H' rx='10' fill='#0D1117'/>")
-[void]$sb.AppendLine("<text x='$($W/2)' y='36' fill='#E6EDF3' font-size='20' font-weight='700' text-anchor='middle'>rg-azure-monitor-lab · northeurope</text>")
+[void]$sb.AppendLine("<text x='$($W/2)' y='34' fill='#E6EDF3' font-size='20' font-weight='700' text-anchor='middle'>rg-azure-monitor-lab · northeurope</text>")
+[void]$sb.AppendLine("<text x='$($W/2)' y='52' fill='#9DA7B3' font-size='11' text-anchor='middle'>optional GenAI workload (Microsoft Foundry) pinned to swedencentral</text>")
 [void]$sb.AppendLine("<defs><marker id='arrow' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#7D8590'/></marker></defs>")
 
 # group boxes

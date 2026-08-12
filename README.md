@@ -4,32 +4,15 @@ A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel*
 
 Built for **demos, microhacks, and hackathons**: deploy it into your own subscription, explore Azure Monitor end-to-end, break it, restore it, and tear it down.
 
-## What's inside
-
-One resource group, wired end-to-end across the observability stack:
-
-| Layer | What you get |
-| --- | --- |
-| **Workloads** | Linux/Windows VMs, AKS, Linux VMSS (predictive autoscale), .NET 8 App Service |
-| **Workload monitoring** | VM Insights, Container Insights, Managed Prometheus, Grafana, OpenTelemetry, codeless App Service auto-instrumentation |
-| **Telemetry backbone** | 2 × Log Analytics, Application Insights, Azure Monitor Workspace (Managed Prometheus), DCRs with ingest-time transforms |
-| **Governance** | Diagnostic Settings via DeployIfNotExists policy, cross-workspace KQL, reusable KQL functions |
-| **Networking** | Connection Monitor, NSG Flow Logs + Traffic Analytics, Network Insights |
-| **Alerting & response** | Action Group, 7+ metric/KQL/activity/dynamic-threshold alerts, AMBA, alert processing rules, Logic App auto-mitigation |
-| **Security** | Microsoft Sentinel onboarding, security-posture alert rules, granular workspace/table/row RBAC |
-| **Cost & data routing** | Daily caps, Basic/Analytics table plans, Summary Rules, Data Export, cost workbook |
-| **Reliability previews** | Service Groups + Health Models, SLIs/SLOs, Search Jobs + archive restore |
-| **GenAI observability** (optional AI stage) | Microsoft Foundry account + project, chat/embedding/optimization/**model-router** deployments, App Insights tracing, token anomaly + spike alerts, AI FinOps query pack + workbook, an AI tier folded into the workload health model, agents + traffic simulator |
-
-> Full resource-by-resource list: **[REFERENCE.md → What gets deployed](REFERENCE.md#what-gets-deployed)**.
-
 ## Architecture
 
-Everything below lands in a **single resource group** (`rg-azure-monitor-lab`). Telemetry flows left-to-right: workloads emit signals, agents/policies collect them, the backplane stores them, and the consumption layer turns them into dashboards, alerts, and responses.
+Everything below lands in a **single resource group** (`rg-azure-monitor-lab`). Telemetry flows left-to-right: workloads emit signals, agents/policies collect them, the backplane stores them, and the consumption layer turns them into dashboards, alerts, and responses. An optional, off-by-default **GenAI workload** (Microsoft Foundry account + project, chat/embedding/optimization/**model-router** deployments, agents + traffic simulator) plugs into the same backbone — its token/trace/cost telemetry flows into Application Insights, drives token anomaly + spike alerts and an AI FinOps query pack + workbook, and folds an **AI tier** into the workload health model.
 
 [![Azure Monitor Demo Lab architecture - Azure-icon overview](docs/architecture-overview.svg)](docs/architecture.drawio)
 
-> 🎨 **Full Azure-icon diagram (editable):** [docs/architecture.drawio](docs/architecture.drawio) - open with [diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension. It contains a per-tier overview plus detail pages for each pillar.
+> 🎨 **Full Azure-icon diagram (editable):** [docs/architecture.drawio](docs/architecture.drawio) - open with [diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension. It contains a per-tier overview plus detail pages for each pillar, including a dedicated **AI · GenAI** page.
+
+> 📦 **Full resource-by-resource list** of everything that gets created: **[REFERENCE.md → What gets deployed](REFERENCE.md#what-gets-deployed)**.
 
 ## Prerequisites
 
@@ -38,12 +21,13 @@ Everything below lands in a **single resource group** (`rg-azure-monitor-lab`). 
 - Bicep CLI (bundled with `az` ≥ 2.20) - **or** Terraform ≥ 1.6 for the Terraform path
 - PowerShell 7+
 - A subscription with quota for ~5 small VMs/nodes (`Standard_B2s`), 1 App Service B1, Managed Grafana, Storage, Event Hub, Key Vault.
+- *(Optional AI stage only)* Python 3.10+ - `scripts/setup-ai.ps1` provisions the demo agents + traffic simulator from [`workloads/ai/`](workloads/ai/), and the models are billable.
 
 > **Two IaC paths, one config.** Bicep is primary (`infra/`); Terraform (`terraform/`) is a parallel implementation driven from the same `lab.config.json`. Pick one - don't mix.
 
 ## Deploy
 
-> **Recommended region:** `northeurope` (the default) for the widest feature availability. The Health Model preview is pinned to `swedencentral` automatically, since it isn't available in `northeurope` — everything else follows the region you pick.
+> **Recommended region:** `northeurope` (the default) for the widest feature availability. The Health Model preview and the optional **GenAI / AI stage** (Microsoft Foundry + models) are pinned to `swedencentral` automatically, since they aren't available in `northeurope` — everything else follows the region you pick.
 
 ### Option 1 - Deploy to Azure (portal, no local setup)
 
@@ -115,7 +99,7 @@ When you're done (cost guardrails of 1 GB/day are baked in either way):
 | [REFERENCE.md](REFERENCE.md) | Full capability matrix · every deployed resource · demo walkthrough · cost breakdown · folder layout · optional add-ons · troubleshooting |
 | [DEMO-SCENARIOS.md](DEMO-SCENARIOS.md) | All 52 demo scenarios - story, click-path, and "killer line", plus audience-pivoted shortlists |
 | [docs/DEPLOY-BICEP-STEP-BY-STEP.md](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md) | Staged deployment tutorials |
-| Stage notes: [A](docs/STAGE-A-FOUNDATION.md) · [B](docs/STAGE-B-WORKLOADS.md) · [C](docs/STAGE-C-ALERTING.md) · [D](docs/STAGE-D-SECURITY-POSTURE.md) · [E](docs/STAGE-E-OPTIONAL-ADVANCED.md) | Per-stage speaker notes |
+| Stage notes: [A](docs/STAGE-A-FOUNDATION.md) · [B](docs/STAGE-B-WORKLOADS.md) · [C](docs/STAGE-C-ALERTING.md) · [D](docs/STAGE-D-SECURITY-POSTURE.md) · [E](docs/STAGE-E-OPTIONAL-ADVANCED.md) · [AI](docs/STAGE-AI.md) | Per-stage speaker notes (incl. the optional GenAI / AI FinOps stage) |
 | [docs/CUSTOMER-STAGE-HANDOUT.md](docs/CUSTOMER-STAGE-HANDOUT.md) | Per-stage time + cost cheat sheet |
 
 ## Contributing & license
