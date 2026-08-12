@@ -79,8 +79,8 @@ param routerModelVersion string = '2025-08-07'
 // Naming
 // ---------------------------------------------------------------------------------
 var suffix              = uniqueString(resourceGroup().id)
-var lawCentralName      = 'law-${namePrefix}-central'
-var lawAppInsightsName  = 'law-${namePrefix}-appinsights'
+var lawCentralName      = 'law-${namePrefix}-central-${take(suffix, 5)}'
+var lawAppInsightsName  = 'law-${namePrefix}-appinsights-${take(suffix, 5)}'
 var appInsightsName     = 'appi-${namePrefix}'
 var amwName             = 'amw-${namePrefix}'
 var grafanaName         = 'amg-${namePrefix}-${take(suffix, 4)}'

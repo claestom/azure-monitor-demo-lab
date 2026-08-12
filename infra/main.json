@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "9424153599125831604"
+      "templateHash": "6519500284991708750"
     }
   },
   "parameters": {
@@ -160,8 +160,8 @@
   },
   "variables": {
     "suffix": "[uniqueString(resourceGroup().id)]",
-    "lawCentralName": "[format('law-{0}-central', parameters('namePrefix'))]",
-    "lawAppInsightsName": "[format('law-{0}-appinsights', parameters('namePrefix'))]",
+    "lawCentralName": "[format('law-{0}-central-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
+    "lawAppInsightsName": "[format('law-{0}-appinsights-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
     "appInsightsName": "[format('appi-{0}', parameters('namePrefix'))]",
     "amwName": "[format('amw-{0}', parameters('namePrefix'))]",
     "grafanaName": "[format('amg-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 4))]",
