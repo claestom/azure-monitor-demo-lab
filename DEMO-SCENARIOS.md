@@ -10,22 +10,90 @@ A curated set of demo scenarios you can run with this lab. Each one has a **stor
 
 Pick a workload (or theme) and run only those scenarios. Each row links to the numbered scenario below.
 
-| Workload / theme | Scenarios |
-|---|---|
-| **Cross-stack — single pane of glass** | [1](#s1) Traffic-Lights workbook |
-| **Workload health (Service Groups + Health Models, preview)** | [45](#s45) Service Group + Health Model · [46](#s46) SLIs / SLOs |
-| **App Service (.NET web app — `app-amlab-*`)** | [3](#s3) Code-less App Insights · [22](#s22) Availability Tests · [13](#s13) Smart Detection · [18](#s18) Code Optimizations · [25](#s25) Change Analysis · [28](#s28) Custom TrackMetric · [29](#s29) Profiler + Snapshot · [33](#s33) Release annotations |
-| **AKS (`aks-amlab`)** | [4](#s4) Container Insights + Prom + Grafana · [14](#s14) OTel tracing AKS→App Service · [30](#s30) Node.js OTel · [31](#s31) Prom rule group · [32](#s32) Grafana alert rule |
-| **Azure VMs (Linux + Windows)** | [2](#s2) VM Insights cross-OS |
-| **VMSS (`vmss-amlab`)** | [19](#s19) Predictive autoscale |
-| **Networking (VNet + NSG)** | [34](#s34) Connection Monitor · [35](#s35) Flow Logs + Traffic Analytics · [50](#s50) Network Insights |
-| **Platform resources (Key Vault, Storage)** | [36](#s36) Key Vault + Storage Insights |
-| **Alerts & incident response** | [7](#s7) Alerts + Action Group · [12](#s12) AMBA · [17](#s17) Dynamic Thresholds · [23](#s23) Processing Rules · [15](#s15) Auto-mitigation · [8](#s8) Break the lab · [37](#s37) Nightly maintenance · [38](#s38) SIEM webhook |
-| **Cost & data routing** | [9](#s9) Daily caps · [11](#s11) DCR Transform · [20](#s20) Basic vs Analytics · [21](#s21) Summary Rules · [39](#s39) Data Export · [40](#s40) Diag fan-out · [41](#s41) LAW replication · [42](#s42) Cost workbook · [51](#s51) Platform logs at scale (DCR) · [52](#s52) Metrics Export (DCR) |
-| **Security** | [27](#s27) Granular RBAC · [43](#s43) Sentinel · [44](#s44) Search jobs + Restore · [47](#s47) Control-plane drift watch · [48](#s48) Privilege escalation watch · [49](#s49) Exfil early warning |
-| **AI / ML in Azure Monitor** | [16](#s16) Copilot · [13](#s13) Smart Detection · [17](#s17) Dynamic Thresholds · [18](#s18) Code Optimizations · [19](#s19) Predictive autoscale |
-| **GenAI observability (optional AI stage)** | [53](#s53) AI FinOps — token / trace / cost |
-| **Platform foundations** | [5](#s5) Policy auto-onboard · [6](#s6) Cross-workspace KQL · [24](#s24) Custom Logs Ingestion API · [26](#s26) KQL Functions · [51](#s51) Platform logs at scale (DCR) |
+**Cross-stack — single pane of glass**
+- [1](#s1) Traffic-Lights workbook
+
+**Workload health (Service Groups + Health Models, preview)**
+- [45](#s45) Service Group + Health Model
+- [46](#s46) SLIs / SLOs
+
+**App Service (.NET web app — `app-amlab-*`)**
+- [3](#s3) Code-less App Insights
+- [22](#s22) Availability Tests
+- [13](#s13) Smart Detection
+- [18](#s18) Code Optimizations
+- [25](#s25) Change Analysis
+- [28](#s28) Custom TrackMetric
+- [29](#s29) Profiler + Snapshot
+- [33](#s33) Release annotations
+
+**AKS (`aks-amlab`)**
+- [4](#s4) Container Insights + Prom + Grafana
+- [14](#s14) OTel tracing AKS→App Service
+- [30](#s30) Node.js OTel
+- [31](#s31) Prom rule group
+- [32](#s32) Grafana alert rule
+
+**Azure VMs (Linux + Windows)**
+- [2](#s2) VM Insights cross-OS
+
+**VMSS (`vmss-amlab`)**
+- [19](#s19) Predictive autoscale
+
+**Networking (VNet + NSG)**
+- [34](#s34) Connection Monitor
+- [35](#s35) Flow Logs + Traffic Analytics
+- [50](#s50) Network Insights
+
+**Platform resources (Key Vault, Storage)**
+- [36](#s36) Key Vault + Storage Insights
+
+**Alerts & incident response**
+- [7](#s7) Alerts + Action Group
+- [12](#s12) AMBA
+- [17](#s17) Dynamic Thresholds
+- [23](#s23) Processing Rules
+- [15](#s15) Auto-mitigation
+- [8](#s8) Break the lab
+- [37](#s37) Nightly maintenance
+- [38](#s38) SIEM webhook
+
+**Cost & data routing**
+- [9](#s9) Daily caps
+- [11](#s11) DCR Transform
+- [20](#s20) Basic vs Analytics
+- [21](#s21) Summary Rules
+- [39](#s39) Data Export
+- [40](#s40) Diag fan-out
+- [41](#s41) LAW replication
+- [42](#s42) Cost workbook
+- [51](#s51) Platform logs at scale (DCR)
+- [52](#s52) Metrics Export (DCR)
+
+**Security**
+- [27](#s27) Granular RBAC
+- [43](#s43) Sentinel
+- [44](#s44) Search jobs + Restore
+- [47](#s47) Control-plane drift watch
+- [48](#s48) Privilege escalation watch
+- [49](#s49) Exfil early warning
+
+**AI / ML in Azure Monitor**
+- [16](#s16) Copilot
+- [13](#s13) Smart Detection
+- [17](#s17) Dynamic Thresholds
+- [18](#s18) Code Optimizations
+- [19](#s19) Predictive autoscale
+
+**GenAI observability (optional AI stage)**
+- [53](#s53) AI FinOps — token / trace / cost
+
+**Platform foundations**
+- [5](#s5) Policy auto-onboard
+- [6](#s6) Cross-workspace KQL
+- [24](#s24) Custom Logs Ingestion API
+- [26](#s26) KQL Functions
+- [51](#s51) Platform logs at scale (DCR)
 
 > **Suggested 25-min "by-workload" demos:** App Service → 3, 22, 28, 29, 33 · AKS → 4, 14, 30, 31 · Cost → 9, 11, 20, 39, 42 · Security → 27, 47, 48 · Workload health → 1 + 45 + 46.
 
