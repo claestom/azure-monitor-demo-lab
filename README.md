@@ -6,7 +6,17 @@ Built for **demos, microhacks, and hackathons**: deploy it into your own subscri
 
 ## Architecture
 
-Everything below lands in a **single resource group** (`rg-azure-monitor-lab`). Telemetry flows left-to-right: workloads emit signals, agents/policies collect them, the backplane stores them, and the consumption layer turns them into dashboards, alerts, and responses. An optional, off-by-default **GenAI workload** (Microsoft Foundry account + project, chat/embedding/optimization/**model-router** deployments, agents + traffic simulator) plugs into the same backbone — its token/trace/cost telemetry flows into Application Insights, drives token anomaly + spike alerts and an AI FinOps query pack + workbook, and folds an **AI tier** into the workload health model.
+Everything below lands in a **single resource group** (`rg-azure-monitor-lab`), with telemetry flowing left-to-right:
+
+1. **Workloads** emit signals.
+2. **Agents & policies** collect them.
+3. The **telemetry backplane** stores them.
+4. The **consumption layer** turns them into dashboards, alerts, and responses.
+
+An optional, off-by-default **GenAI workload** plugs into the same backbone:
+
+- **What it adds:** a Microsoft Foundry account + project, with chat / embedding / optimization / **model-router** deployments, plus agents and a traffic simulator.
+- **How it's observed:** token/trace/cost telemetry flows into Application Insights, drives token anomaly + spike alerts and an AI FinOps query pack + workbook, and folds an **AI tier** into the workload health model.
 
 [![Azure Monitor Demo Lab architecture - Azure-icon overview](docs/architecture-overview.svg)](docs/architecture.drawio)
 
