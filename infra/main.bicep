@@ -111,6 +111,11 @@ var metricsExportDcrName = 'dcr-${namePrefix}-metricsexport'
 // the gpt-5-* / model-router SKUs + Foundry portal + CloudHealth preview are region-limited.
 var aiLocation = 'swedencentral'
 
+// App Service is pinned to westeurope, independent of the lab region — the sponsored
+// lab subscriptions have no Basic (B1) App Service quota in northeurope, so the plan
+// would fail ARM preflight there. westeurope has unlimited Basic quota.
+var appServiceLocation = 'westeurope'
+
 var commonTags = {
   owner: ownerTag
   purpose: 'azure-monitor-demo-lab'
@@ -401,7 +406,7 @@ module appService 'modules/appservice.bicep' = {
   params: {
     planName: appPlanName
     webAppName: webAppName
-    location: location
+    location: appServiceLocation
     appInsightsConnectionString: appInsights.outputs.connectionString
     appInsightsInstrumentationKey: appInsights.outputs.instrumentationKey
     centralLawId: lawCentral.outputs.id

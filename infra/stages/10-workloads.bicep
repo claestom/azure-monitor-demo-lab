@@ -58,6 +58,11 @@ var commonTags = {
   costCenter: 'demo'
 }
 
+// App Service is pinned to westeurope, independent of the lab region — the sponsored
+// lab subscriptions have no Basic (B1) App Service quota in northeurope, so the plan
+// would fail ARM preflight there. westeurope has unlimited Basic quota.
+var appServiceLocation = 'westeurope'
+
 var workloadSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, 'snet-workload')
 
 resource lawCentral 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
@@ -156,7 +161,7 @@ module appService '../modules/appservice.bicep' = {
   params: {
     planName: appPlanName
     webAppName: webAppName
-    location: location
+    location: appServiceLocation
     appInsightsConnectionString: appInsights.properties.ConnectionString
     appInsightsInstrumentationKey: appInsights.properties.InstrumentationKey
     centralLawId: lawCentral.id

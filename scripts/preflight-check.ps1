@@ -78,6 +78,12 @@ function Add-Result($check, $detail, $status) {
 function Get-RegionToken($s) { if ($null -eq $s) { '' } else { ($s -replace '\s','').ToLowerInvariant() } }
 $locToken = Get-RegionToken $Location
 
+# App Service is pinned to westeurope by the templates (northeurope has no Basic quota
+# on the sponsored lab subs), so its availability + quota are validated against that
+# region, not the lab $Location.
+$appServiceLocation = 'westeurope'
+$appServiceLocToken = Get-RegionToken $appServiceLocation
+
 Write-Step "Pre-flight availability + quota check for region '$Location'"
 $sub = az account show --query "{name:name, id:id}" -o json | ConvertFrom-Json
 Write-Host "   Subscription: $($sub.name) ($($sub.id))" -ForegroundColor DarkGray
@@ -215,11 +221,14 @@ foreach ($t in $paasTypes) {
     Add-Result "$($t.Label)" "$($t.Ns)/$($t.Type): no region list (global or provider not registered) — skipped" 'WARN'
     continue
   }
+  # App Service is pinned to westeurope, so validate it against that region.
+  $checkLoc = if ($t.Ns -eq 'Microsoft.Web') { $appServiceLocation } else { $Location }
+  $checkTok = if ($t.Ns -eq 'Microsoft.Web') { $appServiceLocToken } else { $locToken }
   $tokens = @($locs | ForEach-Object { Get-RegionToken $_ })
-  if ($tokens -contains $locToken) {
-    Add-Result "$($t.Label)" "available in $Location" 'PASS'
+  if ($tokens -contains $checkTok) {
+    Add-Result "$($t.Label)" "available in $checkLoc" 'PASS'
   } else {
-    Add-Result "$($t.Label)" "$($t.Ns)/$($t.Type) NOT available in $Location — pick a supported region" 'FAIL'
+    Add-Result "$($t.Label)" "$($t.Ns)/$($t.Type) NOT available in $checkLoc — pick a supported region" 'FAIL'
   }
 }
 
@@ -232,15 +241,15 @@ foreach ($t in $paasTypes) {
 #     tell those apart, we WARN (not FAIL) here and let ARM's fast preflight validation at
 #     deploy time be the authoritative gate (deploy.ps1 hard-fails in seconds with guidance).
 # ---------------------------------------------------------------------------
-Write-Step "Checking App Service Plan quota ($AppServicePlanTier tier, advisory)"
+Write-Step "Checking App Service Plan quota ($AppServicePlanTier tier in $appServiceLocation, advisory)"
 $webUsageJson = az rest --method get `
-  --url "https://management.azure.com/subscriptions/$($sub.id)/providers/Microsoft.Web/locations/$Location/usages?api-version=2023-12-01" `
+  --url "https://management.azure.com/subscriptions/$($sub.id)/providers/Microsoft.Web/locations/$appServiceLocation/usages?api-version=2023-12-01" `
   -o json 2>$null
 if ($webUsageJson) {
   $webUsage = ($webUsageJson | ConvertFrom-Json).value
   $tierUsage = $webUsage | Where-Object { $_.name.localizedValue -eq $AppServicePlanTier } | Select-Object -First 1
   if ($null -eq $tierUsage) {
-    Add-Result "App Service quota" "$AppServicePlanTier-tier quota not reported for $Location — verify manually" 'WARN'
+    Add-Result "App Service quota" "$AppServicePlanTier-tier quota not reported for $appServiceLocation — verify manually" 'WARN'
   } else {
     $webLimit = [int]$tierUsage.limit
     if ($webLimit -lt 0) {
@@ -257,7 +266,7 @@ if ($webUsageJson) {
     }
   }
 } else {
-  Add-Result "App Service quota" "could not query Microsoft.Web usages for $Location — verify manually" 'WARN'
+  Add-Result "App Service quota" "could not query Microsoft.Web usages for $appServiceLocation — verify manually" 'WARN'
 }
 
 # ---------------------------------------------------------------------------

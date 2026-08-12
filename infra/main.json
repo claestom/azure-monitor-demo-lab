@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "15722320980127543990"
+      "templateHash": "5663763513880133572"
     }
   },
   "parameters": {
@@ -188,6 +188,7 @@
     "platformLogsDcrName": "[format('dcr-{0}-platformlogs', parameters('namePrefix'))]",
     "metricsExportDcrName": "[format('dcr-{0}-metricsexport', parameters('namePrefix'))]",
     "aiLocation": "swedencentral",
+    "appServiceLocation": "westeurope",
     "commonTags": {
       "owner": "[parameters('ownerTag')]",
       "purpose": "azure-monitor-demo-lab",
@@ -2577,7 +2578,7 @@
             "value": "[variables('webAppName')]"
           },
           "location": {
-            "value": "[parameters('location')]"
+            "value": "[variables('appServiceLocation')]"
           },
           "appInsightsConnectionString": {
             "value": "[reference('appInsights').outputs.connectionString.value]"

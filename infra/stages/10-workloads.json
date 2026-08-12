@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "9182743583887725808"
+      "templateHash": "15882601043407706591"
     }
   },
   "parameters": {
@@ -105,6 +105,7 @@
       "purpose": "azure-monitor-demo-lab",
       "costCenter": "demo"
     },
+    "appServiceLocation": "westeurope",
     "workloadSubnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), 'snet-workload')]"
   },
   "resources": [
@@ -1051,7 +1052,7 @@
             "value": "[variables('webAppName')]"
           },
           "location": {
-            "value": "[parameters('location')]"
+            "value": "[variables('appServiceLocation')]"
           },
           "appInsightsConnectionString": {
             "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"

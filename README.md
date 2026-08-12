@@ -37,7 +37,7 @@ An optional, off-by-default **GenAI workload** plugs into the same backbone:
 
 ## Deploy
 
-> **Recommended region:** `northeurope` (the default) for the widest feature availability. The Health Model preview and the optional **GenAI / AI stage** (Microsoft Foundry + models) are pinned to `swedencentral` automatically, since they aren't available in `northeurope` — everything else follows the region you pick.
+> **Recommended region:** `northeurope` (the default) for the widest feature availability. Three things auto-pin to their own region regardless of what you pick: the **Health Model** preview and the optional **GenAI / AI stage** (Microsoft Foundry + models) to `swedencentral` (not available in `northeurope`), and the **App Service** to `westeurope` (the sponsored lab subs have no Basic App Service quota in `northeurope`). Everything else follows the region you pick.
 
 ### Option 1 - Deploy to Azure (portal, no local setup)
 
