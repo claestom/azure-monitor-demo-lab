@@ -10,6 +10,9 @@ param aksId string
 @description('Web App resource ID.')
 param webAppId string
 
+@description('Region of the Web App / App Service Plan (metric alert targetResourceRegion must match the target).')
+param webAppRegion string = location
+
 @description('App Insights resource ID.')
 param appInsightsId string
 
@@ -73,7 +76,7 @@ resource alertWebApp5xx 'Microsoft.Insights/metricAlerts@2018-03-01' = {
     enabled: true
     scopes: [ webAppId ]
     targetResourceType: 'Microsoft.Web/sites'
-    targetResourceRegion: location
+    targetResourceRegion: webAppRegion
     evaluationFrequency: 'PT1M'
     windowSize: 'PT5M'
     criteria: {

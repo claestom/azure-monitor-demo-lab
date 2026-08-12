@@ -23,6 +23,9 @@ param aksId string
 @description('App Service Plan resource ID.')
 param appPlanId string
 
+@description('Region of the Web App / App Service Plan (metric alert targetResourceRegion must match the target).')
+param webAppRegion string = location
+
 @description('Region (for log-query / multi-resource metric alerts).')
 param location string
 
@@ -107,7 +110,7 @@ resource amba_app_resptime 'Microsoft.Insights/metricAlerts@2018-03-01' = {
     enabled: true
     scopes: [ webAppId ]
     targetResourceType: 'Microsoft.Web/sites'
-    targetResourceRegion: location
+    targetResourceRegion: webAppRegion
     evaluationFrequency: 'PT1M'
     windowSize: 'PT5M'
     criteria: {
@@ -138,7 +141,7 @@ resource amba_app_4xx 'Microsoft.Insights/metricAlerts@2018-03-01' = {
     enabled: true
     scopes: [ webAppId ]
     targetResourceType: 'Microsoft.Web/sites'
-    targetResourceRegion: location
+    targetResourceRegion: webAppRegion
     evaluationFrequency: 'PT5M'
     windowSize: 'PT5M'
     criteria: {
@@ -169,7 +172,7 @@ resource amba_plan_cpu 'Microsoft.Insights/metricAlerts@2018-03-01' = {
     enabled: true
     scopes: [ appPlanId ]
     targetResourceType: 'Microsoft.Web/serverfarms'
-    targetResourceRegion: location
+    targetResourceRegion: webAppRegion
     evaluationFrequency: 'PT1M'
     windowSize: 'PT10M'
     criteria: {
@@ -200,7 +203,7 @@ resource amba_plan_mem 'Microsoft.Insights/metricAlerts@2018-03-01' = {
     enabled: true
     scopes: [ appPlanId ]
     targetResourceType: 'Microsoft.Web/serverfarms'
-    targetResourceRegion: location
+    targetResourceRegion: webAppRegion
     evaluationFrequency: 'PT1M'
     windowSize: 'PT10M'
     criteria: {

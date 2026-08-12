@@ -470,6 +470,7 @@ module alerts 'modules/alerts.bicep' = {
     actionGroupId: actionGroup.outputs.id
     aksId: aks.outputs.id
     webAppId: appService.outputs.webAppId
+    webAppRegion: appServiceLocation
     appInsightsId: appInsights.outputs.id
     linuxVmId: deployLinuxVm ? vmLinux!.outputs.vmId : ''
     windowsVmId: deployWindowsVm ? vmWindows!.outputs.vmId : ''
@@ -492,6 +493,7 @@ module amba 'modules/amba.bicep' = {
     webAppId: appService.outputs.webAppId
     aksId: aks.outputs.id
     appPlanId: appService.outputs.planId
+    webAppRegion: appServiceLocation
     tags: commonTags
   }
 }

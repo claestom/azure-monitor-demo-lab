@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "948536546256626177"
+      "templateHash": "5817157799534368799"
     }
   },
   "parameters": {
@@ -3407,6 +3407,9 @@
           "webAppId": {
             "value": "[reference('appService').outputs.webAppId.value]"
           },
+          "webAppRegion": {
+            "value": "[variables('appServiceLocation')]"
+          },
           "appInsightsId": {
             "value": "[reference('appInsights').outputs.id.value]"
           },
@@ -3423,7 +3426,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "6796254641340571856"
+              "templateHash": "14373381281535683708"
             }
           },
           "parameters": {
@@ -3449,6 +3452,13 @@
               "type": "string",
               "metadata": {
                 "description": "Web App resource ID."
+              }
+            },
+            "webAppRegion": {
+              "type": "string",
+              "defaultValue": "[parameters('location')]",
+              "metadata": {
+                "description": "Region of the Web App / App Service Plan (metric alert targetResourceRegion must match the target)."
               }
             },
             "appInsightsId": {
@@ -3534,7 +3544,7 @@
                   "[parameters('webAppId')]"
                 ],
                 "targetResourceType": "Microsoft.Web/sites",
-                "targetResourceRegion": "[parameters('location')]",
+                "targetResourceRegion": "[parameters('webAppRegion')]",
                 "evaluationFrequency": "PT1M",
                 "windowSize": "PT5M",
                 "criteria": {
@@ -3710,6 +3720,9 @@
           "appPlanId": {
             "value": "[reference('appService').outputs.planId.value]"
           },
+          "webAppRegion": {
+            "value": "[variables('appServiceLocation')]"
+          },
           "tags": {
             "value": "[variables('commonTags')]"
           }
@@ -3721,7 +3734,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "14788737389900725275"
+              "templateHash": "1605887819057981622"
             }
           },
           "parameters": {
@@ -3754,6 +3767,13 @@
               "type": "string",
               "metadata": {
                 "description": "App Service Plan resource ID."
+              }
+            },
+            "webAppRegion": {
+              "type": "string",
+              "defaultValue": "[parameters('location')]",
+              "metadata": {
+                "description": "Region of the Web App / App Service Plan (metric alert targetResourceRegion must match the target)."
               }
             },
             "location": {
@@ -3864,7 +3884,7 @@
                   "[parameters('webAppId')]"
                 ],
                 "targetResourceType": "Microsoft.Web/sites",
-                "targetResourceRegion": "[parameters('location')]",
+                "targetResourceRegion": "[parameters('webAppRegion')]",
                 "evaluationFrequency": "PT1M",
                 "windowSize": "PT5M",
                 "criteria": {
@@ -3902,7 +3922,7 @@
                   "[parameters('webAppId')]"
                 ],
                 "targetResourceType": "Microsoft.Web/sites",
-                "targetResourceRegion": "[parameters('location')]",
+                "targetResourceRegion": "[parameters('webAppRegion')]",
                 "evaluationFrequency": "PT5M",
                 "windowSize": "PT5M",
                 "criteria": {
@@ -3940,7 +3960,7 @@
                   "[parameters('appPlanId')]"
                 ],
                 "targetResourceType": "Microsoft.Web/serverfarms",
-                "targetResourceRegion": "[parameters('location')]",
+                "targetResourceRegion": "[parameters('webAppRegion')]",
                 "evaluationFrequency": "PT1M",
                 "windowSize": "PT10M",
                 "criteria": {
@@ -3978,7 +3998,7 @@
                   "[parameters('appPlanId')]"
                 ],
                 "targetResourceType": "Microsoft.Web/serverfarms",
-                "targetResourceRegion": "[parameters('location')]",
+                "targetResourceRegion": "[parameters('webAppRegion')]",
                 "evaluationFrequency": "PT1M",
                 "windowSize": "PT10M",
                 "criteria": {

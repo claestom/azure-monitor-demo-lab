@@ -49,6 +49,10 @@ var commonTags = {
   costCenter: 'demo'
 }
 
+// App Service (Stage B) is pinned to westeurope; metric alerts targeting the web app /
+// plan must declare that region as targetResourceRegion.
+var appServiceLocation = 'westeurope'
+
 var workloadSubnetId = resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, 'snet-workload')
 
 resource lawCentral 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
@@ -106,6 +110,7 @@ module alerts '../modules/alerts.bicep' = {
     actionGroupId: actionGroup.outputs.id
     aksId: aks.id
     webAppId: webApp.id
+    webAppRegion: appServiceLocation
     appInsightsId: appInsights.id
     linuxVmId: deployLinuxVm ? vmLinux.id : ''
     windowsVmId: deployWindowsVm ? vmWindows.id : ''
@@ -122,6 +127,7 @@ module amba '../modules/amba.bicep' = {
     aksId: aks.id
     appPlanId: appPlan.id
     location: location
+    webAppRegion: appServiceLocation
     tags: commonTags
   }
 }
