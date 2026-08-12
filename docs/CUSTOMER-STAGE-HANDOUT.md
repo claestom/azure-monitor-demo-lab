@@ -4,7 +4,7 @@ This one-pager helps customers decide how far to go in a workshop or pilot.
 
 ## Assumptions
 
-- Region: Sweden Central
+- Region: North Europe (App Service pins to West Europe; optional AI stage + Health Model pin to Sweden Central)
 - Pricing basis: list price guidance from this lab's README
 - Cost values are directional ranges, not quotes
 - Monthly impact assumes resources are left running 24/7

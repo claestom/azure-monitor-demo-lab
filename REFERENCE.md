@@ -267,14 +267,14 @@ azure-monitor-demo-lab/
 │   │   ├─ 30-security-posture.bicep← Sentinel · security alerts · security workbook
 │   │   ├─ 40-optional-advanced.bicep ← Connection Monitor · flow logs · data export · etc.
 │   │   └─ 50-ai.bicep              ← (optional) Foundry GenAI workload · token alerts · AI FinOps observability
-│   └─ modules/                     ← 40 reusable Bicep modules
+│   └─ modules/                     ← 40+ reusable Bicep modules (incl. the optional AI stage)
 │       ├─ law.bicep · appinsights.bicep · azure-monitor-workspace.bicep
 │       ├─ network.bicep · vm-linux.bicep · vm-windows.bicep · vmss.bicep · aks.bicep
 │       ├─ grafana.bicep · appservice.bicep · availability-test.bicep
 │       ├─ actiongroup.bicep · alerts.bicep · alert-processing-rules.bicep
 │       ├─ amba.bicep · health-alerts.bicep · automitigation-logicapp.bicep
 │       ├─ policy-diagnostics.bicep · saved-queries.bicep · kql-functions.bicep
-│       ├─ workbook.bicep · cost-workbook.bicep · security-workbook.bicep
+│       ├─ workbook.bicep · cost-workbook.bicep · security-workbook.bicep  ← security-workbook is WIP (untracked)
 │       ├─ summary-rules.bicep · prometheus-rules.bicep · dcr-workspace-transforms.bicep
 │       ├─ custom-logs.bicep · data-export.bicep · connection-monitor.bicep · flow-logs.bicep
 │       ├─ storage-account.bicep · eventhub.bicep · keyvault.bicep

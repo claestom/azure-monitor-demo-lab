@@ -4,7 +4,7 @@
 **Subscription:** `<your-subscription-name>` (`<your-subscription-id>`)
 **Tenant:** `<your-tenant-id>`
 **Resource Group:** `rg-azure-monitor-lab`
-**Region:** Sweden Central
+**Region:** North Europe (App Service pinned to West Europe; optional AI stage + Health Model pinned to Sweden Central)
 
 ---
 
@@ -13,8 +13,8 @@
 | Resource | Name / URL |
 |---|---|
 | Resource group | `rg-azure-monitor-lab` |
-| Central Log Analytics workspace | `law-amlab-central` |
-| App Insights LAW | `law-amlab-appinsights` |
+| Central Log Analytics workspace | `law-amlab-central-<suffix>` |
+| App Insights LAW | `law-amlab-appinsights-<suffix>` |
 | Application Insights | `appi-amlab` |
 | Azure Monitor Workspace (Managed Prometheus) | `amw-amlab` |
 | Data Collection Endpoint | `dce-amlab` |
@@ -25,10 +25,13 @@
 | Windows VM (Win 2022) | `vmwin<suffix>` |
 | AKS cluster | `aks-amlab` (2 × Standard_B2s, K8s 1.34) |
 | Azure Managed Grafana | https://amg-amlab-<suffix>.cse.grafana.azure.com |
-| App Service (Linux B1) | https://app-amlab-<suffix>.azurewebsites.net |
+| App Service (Linux B1, **West Europe**) | https://app-amlab-<suffix>.azurewebsites.net |
+| App Service diag sinks (**West Europe**) | `stapp-amlab<suffix>` (archive) · `evhns-amlab-<suffix>` (stream) |
 | AKS frontend (LoadBalancer) | http://<public-ip> |
 | Action Group | `ag-amlab-email` → `<your-alert-email>` |
 | Workbook | **Azure Monitor Demo Lab — Traffic Lights** |
+
+> **Optional AI stage** (off by default) adds, in **Sweden Central**: a Microsoft Foundry account `ai<amlab><suffix>` + project `amlab-ai-proj`, `gpt-5-mini` / `text-embedding-3-small` / `gpt-5.4` / `model-router` deployments, `gen_ai.*` App Insights tracing, token anomaly + spike alerts, an AI FinOps query pack + workbook, and an AI tier in the workload health model.
 
 ### Endpoints on the App Service (.NET 8 minimal API)
 

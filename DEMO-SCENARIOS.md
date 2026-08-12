@@ -2,7 +2,7 @@
 
 A curated set of demo scenarios you can run with this lab. Each one has a **story**, a **click-path / commands**, and **what to point at** so the audience walks away with the value.
 
-> **Active subscription:** `<your-subscription-name>` (`<your-subscription-id>`) · **RG:** `rg-azure-monitor-lab` · **Region:** Sweden Central
+> **Active subscription:** `<your-subscription-name>` (`<your-subscription-id>`) · **RG:** `rg-azure-monitor-lab` · **Region:** North Europe (App Service pins to West Europe; optional AI stage + Health Model pin to Sweden Central)
 
 ---
 
