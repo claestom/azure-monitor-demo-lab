@@ -75,6 +75,7 @@ cd azure-monitor-demo-lab
 # 2. Copy the template and fill in subscriptionId, tenantId, alertEmail, vmAdminPassword, ...
 Copy-Item lab.config.json.example lab.config.json
 notepad lab.config.json
+#    → edit the values, then save the file (Ctrl+S) and close Notepad before continuing
 
 # 3. Deploy (deploy.ps1 calls sync-config.ps1 for you)
 ./scripts/deploy.ps1
