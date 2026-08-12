@@ -1,6 +1,11 @@
 # Azure Monitor Demo Lab
 
-A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for progressive enablement), and **53 demo scenarios** - all driven from a single, gitignored config file.
+A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack — everything driven from a single, gitignored config file:
+
+- **One resource group** — the whole lab lands in `rg-azure-monitor-lab`.
+- **Two IaC paths** — deploy with Bicep or Terraform.
+- **Two delivery modes** — **one-shot** for internal demos, or a **5-stage workshop** for progressive enablement.
+- **53 demo scenarios** — end-to-end coverage of Azure Monitor and Sentinel.
 
 Built for **demos, microhacks, and hackathons**: deploy it into your own subscription, explore Azure Monitor end-to-end, break it, restore it, and tear it down.
 
