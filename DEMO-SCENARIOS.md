@@ -24,6 +24,7 @@ Pick a workload (or theme) and run only those scenarios. Each row links to the n
 | 💰 **Cost & data routing** | [9](#s9) Daily caps · [11](#s11) DCR Transform · [20](#s20) Basic vs Analytics · [21](#s21) Summary Rules · ⭐[39](#s39) Data Export · ⭐[40](#s40) Diag fan-out · ⭐[41](#s41) LAW replication · ⭐[42](#s42) Cost workbook · ⭐[51](#s51) Platform logs at scale (DCR) · ⭐[52](#s52) Metrics Export (DCR) |
 | 🔐 **Security** | [27](#s27) Granular RBAC · ⭐[43](#s43) Sentinel · ⭐[44](#s44) Search jobs + Restore · ⭐[47](#s47) Control-plane drift watch · ⭐[48](#s48) Privilege escalation watch · ⭐[49](#s49) Exfil early warning |
 | 🧠 **AI / ML in Azure Monitor** | [16](#s16) Copilot · [13](#s13) Smart Detection · [17](#s17) Dynamic Thresholds · [18](#s18) Code Optimizations · [19](#s19) Predictive autoscale |
+| 🤖 **GenAI observability (optional AI stage)** | ⭐[53](#s53) AI FinOps — token / trace / cost |
 | 🛠️ **Platform foundations** | [5](#s5) Policy auto-onboard · [6](#s6) Cross-workspace KQL · [24](#s24) Custom Logs Ingestion API · [26](#s26) KQL Functions · ⭐[51](#s51) Platform logs at scale (DCR) |
 
 > **Suggested 25-min "by-workload" demos:** App Service → 3, 22, 28, 29, 33 · AKS → 4, 14, 30, 31 · Cost → 9, 11, 20, 39, 42 · Security → 27, 47, 48 · Workload health → 1 + 45 + 46.
@@ -2406,6 +2407,46 @@ The export DCR ships as code but **off by default** — the DCR and the central 
 
 ---
 
+<a id="s53"></a>
+## 53 · 🤖 AI FinOps — GenAI token / trace / cost observability (optional AI stage)
+
+**Audience:** FinOps, AI platform teams, architects putting GenAI into production.
+**Time:** 5 min.
+
+> **Requires the optional AI stage** — off by default (it deploys billable models pinned to `swedencentral`). Enable `stageToggles.enableStageAI` (Bicep) / `enable_stage_ai` (Terraform), deploy, then run `./scripts/setup-ai.ps1` to create the demo agents and simulate traffic.
+
+### Story
+Every other scenario watches infra/platform telemetry. This one points the **exact same Azure Monitor stack** at **AI spend**. A Microsoft Foundry workload runs four agents against `gpt-5-mini`, `text-embedding-3-small`, `gpt-5.4`, and a **model-router**; their OpenTelemetry GenAI spans land in the lab's Application Insights as `gen_ai.*` dependencies. From those token counts the lab derives **estimated cost**, charts it by agent, guards it with alerts, and rolls it into the workload health model — treating tokens as just another signal to query, visualize, alert on, and reason about.
+
+### What's deployed
+
+| Object | Value |
+|---|---|
+| Foundry workload | `ai<amlab><suffix>` AI Services account + `amlab-ai-proj` project (swedencentral) |
+| Model deployments | `gpt-5-mini` · `text-embedding-3-small` · `gpt-5.4` · **`model-router`** (all GlobalStandard) |
+| Tracing | Project → `appi-amlab` connection → `gen_ai.*` spans in the App Insights LAW |
+| Query pack | `qp-ai-finops` — 14 GenAI KQL queries (token usage, est. cost by agent, cached ratio, router mix, PTU break-even) |
+| Workbook | **"AI FinOps — Foundry Agents"** (Monitor → Workbooks → Shared) |
+| Alerts | `alert-amlab-token-anomaly` (dynamic threshold) + `alert-amlab-token-spike` (static ceiling) on `TotalTokens` |
+| Health tier | An **AI tier** folded into `hm-amlab-workload` — `aiworkload` → Foundry account + 4 agent entities (error-rate + est-cost signals) |
+
+### Click-path
+
+1. **Foundry portal (`ai.azure.com`) → project `amlab-ai-proj` → Observability / Tracing** — show agent runs + token consumption per model from the simulated conversations.
+2. **`appi-amlab` → Logs → Queries** — run *Estimated cost by agent* and *Model router routed-model distribution* from the `qp-ai-finops` pack.
+3. **model-router is the cost lever** — the router query shows easy prompts routed to a cheap model, hard prompts to a strong one (surfaced as `gen_ai.response.model`). Even a modest routing rate compounds into real savings.
+4. **Prompt caching is free money** — the `Context-Rich Assistant` uses a >1024-token static system prompt, so repeated calls hit the prompt cache; open *Cached-input token ratio* to show cached input billed at a steep discount.
+5. **Monitor → Workbooks → "AI FinOps — Foundry Agents"** — token/cost tiles, cost-share pie, PTU break-even.
+6. **Monitor → Alerts** — `alert-amlab-token-anomaly` + `alert-amlab-token-spike`. Trigger live by running the simulator hot: `python workloads/ai/simulate_traffic.py --conversations 100 --interval 5`.
+7. **Monitor → Health models → `hm-amlab-workload`** *(preview)* — the **AI** tier rolls up next to frontend/compute/platform; a cost breach alone turns an agent Unhealthy.
+
+### Killer line
+> *"Tokens are the new unit of cloud cost — and they're just another signal. Same workspace, same KQL, same alerts, same health model your infra already uses, now pointed at GenAI spend: routed-model savings, cached-token discounts, and a hard token ceiling before the bill surprises you."*
+
+**Reference:** [docs/STAGE-AI.md](docs/STAGE-AI.md)
+
+---
+
 ## Updated demo flow (≈50 min)
 
 | Min | Scenario |
@@ -2445,7 +2486,7 @@ The export DCR ships as code but **off by default** — the DCR and the central 
 | **Infra ops (VM + network)** | 2 → 50 → 34 → 35 → 7 → 12 → 15 |
 | **FinOps** | 9 → 11 → 20 → 21 → 39 → 42 → 51 → 52 |
 | **SecOps** | 27 → 47 → 48 → 49 → 44 |
-| **AI/ML curious** | 16 → 13 → 17 → 18 → 19 |
+| **AI/ML curious** | 16 → 13 → 17 → 18 → 19 → ⭐53 |
 | **Workload owners / SRE leads** | 1 → 45 → 12 → 7 → 8 (Root entity flips Unhealthy) |
 
 ## Reset between demos

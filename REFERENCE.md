@@ -2,7 +2,7 @@
 
 > 👈 **New here? Start with the [README](README.md).** This is the deep-dive reference: full capability matrix, every deployed resource, the demo walkthrough, cost breakdown, folder layout, optional add-ons, and troubleshooting.
 
-A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for customer-facing progressive enablement), 52 demo scenarios — all driven from one central config file.
+A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for customer-facing progressive enablement), 53 demo scenarios — all driven from one central config file.
 
 ## Capabilities
 
@@ -301,7 +301,7 @@ azure-monitor-demo-lab/
 
 ## Ideas to extend beyond current scope
 
-The lab covers 52 scenarios out of the box; here are well-scoped follow-ups for deeper sessions:
+The lab covers 53 scenarios out of the box; here are well-scoped follow-ups for deeper sessions:
 
 - **Multi-region DR drill** — pair the central LAW with a paired region (the `enableLawReplication` parameter wires this up) and walk alert + workbook continuity during a regional outage.
 - **Cross-subscription workbook rollup** — clone the Traffic Lights workbook into a management-group-scoped variant.
