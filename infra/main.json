@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "5817157799534368799"
+      "templateHash": "9424153599125831604"
     }
   },
   "parameters": {
@@ -351,12 +351,6 @@
         "vmLinux",
         "vmWindows"
       ]
-    },
-    "lawCentralExisting": {
-      "existing": true,
-      "type": "Microsoft.OperationalInsights/workspaces",
-      "apiVersion": "2023-09-01",
-      "name": "[variables('lawCentralName')]"
     },
     "lawCentral": {
       "type": "Microsoft.Resources/deployments",
@@ -6465,7 +6459,7 @@
             "value": "[parameters('location')]"
           },
           "centralLawCustomerId": {
-            "value": "[reference('lawCentralExisting').customerId]"
+            "value": "[reference('lawCentral').outputs.customerId.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -6591,7 +6585,6 @@
       "dependsOn": [
         "connectionMonitor",
         "lawCentral",
-        "lawCentralExisting",
         "network",
         "storageAccount"
       ]

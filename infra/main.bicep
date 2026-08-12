@@ -709,10 +709,6 @@ module connectionMonitor 'modules/connection-monitor.bicep' = {
 // VNet Flow Logs + Traffic Analytics (raw to storage, enriched to central LAW)
 // Flow logs are children of the Network Watcher, so this also deploys to NetworkWatcherRG.
 // ---------------------------------------------------------------------------------
-resource lawCentralExisting 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
-  name: lawCentralName
-}
-
 module flowLogs 'modules/flow-logs.bicep' = {
   name: 'flow-logs'
   scope: resourceGroup('NetworkWatcherRG')
@@ -724,7 +720,10 @@ module flowLogs 'modules/flow-logs.bicep' = {
     storageAccountId: storageAccount.outputs.id
     centralLawId: lawCentral.outputs.id
     centralLawRegion: location
-    centralLawCustomerId: lawCentralExisting.properties.customerId
+    // Read customerId via the module output (not a separate `existing` reference) so the
+    // cross-RG flow-logs deployment has a hard dependency on the LAW being fully created —
+    // the `existing` reference was intermittently ResourceNotFound at preflight.
+    centralLawCustomerId: lawCentral.outputs.customerId
     tags: commonTags
   }
 }
