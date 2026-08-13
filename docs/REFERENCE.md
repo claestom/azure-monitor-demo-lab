@@ -1,6 +1,6 @@
 # Azure Monitor Demo Lab — Full reference
 
-> 👈 **New here? Start with the [README](README.md).** This is the deep-dive reference: full capability matrix, every deployed resource, the demo walkthrough, cost breakdown, folder layout, optional add-ons, and troubleshooting.
+> 👈 **New here? Start with the [README](../README.md).** This is the deep-dive reference: full capability matrix, every deployed resource, the demo walkthrough, cost breakdown, folder layout, optional add-ons, and troubleshooting.
 
 A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for customer-facing progressive enablement), 53 demo scenarios — all driven from one central config file.
 
@@ -27,7 +27,7 @@ A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel*
 | **Microsoft Sentinel** | Sentinel onboarded on the central LAW with security-posture alert rules + dedicated *Security* workbook. Demo queries for control-plane drift, privilege escalation, exfil early warning. | [docs](https://learn.microsoft.com/en-us/azure/sentinel/overview) |
 | **Granular RBAC** | 3 service principals scoped at workspace / table / row level (`setup-rbac-demo.ps1` + `demo-granular-rbac.ps1`). | [docs](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/manage-access) |
 | **Service Groups + Health Models (preview)** | `setup-health-model.ps1` provisions an Azure **Service Group** and links the RG. SLI/SLO scaffolding in `setup-slis.ps1`. | [docs](https://learn.microsoft.com/en-us/azure/azure-monitor/health-model) |
-| **GenAI observability (optional AI stage)** | Off-by-default Microsoft **Foundry** workload (account + project pinned to swedencentral) with chat / embedding / optimization / **model-router** deployments; OpenTelemetry `gen_ai.*` tracing into App Insights; **token anomaly + spike** alerts; an **AI FinOps** query pack + workbook; an AI tier folded into the workload health model; demo agents + traffic via `setup-ai.ps1`. | [docs](https://learn.microsoft.com/en-us/azure/ai-foundry/concepts/trace) · [stage](docs/STAGE-AI.md) |
+| **GenAI observability (optional AI stage)** | Off-by-default Microsoft **Foundry** workload (account + project pinned to swedencentral) with chat / embedding / optimization / **model-router** deployments; OpenTelemetry `gen_ai.*` tracing into App Insights; **token anomaly + spike** alerts; an **AI FinOps** query pack + workbook; an AI tier folded into the workload health model; demo agents + traffic via `setup-ai.ps1`. | [docs](https://learn.microsoft.com/en-us/azure/ai-foundry/concepts/trace) · [stage](STAGE-AI.md) |
 | **"Break the lab" + "Start the lab"** | Scripted incident injection (`break-the-lab.ps1`, `start-the-lab.ps1`, `start-ramp.ps1`) + one-shot restore (`restore-the-lab.ps1`). | — |
 
 ---
@@ -82,7 +82,7 @@ rg-azure-monitor-lab/
 
 > **Opt-in (default off):** `dcr-amlab-platformlogs` (platform-logs DCR, preview) and `dcr-amlab-metricsexport` (metrics-export DCR, GA) — enable via `enablePlatformLogsDcr` / `enableMetricsExportDcr` (Bicep) or `enable_platform_logs_dcr` / `enable_metrics_export_dcr` (Terraform).
 
-> **Optional AI stage (default off, billable):** a Microsoft **Foundry** account + project (pinned to `swedencentral`) with `gpt-5-mini` / `text-embedding-3-small` / `gpt-5.4` / **`model-router`** deployments, App Insights `gen_ai.*` tracing, **token anomaly + spike** alerts, an **AI FinOps** query pack + workbook, and an AI tier folded into the workload health model. Enable via `enableStageAI` (Bicep) / `enable_stage_ai` (Terraform), then run `scripts/setup-ai.ps1`. See [docs/STAGE-AI.md](docs/STAGE-AI.md).
+> **Optional AI stage (default off, billable):** a Microsoft **Foundry** account + project (pinned to `swedencentral`) with `gpt-5-mini` / `text-embedding-3-small` / `gpt-5.4` / **`model-router`** deployments, App Insights `gen_ai.*` tracing, **token anomaly + spike** alerts, an **AI FinOps** query pack + workbook, and an AI tier folded into the workload health model. Enable via `enableStageAI` (Bicep) / `enable_stage_ai` (Terraform), then run `scripts/setup-ai.ps1`. See [STAGE-AI.md](STAGE-AI.md).
 
 > **Region pinning:** the **App Service** (plan + site) and its diagnostic sinks (dedicated storage + Event Hub) are pinned to **`westeurope`**; the **Health Model** preview and the **AI stage** are pinned to **`swedencentral`**. Everything else follows the lab region (default `northeurope`).
 
@@ -167,10 +167,10 @@ Same lab, broken into 5 progressive stages so you can pause for discussion after
 
 Walk-through docs:
 
-- Bicep staged tutorial → [docs/DEPLOY-BICEP-STEP-BY-STEP.md](docs/DEPLOY-BICEP-STEP-BY-STEP.md)
-- Terraform staged tutorial → [docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md)
-- Per-stage speaker notes → [STAGE-A](docs/STAGE-A-FOUNDATION.md) · [STAGE-B](docs/STAGE-B-WORKLOADS.md) · [STAGE-C](docs/STAGE-C-ALERTING.md) · [STAGE-D](docs/STAGE-D-SECURITY-POSTURE.md) · [STAGE-E](docs/STAGE-E-OPTIONAL-ADVANCED.md)
-- Customer handout (time + cost cheat sheet) → [docs/CUSTOMER-STAGE-HANDOUT.md](docs/CUSTOMER-STAGE-HANDOUT.md)
+- Bicep staged tutorial → [DEPLOY-BICEP-STEP-BY-STEP.md](DEPLOY-BICEP-STEP-BY-STEP.md)
+- Terraform staged tutorial → [DEPLOY-TERRAFORM-STEP-BY-STEP.md](DEPLOY-TERRAFORM-STEP-BY-STEP.md)
+- Per-stage speaker notes → [STAGE-A](STAGE-A-FOUNDATION.md) · [STAGE-B](STAGE-B-WORKLOADS.md) · [STAGE-C](STAGE-C-ALERTING.md) · [STAGE-D](STAGE-D-SECURITY-POSTURE.md) · [STAGE-E](STAGE-E-OPTIONAL-ADVANCED.md)
+- Customer handout (time + cost cheat sheet) → [CUSTOMER-STAGE-HANDOUT.md](CUSTOMER-STAGE-HANDOUT.md)
 
 > Stage A is mandatory; B/C/D/E layer on top, and **AI** is a fully optional, off-by-default add-on (depends only on Stage A). Both IaC paths (Bicep and Terraform) keep identical stage boundaries.
 
@@ -250,8 +250,10 @@ Deletes the whole RG (background, no-wait). Sub-scope items: there are none — 
 ```
 azure-monitor-demo-lab/
 ├─ lab.config.json.example          ← Copy → lab.config.json (gitignored), fill in real values
-├─ README.md · DEMO-SCENARIOS.md · DEPLOYMENT-SUMMARY.md
+├─ README.md
+├─ .github/                         ← CODE_OF_CONDUCT · CONTRIBUTING · SECURITY · workflows
 ├─ docs/
+│   ├─ REFERENCE.md · DEMO-SCENARIOS.md · DEPLOYMENT-SUMMARY.md
 │   ├─ architecture.drawio          ← Editable architecture diagram
 │   ├─ CUSTOMER-STAGE-HANDOUT.md    ← Per-stage time + cost cheat sheet
 │   ├─ DEPLOY-BICEP-STEP-BY-STEP.md
@@ -350,4 +352,4 @@ These are *not* run by `deploy.ps1` — they layer extra capabilities on after t
 
 ---
 
-See the [README](README.md) for contributing, security, and license information.
+See the [README](../README.md) for contributing, security, and license information.

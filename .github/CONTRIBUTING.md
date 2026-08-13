@@ -11,7 +11,7 @@ microhacks, and hackathons are very welcome.
   expected, and what happened (include the IaC path: Bicep or Terraform, and the
   stage).
 - **Suggest scenarios** — new demo scenarios or improvements to existing ones.
-- **Improve docs** — fixes to the README, stage guides, or `DEMO-SCENARIOS.md`.
+- **Improve docs** — fixes to the README, stage guides, or `docs/DEMO-SCENARIOS.md`.
 - **Fix code** — Bicep/Terraform modules, PowerShell scripts, or the sample
   workloads.
 

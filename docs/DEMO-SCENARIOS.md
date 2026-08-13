@@ -702,7 +702,7 @@ Application Insights doesn't just *measure* latency — with **Code Optimization
 ### Prerequisites
 - The App Service (`app-amlab-<suffix>`) is already auto-instrumented with App Insights (the .NET 8 auto-instrumentation handles profiling).
 - Code Optimizations works on production profiler data — no code changes needed.
-- For a *guaranteed* recommendation on demand, the lab webapp ships a `GET /api/inefficient` endpoint with four detectable anti-patterns (string concat in loop, exception-throwing in loop, sync-over-async, O(n²) `List.Contains`) — see [workloads/webapp/Program.cs](workloads/webapp/Program.cs).
+- For a *guaranteed* recommendation on demand, the lab webapp ships a `GET /api/inefficient` endpoint with four detectable anti-patterns (string concat in loop, exception-throwing in loop, sync-over-async, O(n²) `List.Contains`) — see [workloads/webapp/Program.cs](../workloads/webapp/Program.cs).
 
 ### Click-path
 
@@ -2280,10 +2280,10 @@ Scenarios [34](#s34) (Connection Monitor) and [35](#s35) (Flow Logs + Traffic An
 
 | Network Insights surface | Data source in the lab | Module |
 |---|---|---|
-| **Topology / Resource health** per VNet, NSG, Public IP | Auto-discovery + resource diagnostic settings | [`policy-diagnostics.bicep`](infra/modules/policy-diagnostics.bicep) — DINE assignments push `allLogs` for VNet / NSG / Public IP / App Service to `law-amlab-central` |
-| **Connection Monitor tab** | `NWConnectionMonitorTestResult` | [`connection-monitor.bicep`](infra/modules/connection-monitor.bicep) (scenario [34](#s34)) |
-| **Traffic Analytics tab** | `NTANetAnalytics` + `NTAIpDetails` | [`flow-logs.bicep`](infra/modules/flow-logs.bicep) (scenario [35](#s35)) |
-| **Dependency map** (VM-to-VM, VM-to-service edges) | `VMConnection` + `Microsoft-InsightsMetrics` from AMA | VM Insights DCR in [`stages/00-foundation.bicep`](infra/stages/00-foundation.bicep) + agents on both VMs |
+| **Topology / Resource health** per VNet, NSG, Public IP | Auto-discovery + resource diagnostic settings | [`policy-diagnostics.bicep`](../infra/modules/policy-diagnostics.bicep) — DINE assignments push `allLogs` for VNet / NSG / Public IP / App Service to `law-amlab-central` |
+| **Connection Monitor tab** | `NWConnectionMonitorTestResult` | [`connection-monitor.bicep`](../infra/modules/connection-monitor.bicep) (scenario [34](#s34)) |
+| **Traffic Analytics tab** | `NTANetAnalytics` + `NTAIpDetails` | [`flow-logs.bicep`](../infra/modules/flow-logs.bicep) (scenario [35](#s35)) |
+| **Dependency map** (VM-to-VM, VM-to-service edges) | `VMConnection` + `Microsoft-InsightsMetrics` from AMA | VM Insights DCR in [`stages/00-foundation.bicep`](../infra/stages/00-foundation.bicep) + agents on both VMs |
 | **Network Watcher tools** (IP flow verify, NSG diagnostics, packet capture, next hop) | Network Watcher in `NetworkWatcherRG` | Created on first use by Connection Monitor module |
 
 ### Click-path
@@ -2332,7 +2332,7 @@ The lab ships the DCR as code but **off by default** — the DCR and the central
 
 | Object | Value |
 |---|---|
-| Module | [`infra/modules/platform-logs-dcr.bicep`](infra/modules/platform-logs-dcr.bicep) — `PlatformTelemetry` DCR + DCR association |
+| Module | [`infra/modules/platform-logs-dcr.bicep`](../infra/modules/platform-logs-dcr.bicep) — `PlatformTelemetry` DCR + DCR association |
 | Feature flag | `enablePlatformLogsDcr` (Bicep) / `enable_platform_logs_dcr` (Terraform) — default `false` |
 | Stream | `microsoft.keyvault/vaults:Logs-Group-All` |
 | Monitored resource | `kv-amlab-<suffix>` (via one DCR association — swap in any/many resources) |
@@ -2381,7 +2381,7 @@ The export DCR ships as code but **off by default** — the DCR and the central 
 
 | Object | Value |
 |---|---|
-| Module | [`infra/modules/metrics-export-dcr.bicep`](infra/modules/metrics-export-dcr.bicep) — `PlatformTelemetry` DCR + DCR association |
+| Module | [`infra/modules/metrics-export-dcr.bicep`](../infra/modules/metrics-export-dcr.bicep) — `PlatformTelemetry` DCR + DCR association |
 | Feature flag | `enableMetricsExportDcr` (Bicep) / `enable_metrics_export_dcr` (Terraform) — default `false` |
 | Stream | `Microsoft.KeyVault/vaults:Metrics-Group-All` (narrow to specific metric names to cut volume) |
 | Monitored resource | `kv-amlab-<suffix>` (dimensional metrics like `ServiceApiLatency` by `StatusCode`) |
@@ -2443,7 +2443,7 @@ Every other scenario watches infra/platform telemetry. This one points the **exa
 ### Killer line
 > *"Tokens are the new unit of cloud cost — and they're just another signal. Same workspace, same KQL, same alerts, same health model your infra already uses, now pointed at GenAI spend: routed-model savings, cached-token discounts, and a hard token ceiling before the bill surprises you."*
 
-**Reference:** [docs/STAGE-AI.md](docs/STAGE-AI.md)
+**Reference:** [docs/STAGE-AI.md](STAGE-AI.md)
 
 ---
 
