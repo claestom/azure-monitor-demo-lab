@@ -38,7 +38,6 @@ module lawRbac '../modules/law-rbac.bicep' = {
     tags: commonTags
   }
 }
-
 module securityPostureAlerts '../modules/security-posture-alerts.bicep' = {
   name: 'security-posture-alerts'
   params: {
