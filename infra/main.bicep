@@ -105,7 +105,6 @@ var appDiagStorageName  = 'stapp${namePrefix}${take(suffix, 8)}'
 var eventHubNsName      = 'evhns-${namePrefix}-${take(suffix, 5)}'
 var keyVaultName        = 'kv-${namePrefix}-${take(suffix, 5)}'
 var costWorkbookName    = 'wb-${namePrefix}-cost'
-var securityWorkbookName = 'wb-${namePrefix}-security'
 var sliUamiName         = 'id-sli-${namePrefix}'
 var platformLogsDcrName = 'dcr-${namePrefix}-platformlogs'
 var metricsExportDcrName = 'dcr-${namePrefix}-metricsexport'
@@ -819,23 +818,6 @@ module costWorkbook 'modules/cost-workbook.bicep' = {
 }
 
 // ---------------------------------------------------------------------------------
-// Security operations Workbook
-//   Single security pane-of-glass covering identity, control-plane CRUD, privilege
-//   escalation, network exfil, lifecycle churn, and sensitive data-plane events.
-//   Pulls from AzureActivity, SigninLogs (if forwarded), NTANetAnalytics,
-//   AzureDiagnostics. Backing alerts: scenarios 47, 48, 49.
-// ---------------------------------------------------------------------------------
-module securityWorkbook 'modules/security-workbook.bicep' = {
-  name: 'security-workbook'
-  params: {
-    name: guid(resourceGroup().id, securityWorkbookName)
-    location: location
-    centralLawId: lawCentral.outputs.id
-    tags: commonTags
-  }
-}
-
-// ---------------------------------------------------------------------------------
 // Azure Monitor Health Model (preview) -- scenario 45
 //
 // Builds a 3-tier model rolling up to a single root: frontend (webapp +
@@ -969,7 +951,6 @@ output dataExportRuleName string       = dataExport.outputs.name
 output sentinelEnabled bool            = enableSentinel
 output prometheusRuleGroupName string  = promRules.outputs.name
 output costWorkbookId string           = costWorkbook.outputs.id
-output securityWorkbookId string       = securityWorkbook.outputs.id
 // NEW — Health Model (scenario 45)
 output healthModelName string          = healthModel.outputs.healthModelName
 output healthModelId string            = healthModel.outputs.healthModelId

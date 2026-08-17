@@ -14,7 +14,6 @@ param ownerTag string = 'demo-lab'
 var suffix = uniqueString(resourceGroup().id)
 var lawCentralName = 'law-${namePrefix}-central-${take(suffix, 5)}'
 var actionGroupName = 'ag-${namePrefix}-email'
-var securityWorkbookName = 'wb-${namePrefix}-security'
 
 var commonTags = {
   owner: ownerTag
@@ -50,21 +49,3 @@ module securityPostureAlerts '../modules/security-posture-alerts.bicep' = {
   }
 }
 
-// ---------------------------------------------------------------------------------
-// Security operations Workbook
-//   Multi-section security pane-of-glass: identity (SigninLogs), control-plane
-//   CRUD (AzureActivity), privilege escalation, network exfil (NTANetAnalytics),
-//   lifecycle churn, sensitive data plane (Key Vault, Storage), linked alerts.
-//   Backing alerts live in security-posture-alerts.bicep (scenarios 47, 48, 49).
-// ---------------------------------------------------------------------------------
-module securityWorkbook '../modules/security-workbook.bicep' = {
-  name: 'security-workbook'
-  params: {
-    name: guid(resourceGroup().id, securityWorkbookName)
-    location: location
-    centralLawId: lawCentral.id
-    tags: commonTags
-  }
-}
-
-output securityWorkbookId string = securityWorkbook.outputs.id
