@@ -30,6 +30,7 @@ For workshop planning and customer expectation-setting, use:
 - [STAGE-C-ALERTING.md](STAGE-C-ALERTING.md)
 - [STAGE-D-SECURITY-POSTURE.md](STAGE-D-SECURITY-POSTURE.md)
 - [STAGE-E-OPTIONAL-ADVANCED.md](STAGE-E-OPTIONAL-ADVANCED.md)
+- [STAGE-AI.md](STAGE-AI.md)
 
 ## 3) Stage model (recommended)
 
@@ -71,6 +72,7 @@ Use this as the workshop script: each stage adds a bounded set of capabilities a
 3. Stage C done: at least one alert test reaches the Action Group.
 4. Stage D done: scenario 47/48/49 queries return data and alert rules evaluate.
 5. Stage E done: optional feature endpoints/blades become accessible and testable.
+6. Stage AI done: Foundry model deployments exist, App Insights receives AI telemetry, and the AI FinOps queries return data after `setup-ai.ps1` runs.
 
 ## 5) Practical deployment commands (stage-by-stage)
 
@@ -147,6 +149,8 @@ Deploys the Foundry GenAI workload (pinned to swedencentral) directly from the s
 az deployment group create -g rg-azure-monitor-lab --name stage-ai-foundry --template-file infra/stages/50-ai.bicep --parameters namePrefix=amlab alertEmail=your.alias@example.com
 ./scripts/setup-ai.ps1   # pip install + create agents + simulate traffic
 ```
+
+Stage AI depends only on Stage A and can be deployed before or after Stages B to E. If you are using the central config workflow, set `stageToggles.enableStageAI` to `true` in `lab.config.json`, run `./scripts/sync-config.ps1`, and deploy the generated parameters with the same Stage AI template. The stage is off by default because the model deployments are billable.
 
 ## 6) Recommended repo evolution for clean staging
 

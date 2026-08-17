@@ -33,6 +33,7 @@ For workshop planning and customer expectation-setting, use:
 - [STAGE-C-ALERTING.md](STAGE-C-ALERTING.md)
 - [STAGE-D-SECURITY-POSTURE.md](STAGE-D-SECURITY-POSTURE.md)
 - [STAGE-E-OPTIONAL-ADVANCED.md](STAGE-E-OPTIONAL-ADVANCED.md)
+- [STAGE-AI.md](STAGE-AI.md)
 
 ## 3) Stage model (same as Bicep)
 
@@ -65,6 +66,7 @@ Use this matrix in customer sessions so Terraform users see exactly what each ap
 3. Apply Stage C after Stage B; alert scopes/actions depend on deployed workloads.
 4. Apply Stage D after Stage A and C; security detections need Activity data and action routing.
 5. Apply Stage E last; optional features rely on the previously deployed monitor estate.
+6. Apply Stage AI any time after Stage A; it uses the Stage A Application Insights component and is independent of Stages B to E.
 
 ### Acceptance criteria by stage
 
@@ -73,6 +75,7 @@ Use this matrix in customer sessions so Terraform users see exactly what each ap
 3. Stage C: at least one alert path test reaches the Action Group.
 4. Stage D: scenarios 47/48/49 query outputs are non-empty and alert rules evaluate.
 5. Stage E: optional Sentinel/health/SLI capabilities are reachable and testable.
+6. Stage AI: Foundry model deployments exist, App Insights receives AI telemetry, and the AI FinOps queries return data after `setup-ai.ps1` runs.
 
 ## 5) Terraform scaffold (orchestrating staged ARM/Bicep)
 
@@ -188,7 +191,29 @@ If your shell reports "Too many command line arguments", retype the command manu
 
 Flip one stage flag at a time in `stages.tfvars` and re-run plan/apply. Each new `terraform plan` should show exactly one additional `azapi_resource.stage_*` add when you enable the next stage.
 
-### Step 7 - Security stage validation
+### Step 7 - Enable Stage AI (optional)
+
+Stage AI can be enabled after Stage A, independently of Stages B to E. It is off by default because the Foundry model deployments are billable and pinned to `swedencentral`.
+
+Set the AI flag in `stages.tfvars`:
+
+```hcl
+enable_stage_ai = true
+ai_location = "swedencentral"
+router_model_version = "2025-08-07"  # verify with: az cognitiveservices account list-models -l swedencentral
+```
+
+Then apply the stage and run the post-deployment setup:
+
+```powershell
+terraform plan -var-file stages.tfvars
+terraform apply -var-file stages.tfvars
+./scripts/setup-ai.ps1   # creates demo agents and simulates traffic
+```
+
+The AI stage creates the Foundry account, project, four model deployments, App Insights connection, token alerts, AI FinOps query pack and workbook, and the AI tier in the workload health model. It requires the Stage A Application Insights resource but does not require Stages B to E.
+
+### Step 8 - Security stage validation
 
 After Stage D, verify Activity Log ingestion:
 
