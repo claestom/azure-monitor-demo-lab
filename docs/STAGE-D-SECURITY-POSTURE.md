@@ -12,7 +12,6 @@
 | Scheduled query alert #1 — control-plane drift | `alert-security-control-plane-drift` | KQL on `AzureActivity` last 15 min; fires when **success-only write/delete/action ops > 40**. Severity 2. |
 | Scheduled query alert #2 — privilege escalation | `alert-security-privilege-escalation-watch` | KQL on `AzureActivity` last 30 min; fires on **any successful `roleAssignments/write`, `roleDefinitions/write`, or `elevateAccess/action`**. Severity 1. |
 | Scheduled query alert #3 — exfil early warning | `alert-security-exfil-early-warning` | KQL on `NTANetAnalytics` (Traffic Analytics) last 30 min; fires when **outbound bytes > 1 GB across the VNet in any 30-min window**. Severity 2. |
-| Security operations workbook (`security-workbook.bicep`) | `wb-amlab-security` | Single security pane-of-glass that surfaces identity, control-plane CRUD, privilege escalation, network exfil, lifecycle churn, sensitive data-plane events, and the three linked alerts above. Pulls from AzureActivity, SigninLogs, NTANetAnalytics, AzureDiagnostics. |
 | Action routing | All three alerts attach to `ag-amlab-email` from Stage C. | Single Action Group, three new detections. |
 
 > Cross-stage references: `law-amlab-central` (Stage A), `ag-amlab-email` (Stage C). Stage C must be live first or the Action Group lookup fails.
@@ -25,7 +24,6 @@
 | **47** — Control-plane drift | `alert-security-control-plane-drift` |
 | **48** — Privilege escalation | `alert-security-privilege-escalation-watch` |
 | **49** — Exfil early warning | `alert-security-exfil-early-warning` |
-| **Security workbook** — single pane of glass | `wb-amlab-security` (`security-workbook.bicep`) |
 
 ## 2) Speaker notes
 
@@ -57,7 +55,7 @@
 6. **`law-amlab-central` → Tables** — show table-level access if customer wants the deep dive (this is a powerful "we can constrain Security to just these tables" demo).
 7. **Trigger scenario 47 live** — flip a tag or restart a VM ~50 times in 15 min (or use `Restart-AzVM` in a loop) to push past the threshold. Wait ~5 min. Alert fires, Action Group emails, Logic App runs.
 8. **Trigger scenario 48 live** — assign yourself an Owner role at the RG (then remove it). This single op is enough to fire the privilege-escalation rule.
-9. **Open the security workbook** — *Monitor → Workbooks → `🛡️ Azure Monitor Demo Lab — Security operations`*. Walk through the eight sections top-down: 24h tiles → identity → control-plane CRUD → privilege escalation → network exfil → lifecycle churn → sensitive data plane → linked alerts. Pin to a shared dashboard for ongoing demos.
+9. **Review the three security alerts together** — use the alert rules list and each rule's query/history to compare control-plane drift, privilege escalation, and exfiltration detection. The security operations workbook is not deployed because it is currently disabled in the IaC templates.
 
 ## 4) CLI validation
 

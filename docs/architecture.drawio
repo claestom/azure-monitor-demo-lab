@@ -828,7 +828,7 @@
         <mxCell id="w8" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/integration/Logic_Apps.svg" value="Sec Logic App" vertex="1">
           <mxGeometry height="52" width="80" x="1440" y="810" as="geometry" />
         </mxCell>
-        <mxCell id="modulesnote" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#23272F;strokeColor=#0F1115;fontColor=#FFFFFF;fontSize=10;align=center;verticalAlign=middle;spacing=8" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;Bicep modules: sentinel · policy-diagnostics · security-posture-alerts · security-workbook · flow-logs&lt;/font&gt;" vertex="1">
+        <mxCell id="modulesnote" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#23272F;strokeColor=#0F1115;fontColor=#FFFFFF;fontSize=10;align=center;verticalAlign=middle;spacing=8" value="&lt;font style=&quot;font-size: 15px;&quot;&gt;Bicep modules: sentinel · policy-diagnostics · security-posture-alerts · LAW RBAC · flow-logs&lt;/font&gt;" vertex="1">
           <mxGeometry height="50" width="1540" x="80" y="970" as="geometry" />
         </mxCell>
       </root>
