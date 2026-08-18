@@ -145,7 +145,7 @@
         <mxCell id="k6" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/integration/Logic_Apps.svg" value="Logic App" vertex="1">
           <mxGeometry height="52" width="80" x="1490" y="210" as="geometry" />
         </mxCell>
-        <mxCell id="k7" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Heart.svg" value="Health Model" vertex="1">
+        <mxCell id="k7" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;image=icons/azure/03528-icon-service-Monitor-Health-Models.svg" value="Health Model" vertex="1">
           <mxGeometry height="52" width="80" x="1230" y="310" as="geometry" />
         </mxCell>
         <mxCell id="k8" parent="1" style="image;aspect=fixed;html=1;points=[];align=center;fontSize=10;verticalLabelPosition=bottom;verticalAlign=top;image=img/lib/azure2/general/Service_Health.svg" value="Service Health" vertex="1">

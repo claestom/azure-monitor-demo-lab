@@ -31,6 +31,7 @@ $iconPaths = @{
   ag       = 'management_governance/Alerts.svg'
   logic    = 'integration/Logic_Apps.svg'
   sent     = 'security/Azure_Sentinel.svg'
+  health   = 'other/03528-icon-service-Monitor-Health-Models.svg'
   foundry  = 'ai_machine_learning/AI_Foundry.svg'
   agents   = 'ai_machine_learning/Bot_Services.svg'
   router   = 'general/Gear.svg'
@@ -84,13 +85,14 @@ $nodes = [ordered]@{
   AG    = @{ col = 'USE';  i = 2; lines = @('Action Group','Alerts · AMBA · token spikes');     icons = @('ag') }
   LOGIC = @{ col = 'USE';  i = 3; lines = @('Logic App','auto-mitigation');      icons = @('logic') }
   SENT  = @{ col = 'USE';  i = 4; lines = @('Microsoft Sentinel');               icons = @('sent') }
+  HEALTH = @{ col = 'USE'; i = 5; lines = @('Health Models','workload health');  icons = @('health') }
 }
 
 # --- edges (source -> target) ---------------------------------------------------------
 $edges = @(
   @('VM','AMA'), @('VMSS','AMA'), @('AKS','AMA'), @('AKS','AMW'), @('APP','AI'), @('NET','FLOW'), @('FDRY','AI'),
   @('AMA','LAW'), @('AMA','AMW'), @('FLOW','PLAT'), @('POL','LAW'), @('AI','LAWAI'), @('PLAT','LAW'),
-  @('LAW','WB'), @('LAWAI','WB'), @('AMW','GRAF'), @('LAW','AG'), @('AI','AG'), @('AG','LOGIC'), @('LAW','SENT')
+  @('LAW','WB'), @('LAWAI','WB'), @('AMW','GRAF'), @('LAW','AG'), @('AI','AG'), @('AG','LOGIC'), @('LAW','SENT'), @('LAW','HEALTH')
 )
 
 # --- geometry -------------------------------------------------------------------------
