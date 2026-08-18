@@ -32,6 +32,7 @@ $iconPaths = @{
   logic    = 'integration/Logic_Apps.svg'
   sent     = 'security/Azure_Sentinel.svg'
   health   = 'other/03528-icon-service-Monitor-Health-Models.svg'
+  querypack = 'other/01085-icon-service-Log-Analytics-Query-Pack.svg'
   foundry  = 'ai_machine_learning/AI_Foundry.svg'
   agents   = 'ai_machine_learning/Bot_Services.svg'
   router   = 'general/Gear.svg'
@@ -75,10 +76,11 @@ $nodes = [ordered]@{
   POL   = @{ col = 'COL';  i = 2; lines = @('Diag Settings via','Policy (DINE)'); icons = @('pol') }
 
   LAW   = @{ col = 'DATA'; i = 0; lines = @('Log Analytics','central');         icons = @('law') }
-  LAWAI = @{ col = 'DATA'; i = 1; lines = @('Log Analytics','App Insights');     icons = @('law') }
-  AI    = @{ col = 'DATA'; i = 2; lines = @('Application Insights');             icons = @('ai') }
-  AMW   = @{ col = 'DATA'; i = 3; lines = @('Azure Monitor Workspace','Managed Prometheus'); icons = @('amw') }
-  PLAT  = @{ col = 'DATA'; i = 4; lines = @('Storage · Event Hub · Key Vault');  icons = @('storage','eventhub','keyvault') }
+  QUERY  = @{ col = 'DATA'; i = 1; lines = @('Log Analytics Query Pack');        icons = @('querypack') }
+  LAWAI  = @{ col = 'DATA'; i = 2; lines = @('Log Analytics','App Insights');     icons = @('law') }
+  AI     = @{ col = 'DATA'; i = 3; lines = @('Application Insights');             icons = @('ai') }
+  AMW    = @{ col = 'DATA'; i = 4; lines = @('Azure Monitor Workspace','Managed Prometheus'); icons = @('amw') }
+  PLAT   = @{ col = 'DATA'; i = 5; lines = @('Storage · Event Hub · Key Vault');  icons = @('storage','eventhub','keyvault') }
 
   GRAF  = @{ col = 'USE';  i = 0; lines = @('Managed Grafana');                  icons = @('graf') }
   WB    = @{ col = 'USE';  i = 1; lines = @('Workbooks','Traffic Lights · Cost · AI FinOps'); icons = @('wb') }
@@ -91,7 +93,7 @@ $nodes = [ordered]@{
 # --- edges (source -> target) ---------------------------------------------------------
 $edges = @(
   @('VM','AMA'), @('VMSS','AMA'), @('AKS','AMA'), @('AKS','AMW'), @('APP','AI'), @('NET','FLOW'), @('FDRY','AI'),
-  @('AMA','LAW'), @('AMA','AMW'), @('FLOW','PLAT'), @('POL','LAW'), @('AI','LAWAI'), @('PLAT','LAW'),
+  @('AMA','LAW'), @('AMA','AMW'), @('FLOW','PLAT'), @('POL','LAW'), @('LAW','QUERY'), @('AI','LAWAI'), @('PLAT','LAW'),
   @('LAW','WB'), @('LAWAI','WB'), @('AMW','GRAF'), @('LAW','AG'), @('AI','AG'), @('AG','LOGIC'), @('LAW','SENT'), @('LAW','HEALTH')
 )
 
