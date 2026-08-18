@@ -61,9 +61,9 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 | **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
 | **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook |
 
-> Use Option 2 if you prefer Infrastructure-as-Code, the staged workshop, or the subscription guardrail.
+> Use Option 2 for a scripted one-shot deployment, or Option 3 for the staged workshop and progressive deployment.
 
-### Option 2: Scripted (Bicep / Terraform, full control)
+### Option 2: Scripted one-shot (Bicep / Terraform, full control)
 
 This repo ships no secrets. You fill in one central config file, and `sync-config.ps1` generates every derived input from it.
 
@@ -95,11 +95,6 @@ The pre-flight checks *availability and quota*, not *live service capacity*. Tra
 
 </details>
 
-Two delivery modes:
-
-- One-shot: `./scripts/deploy.ps1` deploys everything at once. It's the fastest option and fine for internal demos.
-- Staged workshop: 5 stages (A to E) that you can pause between, toggled in `lab.config.json`. Step-by-step guides: [Bicep](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [Terraform](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md).
-
 > Optional AI stage. An extra stage (off by default) adds a Microsoft Foundry GenAI workload (pinned to `swedencentral`) that emits token, trace, and cost telemetry, plus token-spike alerts and an AI FinOps query pack and workbook. Turn it on with `stageToggles.enableStageAI` (Bicep one-shot) or Terraform's `enable_stage_ai`, then run `./scripts/setup-ai.ps1` to create the demo agents and simulate traffic. Check the Model Router version for your region first (`az cognitiveservices account list-models`).
 
 When you're done (the 1 GB/day cost guardrails are baked in either way):
@@ -107,6 +102,15 @@ When you're done (the 1 GB/day cost guardrails are baked in either way):
 ```powershell
 ./scripts/teardown.ps1 -Yes   # deletes the whole resource group
 ```
+
+### Option 3: Staged workshop (progressive deployment)
+
+Use the staged approach when you want to pause between capabilities, walk through the lab with an audience, or deploy only the stages needed for a particular demo. Stages A to E can be toggled in `lab.config.json`, and the optional AI stage can be enabled separately after Stage A.
+
+Step-by-step guides:
+
+- [Bicep staged deployment](docs/DEPLOY-BICEP-STEP-BY-STEP.md)
+- [Terraform staged deployment](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md)
 
 ## Cost and lifecycle
 
