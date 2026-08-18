@@ -76,8 +76,8 @@ $nodes = [ordered]@{
   POL   = @{ col = 'COL';  i = 2; lines = @('Diag Settings via','Policy (DINE)'); icons = @('pol') }
 
   LAW   = @{ col = 'DATA'; i = 0; lines = @('Log Analytics','central');         icons = @('law') }
-  QUERY  = @{ col = 'DATA'; i = 1; lines = @('Log Analytics Query Pack');        icons = @('querypack') }
-  LAWAI  = @{ col = 'DATA'; i = 2; lines = @('Log Analytics','App Insights');     icons = @('law') }
+  LAWAI  = @{ col = 'DATA'; i = 1; lines = @('Log Analytics','App Insights');     icons = @('law') }
+  QUERY  = @{ col = 'DATA'; i = 2; lines = @('Log Analytics Query Pack');        icons = @('querypack') }
   AI     = @{ col = 'DATA'; i = 3; lines = @('Application Insights');             icons = @('ai') }
   AMW    = @{ col = 'DATA'; i = 4; lines = @('Azure Monitor Workspace','Managed Prometheus'); icons = @('amw') }
   PLAT   = @{ col = 'DATA'; i = 5; lines = @('Storage · Event Hub · Key Vault');  icons = @('storage','eventhub','keyvault') }
