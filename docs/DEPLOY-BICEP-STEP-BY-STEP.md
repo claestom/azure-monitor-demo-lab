@@ -207,7 +207,10 @@ A few resources are subscription-scoped or live in `NetworkWatcherRG` and surviv
 1. Soft-deleted Log Analytics workspaces (14-day grace period; names stay reserved):
 
 ```powershell
-az monitor log-analytics workspace list-deleted-workspaces --subscription $sub --query "[?contains(name,'amlab')]" -o table
+# Keep the filter in PowerShell. Windows Azure CLI can strip quoted JMESPath
+# expressions before az receives them, producing "] was unexpected at this time."
+$deletedLaw = az monitor log-analytics workspace list-deleted-workspaces --subscription $sub -o json | ConvertFrom-Json
+$deletedLaw | Where-Object { $_.name -like '*amlab*' } | Format-Table
 # Permanent purge if needed:
 # az rest --method delete --url "https://management.azure.com/subscriptions/$sub/providers/Microsoft.OperationalInsights/locations/northeurope/deletedWorkspaces/<name>?api-version=2023-09-01"
 ```
@@ -215,13 +218,15 @@ az monitor log-analytics workspace list-deleted-workspaces --subscription $sub -
 2. Soft-deleted Application Insights components (also 14-day grace):
 
 ```powershell
-az monitor app-insights component list-deleted --subscription $sub --query "[?contains(name,'amlab')]" -o table
+$deletedAppInsights = az monitor app-insights component list-deleted --subscription $sub -o json | ConvertFrom-Json
+$deletedAppInsights | Where-Object { $_.name -like '*amlab*' } | Format-Table
 ```
 
 3. NSG/VNet flow logs in `NetworkWatcherRG` (Stage B creates them outside the lab RG):
 
 ```powershell
-az network watcher flow-log list -l northeurope --subscription $sub --query "[?contains(name,'amlab')].{name:name,enabled:enabled}" -o table
+$flowLogs = az network watcher flow-log list -l northeurope --subscription $sub -o json | ConvertFrom-Json
+$flowLogs | Where-Object { $_.name -like '*amlab*' } | Select-Object name, enabled | Format-Table
 # az network watcher flow-log delete -l northeurope -n <flowLogName> --subscription $sub
 ```
 
