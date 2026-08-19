@@ -104,6 +104,7 @@ az deployment group what-if -g rg-azure-monitor-lab --template-file infra/main.b
 2. Deploy:
 
 ```powershell
+az group create -n rg-azure-monitor-lab -l northeurope
 az deployment group create -g rg-azure-monitor-lab --name stage-a-foundation --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=false deployWindowsVm=false aksNodeCount=0 enableSentinel=false
 ```
 
