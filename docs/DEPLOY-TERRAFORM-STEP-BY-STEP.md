@@ -315,7 +315,16 @@ $deletedAppInsights = az monitor app-insights component list-deleted --subscript
 $deletedAppInsights | Where-Object { $_.name -like '*amlab*' } | Format-Table
 ```
 
-3. NSG/VNet flow logs in `NetworkWatcherRG` (Stage B creates them outside the lab RG):
+3. Soft-deleted Key Vault (7-day retention, `enablePurgeProtection: null` so it can be purged). Key Vault names are deterministic (`kv-${namePrefix}-${take(suffix,5)}` from `resourceGroup().id`), so redeploying to the **same RG name** before the vault is purged fails with `VaultAlreadyExists`:
+
+```powershell
+$deletedVaults = az keyvault list-deleted --subscription $sub -o json | ConvertFrom-Json
+$deletedVaults | Where-Object { $_.name -like 'kv-amlab-*' } | Format-Table name, @{n='location';e={$_.properties.location}}
+# Purge before redeploying to the same RG name:
+# az keyvault purge --name <vaultName> --subscription $sub
+```
+
+4. NSG/VNet flow logs in `NetworkWatcherRG` (Stage B creates them outside the lab RG):
 
 ```powershell
 $flowLogs = az network watcher flow-log list -l northeurope --subscription $sub -o json | ConvertFrom-Json
@@ -323,14 +332,14 @@ $flowLogs | Where-Object { $_.name -like '*amlab*' } | Select-Object name, enabl
 # az network watcher flow-log delete -l northeurope -n <flowLogName> --subscription $sub
 ```
 
-4. Custom role definition from Stage D (`AMLAB - Granular Log Reader (<hash>)`). Auto-removed once no scopes reference it; force-delete if it lingers:
+5. Custom role definition from Stage D (`AMLAB - Granular Log Reader (<hash>)`). Auto-removed once no scopes reference it; force-delete if it lingers:
 
 ```powershell
 az role definition list --custom-role-only true --subscription $sub --query "[?starts_with(roleName,'AMLAB - Granular Log Reader')]" -o table
 # az role definition delete --name "AMLAB - Granular Log Reader (<hash>)" --subscription $sub
 ```
 
-5. Confirm the RG is gone:
+6. Confirm the RG is gone:
 
 ```powershell
 az group exists -n $rg --subscription $sub   # false once the async delete completes
