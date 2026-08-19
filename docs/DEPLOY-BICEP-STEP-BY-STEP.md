@@ -99,17 +99,18 @@ $sub='<your-subscription-id>'
 az account set --subscription $sub
 az account show --query "{name:name,id:id,tenantId:tenantId}" -o table
 az group create -n rg-azure-monitor-lab -l northeurope
-az deployment group what-if -g rg-azure-monitor-lab --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=false deployWindowsVm=false aksNodeCount=0 enableSentinel=false
+az deployment group what-if -g rg-azure-monitor-lab --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=false deployWindowsVm=false aksNodeCount=1 enableSentinel=false
 ```
 
 2. Deploy:
 
 ```powershell
-az deployment group create -g rg-azure-monitor-lab --name stage-a-foundation --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=false deployWindowsVm=false aksNodeCount=0 enableSentinel=false
+az deployment group create -g rg-azure-monitor-lab --name stage-a-foundation --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=false deployWindowsVm=false aksNodeCount=1 enableSentinel=false
 ```
 
 Notes:
 - The current main.bicep still contains resources beyond foundation. For strict staging, create dedicated stage templates under infra/stages and move resources there over time.
+- `aksNodeCount` cannot be `0`: the AKS system node pool requires at least 1 node, so the minimum footprint for this monolithic template is 1 node even when treating this as a "foundation-only" pass.
 
 ### Stage B deploy
 

@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "10991408770374343142"
+      "templateHash": "1138567408899491923"
     }
   },
   "parameters": {
@@ -307,6 +307,7 @@
       ]
     },
     "alertVmCpuDynamic": {
+      "condition": "[or(parameters('deployLinuxVm'), parameters('deployWindowsVm'))]",
       "type": "Microsoft.Insights/metricAlerts",
       "apiVersion": "2018-03-01",
       "name": "alert-vm-cpu-dynamic",

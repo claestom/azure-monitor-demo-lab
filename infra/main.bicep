@@ -564,7 +564,9 @@ module vmss 'modules/vmss.bicep' = {
 // ---------------------------------------------------------------------------------
 // Dynamic threshold alert on VM CPU (scenario 17 — ML-learned baselines demo)
 // ---------------------------------------------------------------------------------
-resource alertVmCpuDynamic 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+// Condition must use the plain params (not vmLinux/vmWindows outputs) — a resource
+// `if` can't depend on another conditional resource's output (BCP177).
+resource alertVmCpuDynamic 'Microsoft.Insights/metricAlerts@2018-03-01' = if (deployLinuxVm || deployWindowsVm) {
   name: 'alert-vm-cpu-dynamic'
   location: 'global'
   tags: commonTags
