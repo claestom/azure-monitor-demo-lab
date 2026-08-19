@@ -98,13 +98,13 @@ Alternatively, hand-edit `infra/main.parameters.json` directly (also gitignored;
 $sub='<your-subscription-id>'
 az account set --subscription $sub
 az account show --query "{name:name,id:id,tenantId:tenantId}" -o table
+az group create -n rg-azure-monitor-lab -l northeurope
 az deployment group what-if -g rg-azure-monitor-lab --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=false deployWindowsVm=false aksNodeCount=0 enableSentinel=false
 ```
 
 2. Deploy:
 
 ```powershell
-az group create -n rg-azure-monitor-lab -l northeurope
 az deployment group create -g rg-azure-monitor-lab --name stage-a-foundation --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=false deployWindowsVm=false aksNodeCount=0 enableSentinel=false
 ```
 
