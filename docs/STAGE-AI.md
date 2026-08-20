@@ -14,7 +14,7 @@
 | Token alerts | `alert-amlab-token-anomaly` (dynamic threshold) + `alert-amlab-token-spike` (static ceiling) on the account's `TotalTokens` metric, split per deployment | Anomaly detection + a hard guardrail for runaway token spend. Optional `ag-amlab-ai` action group when `alertEmail` is set. |
 | AI FinOps observability | `qp-ai-finops` query pack (14 GenAI KQL queries) + a shared **AI FinOps workbook** | Token usage, estimated cost by agent, cached-token ratio, model-router distribution, PTU break-even, latency/error percentiles. |
 | AI health tier | An **"AI" tier folded into the workload health model** (`hm-amlab-workload`): an `aiworkload` node → the Foundry account entity (Latency / TotalErrors / TotalTokens metric signals) + 4 agent entities carrying error-rate + estimated-cost Log Analytics signals | One health model for the whole estate — the AI workload rolls up next to frontend/compute/platform; high cost or error rate turns an agent unhealthy. A separate `ai-healthmodel.bicep` exists as an opt-in fallback for standalone A+AI deployments (no Stage E). |
-| Agents + traffic | 4 agents (`Support Triage`, `FinOps Q&A`, `Doc Summarizer`, `Context-Rich Assistant`) + a traffic simulator, provisioned by `scripts/setup-ai.ps1` | Generates the live token/trace/cost telemetry the queries, workbook, health model, and alerts consume. |
+| Agents + traffic | 4 agents (`Support Triage`, `FinOps Q&A`, `Doc Summarizer`, `Context-Rich Assistant`) + a traffic simulator, provisioned by `scripts/setup-ai.ps1` | Generates the live token/trace/cost telemetry the queries, workbook, health model, and alerts consume. Python packages listed in [`workloads/ai/requirements.txt`](../workloads/ai/requirements.txt) are pip-installed first. |
 
 > Cross-stage references: `appi-amlab` and its backing App Insights LAW (Stage A). No dependency on Stages B–E; the AI stage creates its own action group.
 
@@ -81,6 +81,8 @@ az monitor app-insights query --app appi-amlab -g $rg --analytics-query "depende
 5. After `scripts/setup-ai.ps1`, App Insights `dependencies` shows `gen_ai.agent.name` spans for all agents plus Model Router.
 
 ## 6) Enable + run
+
+`setup-ai.ps1` pip-installs the packages in [`workloads/ai/requirements.txt`](../workloads/ai/requirements.txt) (azure-ai-projects, azure-ai-agents, azure-identity, azure-monitor-opentelemetry, opentelemetry-sdk, openai, python-dotenv) before creating the agents and simulating traffic.
 
 **Bicep one-shot** (`lab.config.json`): set `stageToggles.enableStageAI = true` → `deploy.ps1` passes `enableAi=true` to `main.bicep` and runs `setup-ai.ps1` at the end.
 
