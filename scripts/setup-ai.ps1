@@ -16,7 +16,9 @@
   qualifies), and the AI stage already deployed.
 
 .PARAMETER ResourceGroup
-  Resource group hosting the lab. Defaults to lab.config.json 'resourceGroup' or 'rg-azure-monitor-lab'.
+  Resource group hosting the lab (alias -g, matching az CLI). Defaults to lab.config.json
+  'resourceGroup' or 'rg-azure-monitor-lab' when not passed explicitly — pass -g/-ResourceGroup
+  to override a stale or wrong value in lab.config.json.
 
 .PARAMETER NamePrefix
   Lab name prefix used to locate the Foundry account + App Insights. Defaults to lab.config.json 'namePrefix' or 'amlab'.
@@ -34,10 +36,14 @@
   ./scripts/setup-ai.ps1
 
 .EXAMPLE
+  ./scripts/setup-ai.ps1 -g rg-azure-monitor-lab-bicep-staged
+
+.EXAMPLE
   ./scripts/setup-ai.ps1 -Conversations 300
 #>
 [CmdletBinding()]
 param(
+  [Alias('g')]
   [string] $ResourceGroup,
   [string] $NamePrefix,
   [string] $ProjectEndpoint,
@@ -56,7 +62,10 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $labConfigPath = Join-Path $repoRoot 'lab.config.json'
 if (Test-Path $labConfigPath) {
   $labCfg = Get-Content -Raw $labConfigPath | ConvertFrom-Json
-  if ([string]::IsNullOrWhiteSpace($ResourceGroup) -and -not [string]::IsNullOrWhiteSpace($labCfg.resourceGroup)) { $ResourceGroup = $labCfg.resourceGroup }
+  if ([string]::IsNullOrWhiteSpace($ResourceGroup) -and -not [string]::IsNullOrWhiteSpace($labCfg.resourceGroup)) {
+    $ResourceGroup = $labCfg.resourceGroup
+    Write-Host "   Using resourceGroup '$ResourceGroup' from lab.config.json (pass -g to override)" -ForegroundColor DarkGray
+  }
   if ([string]::IsNullOrWhiteSpace($NamePrefix)    -and -not [string]::IsNullOrWhiteSpace($labCfg.namePrefix))    { $NamePrefix    = $labCfg.namePrefix }
 }
 if ([string]::IsNullOrWhiteSpace($ResourceGroup)) { $ResourceGroup = 'rg-azure-monitor-lab' }
