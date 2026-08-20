@@ -160,6 +160,8 @@ az deployment group create -g $rg --name stage-ai-foundry --template-file infra/
 ./scripts/setup-ai.ps1 -g $rg   # pip install + create agents + simulate traffic
 ```
 
+`setup-ai.ps1` pip-installs the packages listed in [`workloads/ai/requirements.txt`](../workloads/ai/requirements.txt) before creating the agents and simulating traffic.
+
 Stage AI depends only on Stage A and can be deployed before or after Stages B to E. If you are using the central config workflow, set `stageToggles.enableStageAI` to `true` in `lab.config.json`, run `./scripts/sync-config.ps1`, and deploy the generated parameters with the same Stage AI template. The stage is off by default because the model deployments are billable.
 
 ## 6) Recommended repo evolution for clean staging

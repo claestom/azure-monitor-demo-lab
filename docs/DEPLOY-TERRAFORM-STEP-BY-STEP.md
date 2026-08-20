@@ -211,6 +211,8 @@ terraform apply -var-file stages.tfvars
 ./scripts/setup-ai.ps1 -g rg-azure-monitor-lab   # match `resource_group_name` in stages.tfvars; creates demo agents and simulates traffic
 ```
 
+`setup-ai.ps1` pip-installs the packages listed in [`workloads/ai/requirements.txt`](../workloads/ai/requirements.txt) before creating the agents and simulating traffic.
+
 The AI stage creates the Foundry account, project, four model deployments, App Insights connection, token alerts, AI FinOps query pack and workbook, and the AI tier in the workload health model. It requires the Stage A Application Insights resource but does not require Stages B to E.
 
 ### Step 8 - Security stage validation
