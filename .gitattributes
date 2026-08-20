@@ -1,0 +1,4 @@
+# Normalize line endings so local core.autocrlf settings can't cause
+# false "local changes would be overwritten" conflicts on git pull.
+* text=auto eol=lf
+*.ps1 text eol=crlf
