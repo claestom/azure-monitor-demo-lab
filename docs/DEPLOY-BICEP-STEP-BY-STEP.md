@@ -90,22 +90,25 @@ notepad lab.config.json   # fill in subscriptionId, tenantId, alertEmail, vmAdmi
 
 Alternatively, hand-edit `infra/main.parameters.json` directly (also gitignored; see `infra/main.parameters.json.template` for the shape). Either way, the rest of this guide assumes `infra/main.parameters.json` exists.
 
+> **Why `-g $rg` on every command below?** `lab.config.json`'s `resourceGroup` field only feeds the **one-shot** `deploy.ps1` path and the **Terraform** `resource_group_name` variable — it is not read by these raw `az deployment group create/what-if` calls. The target resource group for an ARM/Bicep deployment is a CLI/API-level scope (`-g`), not a template parameter, so it must be passed explicitly on every command. Set `$rg` once below to match whatever you put in `lab.config.json` (or your own name), then reuse it throughout.
+
 ### Stage A deploy
 
 1. Validate:
 
 ```powershell
 $sub='<your-subscription-id>'
+$rg='rg-azure-monitor-lab'   # match lab.config.json 'resourceGroup', or use your own name
 az account set --subscription $sub
 az account show --query "{name:name,id:id,tenantId:tenantId}" -o table
-az group create -n rg-azure-monitor-lab -l northeurope
-az deployment group what-if -g rg-azure-monitor-lab --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=false deployWindowsVm=false aksNodeCount=1 enableSentinel=false
+az group create -n $rg -l northeurope
+az deployment group what-if -g $rg --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=false deployWindowsVm=false aksNodeCount=1 enableSentinel=false
 ```
 
 2. Deploy:
 
 ```powershell
-az deployment group create -g rg-azure-monitor-lab --name stage-a-foundation --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=false deployWindowsVm=false aksNodeCount=1 enableSentinel=false
+az deployment group create -g $rg --name stage-a-foundation --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=false deployWindowsVm=false aksNodeCount=1 enableSentinel=false
 ```
 
 Notes:
@@ -115,13 +118,13 @@ Notes:
 ### Stage B deploy
 
 ```powershell
-az deployment group create -g rg-azure-monitor-lab --name stage-b-workloads --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=true deployWindowsVm=true aksNodeCount=1 enableSentinel=false
+az deployment group create -g $rg --name stage-b-workloads --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=true deployWindowsVm=true aksNodeCount=1 enableSentinel=false
 ```
 
 ### Stage C deploy
 
 ```powershell
-az deployment group create -g rg-azure-monitor-lab --name stage-c-alerts --template-file infra/main.bicep --parameters @infra/main.parameters.json enableSentinel=false
+az deployment group create -g $rg --name stage-c-alerts --template-file infra/main.bicep --parameters @infra/main.parameters.json enableSentinel=false
 ```
 
 ### Stage D deploy
@@ -129,7 +132,6 @@ az deployment group create -g rg-azure-monitor-lab --name stage-c-alerts --templ
 1. Ensure AzureActivity is routed to lab LAW:
 
 ```powershell
-$rg='rg-azure-monitor-lab'
 $lawArmId = az resource show -g $rg -n law-amlab-central --resource-type Microsoft.OperationalInsights/workspaces --query id -o tsv
 $logs = '[{"category":"Administrative","enabled":true},{"category":"Security","enabled":true},{"category":"ServiceHealth","enabled":true},{"category":"Alert","enabled":true},{"category":"Recommendation","enabled":true},{"category":"Policy","enabled":true},{"category":"Autoscale","enabled":true},{"category":"ResourceHealth","enabled":true}]'
 az monitor diagnostic-settings subscription create --name amlab-activity-to-law --location global --workspace $lawArmId --logs $logs
@@ -140,7 +142,7 @@ az monitor diagnostic-settings subscription create --name amlab-activity-to-law 
 ### Stage E deploy
 
 ```powershell
-az deployment group create -g rg-azure-monitor-lab --name stage-e-optional --template-file infra/main.bicep --parameters @infra/main.parameters.json enableSentinel=true
+az deployment group create -g $rg --name stage-e-optional --template-file infra/main.bicep --parameters @infra/main.parameters.json enableSentinel=true
 ```
 
 ### Stage AI deploy (optional)
@@ -148,7 +150,7 @@ az deployment group create -g rg-azure-monitor-lab --name stage-e-optional --tem
 Deploys the Foundry GenAI workload (pinned to swedencentral) directly from the stage template, then creates the demo agents and simulates traffic. Verify the Model Router version for your region first with `az cognitiveservices account list-models`.
 
 ```powershell
-az deployment group create -g rg-azure-monitor-lab --name stage-ai-foundry --template-file infra/stages/50-ai.bicep --parameters namePrefix=amlab alertEmail=your.alias@example.com
+az deployment group create -g $rg --name stage-ai-foundry --template-file infra/stages/50-ai.bicep --parameters namePrefix=amlab alertEmail=your.alias@example.com
 ./scripts/setup-ai.ps1   # pip install + create agents + simulate traffic
 ```
 
@@ -168,7 +170,7 @@ Each stage should accept prior-stage outputs as parameters and be deployable ide
 ## 7) Validation checklist per stage
 
 After each stage:
-1. az deployment group show -g rg-azure-monitor-lab -n <stage-name>
+1. az deployment group show -g $rg -n <stage-name>
 2. Verify expected resources exist.
 3. Run at least one saved query relevant to that stage.
 4. For security stage, run:
