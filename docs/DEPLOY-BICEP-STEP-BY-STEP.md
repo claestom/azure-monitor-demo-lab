@@ -132,7 +132,9 @@ az deployment group create -g $rg --name stage-c-alerts --template-file infra/ma
 1. Ensure AzureActivity is routed to lab LAW:
 
 ```powershell
-$lawArmId = az resource show -g $rg -n law-amlab-central --resource-type Microsoft.OperationalInsights/workspaces --query id -o tsv
+# The central LAW name gets a per-deployment suffix (law-<prefix>-central-<hash>), so look it
+# up from the Stage A deployment output rather than guessing the name.
+$lawArmId = az deployment group show -g $rg -n stage-a-foundation --query properties.outputs.centralLawId.value -o tsv
 $logs = '[{"category":"Administrative","enabled":true},{"category":"Security","enabled":true},{"category":"ServiceHealth","enabled":true},{"category":"Alert","enabled":true},{"category":"Recommendation","enabled":true},{"category":"Policy","enabled":true},{"category":"Autoscale","enabled":true},{"category":"ResourceHealth","enabled":true}]'
 az monitor diagnostic-settings subscription create --name amlab-activity-to-law --location global --workspace $lawArmId --logs $logs
 ```

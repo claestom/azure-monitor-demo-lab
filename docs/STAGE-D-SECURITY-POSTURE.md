@@ -68,7 +68,10 @@ az account set --subscription $sub
 az monitor scheduled-query list -g $rg --query "[?starts_with(name, 'alert-security-')].{name:name,severity:properties.severity,enabled:properties.enabled,windowSize:properties.windowSize,actions:properties.actions.actionGroups[0]}" -o table
 
 # AzureActivity is flowing (foundation for 47/48)
-$lawId = az monitor log-analytics workspace show -g $rg -n law-amlab-central --query customerId -o tsv
+# The central LAW name carries a per-deployment suffix (law-amlab-central-<hash>), so
+# resolve it by prefix instead of guessing the exact name.
+$lawName = (az monitor log-analytics workspace list -g $rg -o json | ConvertFrom-Json | Where-Object { $_.name -like 'law-amlab-central*' } | Select-Object -First 1).name
+$lawId = az monitor log-analytics workspace show -g $rg -n $lawName --query customerId -o tsv
 az monitor log-analytics query -w $lawId --analytics-query "AzureActivity | where TimeGenerated > ago(1d) | summarize Rows = count(), LastSeen = max(TimeGenerated)" -o table
 
 # Dry-run each detection query manually
