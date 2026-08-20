@@ -139,7 +139,11 @@ $logs = '[{"category":"Administrative","enabled":true},{"category":"Security","e
 az monitor diagnostic-settings subscription create --name amlab-activity-to-law --location global --workspace $lawArmId --logs $logs
 ```
 
-2. Apply scenario 47/48/49 query alerts (recommended as a dedicated Bicep module in infra/modules/security-posture-alerts.bicep).
+2. Apply scenario 27/47/48/49 (granular LAW RBAC + control-plane drift / privilege escalation / exfil query alerts). `main.bicep` doesn't include these — deploy the dedicated stage template directly against the same `$rg`, which finds the Stage A LAW and Stage C action group as `existing` resources:
+
+```powershell
+az deployment group create -g $rg --name stage-d-security-alerts --template-file infra/stages/30-security-posture.bicep --parameters namePrefix=amlab
+```
 
 ### Stage E deploy
 
