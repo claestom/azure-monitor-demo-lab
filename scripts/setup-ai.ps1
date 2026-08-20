@@ -81,10 +81,13 @@ $python = $python.Source
 # --- Resolve the Foundry project endpoint ---
 if ([string]::IsNullOrWhiteSpace($ProjectEndpoint)) {
   Write-Step "Discovering the Foundry account in $ResourceGroup"
-  $acct = az cognitiveservices account list -g $ResourceGroup `
-            --query "[?kind=='AIServices'] | [?starts_with(name, 'ai$NamePrefix')].name | [0]" -o tsv
+  # Filter in PowerShell, not via a chained "[?...] | [?...]" --query string — az.cmd on
+  # Windows can mangle quoted JMESPath filters before the CLI ever sees them.
+  $accounts = az cognitiveservices account list -g $ResourceGroup -o json | ConvertFrom-Json
+  $aiAccounts = $accounts | Where-Object { $_.kind -eq 'AIServices' }
+  $acct = ($aiAccounts | Where-Object { $_.name -like "ai$NamePrefix*" } | Select-Object -First 1).name
   if ([string]::IsNullOrWhiteSpace($acct)) {
-    $acct = az cognitiveservices account list -g $ResourceGroup --query "[?kind=='AIServices'].name | [0]" -o tsv
+    $acct = ($aiAccounts | Select-Object -First 1).name
   }
   if ([string]::IsNullOrWhiteSpace($acct)) {
     throw "No Foundry (AIServices) account found in $ResourceGroup. Deploy the AI stage (infra/stages/50-ai.bicep) first."
