@@ -208,7 +208,7 @@ Then apply the stage and run the post-deployment setup:
 ```powershell
 terraform plan -var-file stages.tfvars
 terraform apply -var-file stages.tfvars
-./scripts/setup-ai.ps1   # creates demo agents and simulates traffic
+./scripts/setup-ai.ps1 -g rg-azure-monitor-lab   # match `resource_group_name` in stages.tfvars; creates demo agents and simulates traffic
 ```
 
 The AI stage creates the Foundry account, project, four model deployments, App Insights connection, token alerts, AI FinOps query pack and workbook, and the AI tier in the workload health model. It requires the Stage A Application Insights resource but does not require Stages B to E.

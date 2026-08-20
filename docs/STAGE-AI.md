@@ -89,9 +89,9 @@ az monitor app-insights query --app appi-amlab -g $rg --analytics-query "depende
 **Standalone Bicep stage**:
 
 ```powershell
-az deployment group create -g rg-azure-monitor-lab -n stage-ai-foundry `
+az deployment group create -g $rg -n stage-ai-foundry `
   --template-file infra/stages/50-ai.bicep -p namePrefix=amlab alertEmail=you@contoso.com
-./scripts/setup-ai.ps1
+./scripts/setup-ai.ps1 -g $rg
 ```
 
 > **Verify the Model Router version for your region first:** `az cognitiveservices model list -l swedencentral` and pass `-p routerModelVersion=<version>` (or `router_model_version` in Terraform) if the default has rolled forward.

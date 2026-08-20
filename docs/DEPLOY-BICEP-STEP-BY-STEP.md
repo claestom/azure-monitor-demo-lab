@@ -157,7 +157,7 @@ Deploys the Foundry GenAI workload (pinned to swedencentral) directly from the s
 
 ```powershell
 az deployment group create -g $rg --name stage-ai-foundry --template-file infra/stages/50-ai.bicep --parameters namePrefix=amlab alertEmail=your.alias@example.com
-./scripts/setup-ai.ps1   # pip install + create agents + simulate traffic
+./scripts/setup-ai.ps1 -g $rg   # pip install + create agents + simulate traffic
 ```
 
 Stage AI depends only on Stage A and can be deployed before or after Stages B to E. If you are using the central config workflow, set `stageToggles.enableStageAI` to `true` in `lab.config.json`, run `./scripts/sync-config.ps1`, and deploy the generated parameters with the same Stage AI template. The stage is off by default because the model deployments are billable.
