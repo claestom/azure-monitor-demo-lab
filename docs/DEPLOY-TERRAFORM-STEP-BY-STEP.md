@@ -280,10 +280,11 @@ cd terraform
 terraform state list | ForEach-Object { terraform state rm $_ }
 ```
 
-Or just run the wrapper:
+Or just run the wrapper (update the resource group value if needed):
 
 ```powershell
-.\scripts\teardown.ps1 -ResourceGroup rg-azure-monitor-lab -Yes
+$rg = "rg-azure-monitor-lab"
+.\scripts\teardown.ps1 -ResourceGroup $rg -Yes
 ```
 
 ### Option B - terraform destroy + manual RG cleanup
