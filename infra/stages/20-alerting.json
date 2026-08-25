@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "2300577566381535332"
+      "templateHash": "14331048854003964745"
     }
   },
   "parameters": {
@@ -756,7 +756,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "1605887819057981622"
+              "templateHash": "15577159833746838957"
             }
           },
           "parameters": {
@@ -915,9 +915,9 @@
                     {
                       "name": "AvgResponseTime",
                       "metricNamespace": "Microsoft.Web/sites",
-                      "metricName": "AverageResponseTime",
+                      "metricName": "HttpResponseTime",
                       "operator": "GreaterThan",
-                      "threshold": 5,
+                      "threshold": 5000,
                       "timeAggregation": "Average",
                       "criterionType": "StaticThresholdCriterion"
                     }

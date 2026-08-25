@@ -119,9 +119,9 @@ resource amba_app_resptime 'Microsoft.Insights/metricAlerts@2018-03-01' = {
         {
           name: 'AvgResponseTime'
           metricNamespace: 'Microsoft.Web/sites'
-          metricName: 'AverageResponseTime'
+          metricName: 'HttpResponseTime'
           operator: 'GreaterThan'
-          threshold: 5
+          threshold: 5000
           timeAggregation: 'Average'
           criterionType: 'StaticThresholdCriterion'
         }
