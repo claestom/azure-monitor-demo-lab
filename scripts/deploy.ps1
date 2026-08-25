@@ -172,6 +172,7 @@ function Get-FailedOperationMessages {
 }
 
 $attempt = 0
+$sentinelRetryCount = 0
 while ($true) {
   $attempt++
   if ($attempt -gt 1) {
@@ -193,6 +194,14 @@ while ($true) {
   $failMessages = Get-FailedOperationMessages -Rg $ResourceGroup -Name $deploymentName
   $matchedCode  = $capacityCodes | Where-Object { $failMessages -match $_ } | Select-Object -First 1
   $matchedQuota = $quotaCodes    | Where-Object { $failMessages -match $_ } | Select-Object -First 1
+  $sentinelQueryNotReady = $failMessages -match 'Failed to run the analytics rule query.*workspace.*could not be found'
+
+  if ($sentinelQueryNotReady -and $sentinelRetryCount -lt 2) {
+    $sentinelRetryCount++
+    Write-Host "`n   ⚠ Sentinel analytics-rule validation is not ready yet. Waiting 60 seconds and retrying deployment ($sentinelRetryCount/2)..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 60
+    continue
+  }
 
   if ($matchedCode) {
     Write-Host "`n   ⚠ Capacity/allocation failure ($matchedCode) in region '$Location'." -ForegroundColor Yellow
@@ -241,6 +250,7 @@ $webAppHost       = $outputs.webAppDefaultHost.value
 $aksName          = $outputs.aksName.value
 $grafanaEndpoint  = $outputs.grafanaEndpoint.value
 $workbookId       = $outputs.workbookId.value
+$centralLawName   = $outputs.centralLawName.value
 $linuxVm          = $outputs.linuxVmNameOut.value
 $winVm            = $outputs.windowsVmNameOut.value
 
@@ -256,7 +266,7 @@ $winVm            = $outputs.windowsVmNameOut.value
 #     can be a future version that hasn't shipped to all regions yet (e.g. '2026-03-01'
 #     returning NoRegisteredProviderFound in swedencentral).
 Write-Step "Ensuring subscription Activity Log ships to law-amlab-central (scenario 43 prereq)"
-$lawArmId = az monitor log-analytics workspace show -g $ResourceGroup -n 'law-amlab-central' --query id -o tsv
+$lawArmId = az monitor log-analytics workspace show -g $ResourceGroup -n $centralLawName --query id -o tsv
 $diagName = 'amlab-activity-to-law'
 $existingWs = az monitor diagnostic-settings subscription list --query "value[?name=='$diagName'].workspaceId | [0]" -o tsv 2>$null
 if ($existingWs -and $existingWs -eq $lawArmId) {
