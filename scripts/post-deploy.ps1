@@ -35,6 +35,7 @@ az webapp config set `
   --resource-group $ResourceGroup --name $WebAppName `
   --startup-file 'dotnet AmlabHello.dll' `
   --output none
+Start-Sleep -Seconds 30
 
 Write-Step "Publishing AmlabHello (workloads/webapp) and zip-deploying"
 $pub = Join-Path $env:TEMP "amlab-pub-$([guid]::NewGuid().ToString('N'))"
@@ -42,10 +43,23 @@ $csproj = Join-Path $PSScriptRoot '..' 'workloads' 'webapp' 'AmlabHello.csproj'
 dotnet publish $csproj -c Release -o $pub --nologo --verbosity quiet
 $zip = "$pub.zip"
 Compress-Archive -Path "$pub\*" -DestinationPath $zip -Force
-$deployOutput = & az webapp deploy `
-  --resource-group $ResourceGroup --name $WebAppName `
-  --src-path $zip --type zip --restart true --async true --track-status false --output none 2>&1 | Out-String
-$deployExitCode = $LASTEXITCODE
+$deployOutput = ''
+$deployExitCode = 1
+$scmRestartRetries = 0
+do {
+  $deployOutput = & az webapp deploy `
+    --resource-group $ResourceGroup --name $WebAppName `
+    --src-path $zip --type zip --restart true --async true --track-status false --output none 2>&1 | Out-String
+  $deployExitCode = $LASTEXITCODE
+  $scmRestarted = $deployOutput -match 'SCM container restart|management operation and a deployment operation in quick succession'
+  if ($deployExitCode -ne 0 -and $scmRestarted -and $scmRestartRetries -lt 2) {
+    $scmRestartRetries++
+    Write-Host "   SCM restarted during ZIP deployment. Waiting 60 seconds before retry $scmRestartRetries/2..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 60
+  } else {
+    break
+  }
+} while ($true)
 
 # Async deployment avoids Kudu's unreliable long startup poll. Wait quietly for the
 # public endpoint before applying workloads that depend on the App Service URL.
