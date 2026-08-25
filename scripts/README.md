@@ -10,50 +10,50 @@ Most scripts use the Azure CLI and require `az login`. Scripts that work with AK
 
 ## Deployment and configuration
 
-| Script | Purpose | Deployment integration | Typical command |
-|---|---|---|---|
-| `sync-config.ps1` | Reads `lab.config.json` and generates the gitignored deployment inputs: `.azure-target.json`, `infra/main.parameters.json`, and `terraform/stages.tfvars`. | Indirect: called by `deploy.ps1` when `lab.config.json` exists | `./scripts/sync-config.ps1` |
-| `preflight-check.ps1` | Checks regional SKU availability, quota, and Azure resource-provider availability before deployment. | Indirect: called by `deploy.ps1` unless `-SkipPreflight` is used | `./scripts/preflight-check.ps1 -Location northeurope` |
-| `deploy.ps1` | Runs the one-shot Bicep deployment, including resource creation, post-deployment workloads, health model setup, SLIs, and optional AI setup. | Yes: main deployment entry point | `./scripts/deploy.ps1 -ResourceGroup rg-my-lab -Location northeurope` |
-| `post-deploy.ps1` | Publishes the .NET sample to App Service and applies the AKS frontend, load generator, and OpenTelemetry workloads. Normally called by `deploy.ps1`. | Indirect: called by `deploy.ps1` | `./scripts/post-deploy.ps1 -ResourceGroup <rg> -WebAppName <app> -AksName <aks> -WebAppHost <host>` |
-| `gen-architecture-svg.ps1` | Regenerates `docs/architecture-overview.svg` from the architecture definition and local Azure icons. | No: documentation tooling | `./scripts/gen-architecture-svg.ps1` |
+| Script | Purpose | Typical command |
+|---|---|---|
+| `sync-config.ps1` | Reads `lab.config.json` and generates the gitignored deployment inputs: `.azure-target.json`, `infra/main.parameters.json`, and `terraform/stages.tfvars`. | `./scripts/sync-config.ps1` |
+| `preflight-check.ps1` | Checks regional SKU availability, quota, and Azure resource-provider availability before deployment. | `./scripts/preflight-check.ps1 -Location northeurope` |
+| `deploy.ps1` | Runs the one-shot Bicep deployment, including resource creation, post-deployment workloads, health model setup, SLIs, and optional AI setup. | `./scripts/deploy.ps1 -ResourceGroup rg-my-lab -Location northeurope` |
+| `post-deploy.ps1` | Publishes the .NET sample to App Service and applies the AKS frontend, load generator, and OpenTelemetry workloads. Normally called by `deploy.ps1`. | `./scripts/post-deploy.ps1 -ResourceGroup <rg> -WebAppName <app> -AksName <aks> -WebAppHost <host>` |
+| `gen-architecture-svg.ps1` | Regenerates `docs/architecture-overview.svg` from the architecture definition and local Azure icons. | `./scripts/gen-architecture-svg.ps1` |
 
 For a fresh deployment, use `deploy.ps1` rather than calling `post-deploy.ps1` directly.
 
 ## Lab lifecycle and demo control
 
-| Script | Purpose | Deployment integration | Typical command |
-|---|---|---|---|
-| `start-the-lab.ps1` | Starts stopped or deallocated VMs, VMSS, AKS, and App Service resources. Add `-Wait` to poll until running. | No: manual lifecycle control | `./scripts/start-the-lab.ps1 -ResourceGroup <rg> -Wait` |
-| `break-the-lab.ps1` | Intentionally degrades the lab: stops VMs, crashloops the AKS frontend, and increases load-generator failures. | No: manual demo action | `./scripts/break-the-lab.ps1 -ResourceGroup <rg>` |
-| `restore-the-lab.ps1` | Reverses the break scenario by starting VMs, restoring the AKS image, and applying a healthy load generator. | No: manual demo action | `./scripts/restore-the-lab.ps1 -ResourceGroup <rg>` |
-| `start-ramp.ps1` | Starts a 60-minute AKS load test against the App Service for Smart Detection and autoscale demonstrations. | No: manual demo action | `./scripts/start-ramp.ps1 -ResourceGroup <rg>` |
-| `teardown.ps1` | Removes tenant-scoped demo artifacts, disables LAW replication, removes nested DCR associations, deletes DCRs and DCEs where possible, then deletes the resource group. | No: manual cleanup entry point | `./scripts/teardown.ps1 -ResourceGroup <rg> -Yes` |
+| Script | Purpose | Typical command |
+|---|---|---|
+| `start-the-lab.ps1` | Starts stopped or deallocated VMs, VMSS, AKS, and App Service resources. Add `-Wait` to poll until running. | `./scripts/start-the-lab.ps1 -ResourceGroup <rg> -Wait` |
+| `break-the-lab.ps1` | Intentionally degrades the lab: stops VMs, crashloops the AKS frontend, and increases load-generator failures. | `./scripts/break-the-lab.ps1 -ResourceGroup <rg>` |
+| `restore-the-lab.ps1` | Reverses the break scenario by starting VMs, restoring the AKS image, and applying a healthy load generator. | `./scripts/restore-the-lab.ps1 -ResourceGroup <rg>` |
+| `start-ramp.ps1` | Starts a 60-minute AKS load test against the App Service for Smart Detection and autoscale demonstrations. | `./scripts/start-ramp.ps1 -ResourceGroup <rg>` |
+| `teardown.ps1` | Removes tenant-scoped demo artifacts, disables LAW replication, removes nested DCR associations, deletes DCRs and DCEs where possible, then deletes the resource group. | `./scripts/teardown.ps1 -ResourceGroup <rg> -Yes` |
 
 `teardown.ps1` is destructive. The `-Yes` switch skips the confirmation prompt. If omitted, the script requires you to type `DELETE`.
 
 ## Telemetry and monitoring demos
 
-| Script | Purpose | Deployment integration | Typical command |
-|---|---|---|---|
-| `send-custom-logs.ps1` | Sends sample records through the Logs Ingestion API to the custom logs table. | No: manual telemetry demo | `./scripts/send-custom-logs.ps1 -ResourceGroup <rg> -Count 10` |
-| `send-release-annotation.ps1` | Adds a deployment or incident release annotation to Application Insights charts. | Indirect: called by post-deploy and incident scripts | `./scripts/send-release-annotation.ps1 -ResourceGroup <rg> -Name demo-release -Category Deployment` |
-| `trigger-code-optimization.ps1` | Drives traffic through the intentionally inefficient endpoint to produce Application Insights Code Optimization traces. Use `-SkipPublish` when the endpoint is already deployed. | No: manual telemetry demo | `./scripts/trigger-code-optimization.ps1 -ResourceGroup <rg> -SkipPublish` |
-| `setup-grafana-alerts.ps1` | Creates the Grafana alert rule for the Managed Prometheus data source. | No: manual optional setup | `./scripts/setup-grafana-alerts.ps1 -ResourceGroup <rg>` |
-| `create-summary-rule.ps1` | Creates or updates the hourly `Perf_Hourly_CL` summary rule. It discovers the suffixed central LAW when `-WorkspaceName` is omitted. | Indirect: called by `post-deploy.ps1` | `./scripts/create-summary-rule.ps1 -ResourceGroup <rg>` |
-| `toggle-table-plan.ps1` | Switches a Log Analytics table between `Basic` and `Analytics` plans. | No: manual cost demo | `./scripts/toggle-table-plan.ps1 -ResourceGroup <rg> -TableName ContainerLogV2 -Plan Basic` |
-| `run-search-job.ps1` | Runs a Log Analytics search job over archived or Basic Logs data. | No: manual demo | `./scripts/run-search-job.ps1 -ResourceGroup <rg> -TableName ContainerLogV2` |
-| `restore-archived-logs.ps1` | Restores selected archived data for querying. | No: manual demo | `./scripts/restore-archived-logs.ps1 -ResourceGroup <rg> -TableName ContainerLogV2 -LookbackDays 14` |
+| Script | Purpose | Typical command |
+|---|---|---|
+| `send-custom-logs.ps1` | Sends sample records through the Logs Ingestion API to the custom logs table. | `./scripts/send-custom-logs.ps1 -ResourceGroup <rg> -Count 10` |
+| `send-release-annotation.ps1` | Adds a deployment or incident release annotation to Application Insights charts. | `./scripts/send-release-annotation.ps1 -ResourceGroup <rg> -Name demo-release -Category Deployment` |
+| `trigger-code-optimization.ps1` | Drives traffic through the intentionally inefficient endpoint to produce Application Insights Code Optimization traces. Use `-SkipPublish` when the endpoint is already deployed. | `./scripts/trigger-code-optimization.ps1 -ResourceGroup <rg> -SkipPublish` |
+| `setup-grafana-alerts.ps1` | Creates the Grafana alert rule for the Managed Prometheus data source. | `./scripts/setup-grafana-alerts.ps1 -ResourceGroup <rg>` |
+| `create-summary-rule.ps1` | Creates or updates the hourly `Perf_Hourly_CL` summary rule. It discovers the suffixed central LAW when `-WorkspaceName` is omitted. | `./scripts/create-summary-rule.ps1 -ResourceGroup <rg>` |
+| `toggle-table-plan.ps1` | Switches a Log Analytics table between `Basic` and `Analytics` plans. | `./scripts/toggle-table-plan.ps1 -ResourceGroup <rg> -TableName ContainerLogV2 -Plan Basic` |
+| `run-search-job.ps1` | Runs a Log Analytics search job over archived or Basic Logs data. | `./scripts/run-search-job.ps1 -ResourceGroup <rg> -TableName ContainerLogV2` |
+| `restore-archived-logs.ps1` | Restores selected archived data for querying. | `./scripts/restore-archived-logs.ps1 -ResourceGroup <rg> -TableName ContainerLogV2 -LookbackDays 14` |
 
 ## Optional features
 
-| Script | Purpose | Deployment integration | Typical command |
-|---|---|---|---|
-| `setup-ai.ps1` | Creates the four Foundry demo agents and optionally simulates traffic. Use `-g <rg>` or `-ResourceGroup <rg>` to override a stale local config value. | Optional: called by `deploy.ps1` when the AI stage is enabled | `./scripts/setup-ai.ps1 -g <rg> -Conversations 150` |
-| `setup-health-model.ps1` | Creates or removes the optional tenant-scoped Service Group and its RG relationship. | Indirect: called by `deploy.ps1`; manual for teardown or optional setup | `./scripts/setup-health-model.ps1 -ResourceGroup <rg>` or add `-Teardown` |
-| `setup-slis.ps1` | Creates or removes the optional SLI resources attached to the Health Model Service Group. | Indirect: called by `deploy.ps1`; manual for teardown or optional setup | `./scripts/setup-slis.ps1 -ResourceGroup <rg>` or add `-Teardown` |
-| `setup-rbac-demo.ps1` | Creates the service principals and role assignments used by the granular RBAC demonstration. | No: manual demo setup | `./scripts/setup-rbac-demo.ps1 -ResourceGroup <rg>` |
-| `demo-granular-rbac.ps1` | Runs the granular RBAC demonstration query using the generated local RBAC configuration. | No: manual demo | `./scripts/demo-granular-rbac.ps1` |
+| Script | Purpose | Typical command |
+|---|---|---|
+| `setup-ai.ps1` | Creates the four Foundry demo agents and optionally simulates traffic. Use `-g <rg>` or `-ResourceGroup <rg>` to override a stale local config value. | `./scripts/setup-ai.ps1 -g <rg> -Conversations 150` |
+| `setup-health-model.ps1` | Creates or removes the optional tenant-scoped Service Group and its RG relationship. | `./scripts/setup-health-model.ps1 -ResourceGroup <rg>` or add `-Teardown` |
+| `setup-slis.ps1` | Creates or removes the optional SLI resources attached to the Health Model Service Group. | `./scripts/setup-slis.ps1 -ResourceGroup <rg>` or add `-Teardown` |
+| `setup-rbac-demo.ps1` | Creates the service principals and role assignments used by the granular RBAC demonstration. | `./scripts/setup-rbac-demo.ps1 -ResourceGroup <rg>` |
+| `demo-granular-rbac.ps1` | Runs the granular RBAC demonstration query using the generated local RBAC configuration. | `./scripts/demo-granular-rbac.ps1` |
 
 ## Recommended sequence after deployment
 
