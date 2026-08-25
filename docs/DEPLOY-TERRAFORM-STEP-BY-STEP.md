@@ -160,10 +160,11 @@ enable_stage_ai = false   # optional Foundry GenAI workload (swedencentral)
 Terraform looks the RG up via data source rather than creating it, so `terraform destroy` will not nuke it. Create it once (idempotent - safe to re-run):
 
 ```powershell
-az group create -n rg-azure-monitor-lab -l northeurope --tags purpose=azure-monitor-demo-lab owner=demo-lab
+$rg = "rg-azure-monitor-lab"   # set this to the RG used for this deployment
+az group create -n $rg -l northeurope --tags purpose=azure-monitor-demo-lab owner=demo-lab
 ```
 
-If you skip this step, `terraform plan` will fail with `Resource Group "rg-azure-monitor-lab" was not found`.
+If you omit `resource_group_name` from `stages.tfvars`, Terraform defaults to `rg-azure-monitor-lab`. If you use another RG, set the same name in `stages.tfvars` and in `$rg` before running the commands below. If you skip this step, `terraform plan` will fail because the configured resource group was not found.
 
 ### Step 4 - Init
 
@@ -208,7 +209,7 @@ Then apply the stage and run the post-deployment setup:
 ```powershell
 terraform plan -var-file stages.tfvars
 terraform apply -var-file stages.tfvars
-./scripts/setup-ai.ps1 -g rg-azure-monitor-lab   # match `resource_group_name` in stages.tfvars; creates demo agents and simulates traffic
+./scripts/setup-ai.ps1 -g $rg   # match `resource_group_name` in stages.tfvars; creates demo agents and simulates traffic
 ```
 
 `setup-ai.ps1` pip-installs the packages listed in [`workloads/ai/requirements.txt`](../workloads/ai/requirements.txt) before creating the agents and simulating traffic.
