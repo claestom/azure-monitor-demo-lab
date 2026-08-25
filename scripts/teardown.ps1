@@ -31,9 +31,12 @@ Write-Host "Removing LAW replication, DCR associations, DCRs, and DCEs ..." -For
 
 $workspaces = az resource list -g $ResourceGroup --resource-type Microsoft.OperationalInsights/workspaces -o json | ConvertFrom-Json
 foreach ($workspace in @($workspaces)) {
-  if ($workspace.properties.replication.enabled -eq $true) {
+  # az resource list returns a shallow resource projection; fetch the workspace
+  # before checking replication so the nested property is not missed.
+  $workspaceDetails = az resource show --ids $workspace.id --api-version 2025-02-01 -o json | ConvertFrom-Json
+  if ($workspaceDetails.properties.replication.enabled -eq $true) {
     Write-Host "  Disabling replication on $($workspace.name)" -ForegroundColor DarkGray
-    az resource update --ids $workspace.id --api-version 2025-02-01 --set properties.replication.enabled=false | Out-Null
+    az monitor log-analytics workspace update -g $ResourceGroup -n $workspace.name --replication-enabled false --only-show-errors | Out-Null
   }
 }
 
