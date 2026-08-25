@@ -44,28 +44,30 @@ $zip = "$pub.zip"
 Compress-Archive -Path "$pub\*" -DestinationPath $zip -Force
 $deployOutput = & az webapp deploy `
   --resource-group $ResourceGroup --name $WebAppName `
-  --src-path $zip --type zip --restart true --output none 2>&1 | Out-String
+  --src-path $zip --type zip --restart true --async true --track-status false --output none 2>&1 | Out-String
 $deployExitCode = $LASTEXITCODE
 
-# Kudu can time out its startup poll after a successful package deployment. Verify
-# the public endpoint before treating that polling failure as a failed deployment.
+# Async deployment avoids Kudu's unreliable long startup poll. Wait quietly for the
+# public endpoint before applying workloads that depend on the App Service URL.
 if ($deployExitCode -ne 0) {
-  $siteReachable = $false
+  throw "App Service ZIP upload failed. Details:`n$deployOutput"
+}
+
+$siteReachable = $false
+for ($i = 0; $i -lt 36; $i++) {
   try {
     $response = Invoke-WebRequest -Uri "https://$WebAppHost/" -UseBasicParsing -TimeoutSec 15
-    $siteReachable = $response.StatusCode -ge 200 -and $response.StatusCode -lt 400
-  } catch {
-    $siteReachable = $false
-  }
-
-  if ($siteReachable) {
-    Write-Host "   ZIP deployment completed and the App Service is reachable; ignoring Kudu startup-poll timeout." -ForegroundColor Yellow
-  } else {
-    throw "App Service ZIP deployment failed and the site is not reachable. Details:`n$deployOutput"
-  }
-} else {
-  Write-Host "   App Service ZIP deployment completed and the site is reachable." -ForegroundColor Green
+    if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) {
+      $siteReachable = $true
+      break
+    }
+  } catch { }
+  Start-Sleep -Seconds 10
 }
+if (-not $siteReachable) {
+  throw "App Service ZIP upload was accepted, but the site did not become reachable within 6 minutes. Check the App Service runtime logs."
+}
+Write-Host "   App Service ZIP upload accepted and the site is reachable." -ForegroundColor Green
 Remove-Item -Recurse -Force $pub
 Remove-Item -Force $zip
 
