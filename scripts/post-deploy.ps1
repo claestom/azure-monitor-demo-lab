@@ -7,7 +7,8 @@ param(
   [Parameter(Mandatory)] [string] $ResourceGroup,
   [Parameter(Mandatory)] [string] $WebAppName,
   [Parameter(Mandatory)] [string] $AksName,
-  [Parameter(Mandatory)] [string] $WebAppHost
+  [Parameter(Mandatory)] [string] $WebAppHost,
+  [string] $CentralLawName
 )
 
 $ErrorActionPreference = 'Stop'
@@ -164,7 +165,7 @@ Write-Step "Creating summary rule rule-perf-hourly (scenario 21 prereq)"
 $summaryRuleScript = Join-Path $PSScriptRoot 'create-summary-rule.ps1'
 if (Test-Path $summaryRuleScript) {
   try {
-    & $summaryRuleScript -ResourceGroup $ResourceGroup
+    & $summaryRuleScript -ResourceGroup $ResourceGroup -WorkspaceName $CentralLawName
   } catch {
     Write-Host "  Summary rule provisioning failed: $($_.Exception.Message)" -ForegroundColor Yellow
     Write-Host "  Continuing — re-run scripts/create-summary-rule.ps1 manually." -ForegroundColor Yellow

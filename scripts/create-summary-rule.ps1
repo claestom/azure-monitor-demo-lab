@@ -21,14 +21,15 @@
   Resource group containing the demo lab.
 
 .PARAMETER WorkspaceName
-  Central LAW name (default: law-amlab-central).
+  Central LAW name. Pass the actual suffixed name from deployment output; when omitted,
+  the script discovers the first central LAW matching the lab prefix.
 
 .PARAMETER RuleName
   Summary rule name (default: rule-perf-hourly).
 #>
 param(
   [string]$ResourceGroup = 'rg-azure-monitor-lab',
-  [string]$WorkspaceName = 'law-amlab-central',
+  [string]$WorkspaceName,
   [string]$RuleName      = 'rule-perf-hourly'
 )
 
@@ -38,6 +39,13 @@ Write-Host "`n=== Summary Rule: Perf -> Perf_Hourly_CL ($RuleName) ===" -Foregro
 
 $subId      = az account show --query id -o tsv
 $apiVersion = '2025-07-01'
+if ([string]::IsNullOrWhiteSpace($WorkspaceName)) {
+  $workspaces = az monitor log-analytics workspace list -g $ResourceGroup -o json | ConvertFrom-Json
+  $WorkspaceName = ($workspaces | Where-Object { $_.name -like 'law-*-central-*' } | Select-Object -First 1).name
+}
+if ([string]::IsNullOrWhiteSpace($WorkspaceName)) {
+  throw "No central Log Analytics workspace found in $ResourceGroup. Pass -WorkspaceName with the deployed suffixed LAW name."
+}
 $uri        = "https://management.azure.com/subscriptions/$subId/resourceGroups/$ResourceGroup/providers/Microsoft.OperationalInsights/workspaces/$WorkspaceName/summarylogs/$RuleName`?api-version=$apiVersion"
 
 # Single-line KQL — the bin window provides the time range, so the query must NOT
