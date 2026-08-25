@@ -173,6 +173,7 @@ function Get-FailedOperationMessages {
 
 $attempt = 0
 $sentinelRetryCount = 0
+$appServiceCapacityRetryCount = 0
 while ($true) {
   $attempt++
   if ($attempt -gt 1) {
@@ -195,10 +196,18 @@ while ($true) {
   $matchedCode  = $capacityCodes | Where-Object { $failMessages -match $_ } | Select-Object -First 1
   $matchedQuota = $quotaCodes    | Where-Object { $failMessages -match $_ } | Select-Object -First 1
   $sentinelQueryNotReady = $failMessages -match 'Failed to run the analytics rule query.*workspace.*could not be found'
+  $appServiceCapacityNotReady = $failMessages -match 'No available instances to satisfy this request|App Service is attempting to increase capacity'
 
   if ($sentinelQueryNotReady -and $sentinelRetryCount -lt 2) {
     $sentinelRetryCount++
     Write-Host "`n   ⚠ Sentinel analytics-rule validation is not ready yet. Waiting 60 seconds and retrying deployment ($sentinelRetryCount/2)..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 60
+    continue
+  }
+
+  if ($appServiceCapacityNotReady -and $appServiceCapacityRetryCount -lt 2) {
+    $appServiceCapacityRetryCount++
+    Write-Host "`n   ⚠ App Service capacity is not ready in its deployment region. Waiting 60 seconds and retrying deployment ($appServiceCapacityRetryCount/2)..." -ForegroundColor Yellow
     Start-Sleep -Seconds 60
     continue
   }
