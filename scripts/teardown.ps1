@@ -26,7 +26,7 @@ if (-not $Yes) {
 }
 
 # Remove dependencies that can prevent Azure from deleting the monitoring estate.
-# These operations are synchronous; the final RG deletion remains --no-wait.
+# The final RG deletion remains --no-wait.
 Write-Host "Removing LAW replication, DCR associations, DCRs, and DCEs ..." -ForegroundColor Yellow
 
 $workspaces = az resource list -g $ResourceGroup --resource-type Microsoft.OperationalInsights/workspaces -o json | ConvertFrom-Json
@@ -38,9 +38,22 @@ foreach ($workspace in @($workspaces)) {
 }
 
 $dcrAssociations = az resource list -g $ResourceGroup --resource-type Microsoft.Insights/dataCollectionRuleAssociations -o json | ConvertFrom-Json
-foreach ($association in @($dcrAssociations)) {
-  Write-Host "  Removing DCR association $($association.name)" -ForegroundColor DarkGray
-  az resource delete --ids $association.id --api-version 2023-03-11
+
+# Workspace and resource-scoped associations are child resources, so the RG-level
+# resource list can omit them (notably the LAW microsoft-default association).
+$allResources = az resource list -g $ResourceGroup -o json | ConvertFrom-Json
+foreach ($resource in @($allResources)) {
+  $nestedJson = az rest --method get --url "$($resource.id)/providers/Microsoft.Insights/dataCollectionRuleAssociations?api-version=2023-03-11" 2>$null
+  if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($nestedJson)) {
+    $nested = $nestedJson | ConvertFrom-Json
+    $dcrAssociations += @($nested.value)
+  }
+}
+
+$associationIds = @($dcrAssociations | Where-Object { $_.id } | Select-Object -ExpandProperty id -Unique)
+foreach ($associationId in $associationIds) {
+  Write-Host "  Removing DCR association $associationId" -ForegroundColor DarkGray
+  az resource delete --ids $associationId --api-version 2023-03-11
 }
 
 $dcrs = az resource list -g $ResourceGroup --resource-type Microsoft.Insights/dataCollectionRules -o json | ConvertFrom-Json
@@ -52,7 +65,10 @@ foreach ($dcr in @($dcrs)) {
 $dces = az resource list -g $ResourceGroup --resource-type Microsoft.Insights/dataCollectionEndpoints -o json | ConvertFrom-Json
 foreach ($dce in @($dces)) {
   Write-Host "  Removing DCE $($dce.name)" -ForegroundColor DarkGray
-  az resource delete --ids $dce.id --api-version 2023-03-11
+  az resource delete --ids $dce.id --api-version 2023-03-11 2>$null
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "    DCE is managed by Azure; it will be removed with the LAW/RG cascade." -ForegroundColor DarkGray
+  }
 }
 
 # Tear down tenant-scoped artefacts FIRST (they survive RG delete otherwise and

@@ -193,7 +193,7 @@ If count is zero, security-posture scenarios 47/48/49 will not fire.
 
 ## 8) Tearing down the lab
 
-When done, run the teardown script. It first disables LAW replication and removes DCR associations, DCRs, and DCEs in dependency order, then starts the resource-group deletion.
+When done, run the teardown script. It first disables LAW replication and removes nested DCR associations, DCRs, and DCEs in dependency order, then starts the resource-group deletion. Azure-managed DCEs that reject direct deletion are left for the LAW/RG cascade.
 
 ### Step 1 - Pin subscription
 

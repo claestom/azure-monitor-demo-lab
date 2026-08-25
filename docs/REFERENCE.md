@@ -241,7 +241,7 @@ Rough monthly burn if left running 24/7:
 ./scripts/teardown.ps1 -Yes
 ```
 
-Before starting the RG deletion, the script disables LAW replication and removes DCR associations, DCRs, and DCEs in dependency order. The final RG deletion runs in the background (`--no-wait`).
+Before starting the RG deletion, the script disables LAW replication and removes nested DCR associations, DCRs, and DCEs in dependency order. Some Azure-managed DCEs cannot be deleted directly and are left for the LAW/RG cascade. The final RG deletion runs in the background (`--no-wait`).
 
 ---
 
