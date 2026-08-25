@@ -199,7 +199,7 @@ When done, delete the resource group. ARM cascade-deletes everything in it.
 
 ```powershell
 $sub='<your-subscription-id>'
-$rg='rg-azure-monitor-lab'
+$rg='rg-azure-monitor-lab'   # set this to the RG where you deployed the lab; this is the default
 az account set --subscription $sub
 az account show --query "{name:name,id:id,tenantId:tenantId}" -o table
 ```
