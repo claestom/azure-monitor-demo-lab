@@ -193,7 +193,7 @@ If count is zero, security-posture scenarios 47/48/49 will not fire.
 
 ## 8) Tearing down the lab
 
-When done, delete the resource group. ARM cascade-deletes everything in it.
+When done, run the teardown script. It first disables LAW replication and removes DCR associations, DCRs, and DCEs in dependency order, then starts the resource-group deletion.
 
 ### Step 1 - Pin subscription
 

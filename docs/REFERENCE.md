@@ -241,7 +241,7 @@ Rough monthly burn if left running 24/7:
 ./scripts/teardown.ps1 -Yes
 ```
 
-Deletes the whole RG (background, no-wait). Sub-scope items: there are none — everything lives inside the RG.
+Before starting the RG deletion, the script disables LAW replication and removes DCR associations, DCRs, and DCEs in dependency order. The final RG deletion runs in the background (`--no-wait`).
 
 ---
 

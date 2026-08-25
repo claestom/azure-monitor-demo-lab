@@ -272,7 +272,8 @@ $rg='rg-azure-monitor-lab'
 az account set --subscription $sub
 az account show --query "{name:name,id:id,tenantId:tenantId}" -o table
 
-# Cascade-delete the whole RG (async)
+# Direct deletion does not run the dependency cleanup. Prefer the wrapper below,
+# which removes LAW replication, DCR associations, DCRs, and DCEs first.
 az group delete -n $rg --yes --no-wait
 
 # Clear terraform state so the next apply starts clean

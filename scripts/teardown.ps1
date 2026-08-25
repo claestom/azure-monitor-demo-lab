@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Tear the lab down: deletes the resource group + sub-scoped artefacts (none here).
+  Tear the lab down: remove monitoring dependencies, then delete the resource group.
 #>
 [CmdletBinding()]
 param(
@@ -23,6 +23,36 @@ if (Test-Path $targetFile) {
 if (-not $Yes) {
   $confirm = Read-Host "About to delete RG '$ResourceGroup' and EVERYTHING in it. Type DELETE to confirm"
   if ($confirm -ne 'DELETE') { Write-Host "Aborted." -ForegroundColor Yellow; return }
+}
+
+# Remove dependencies that can prevent Azure from deleting the monitoring estate.
+# These operations are synchronous; the final RG deletion remains --no-wait.
+Write-Host "Removing LAW replication, DCR associations, DCRs, and DCEs ..." -ForegroundColor Yellow
+
+$workspaces = az resource list -g $ResourceGroup --resource-type Microsoft.OperationalInsights/workspaces -o json | ConvertFrom-Json
+foreach ($workspace in @($workspaces)) {
+  if ($workspace.properties.replication.enabled -eq $true) {
+    Write-Host "  Disabling replication on $($workspace.name)" -ForegroundColor DarkGray
+    az resource update --ids $workspace.id --api-version 2025-02-01 --set properties.replication.enabled=false | Out-Null
+  }
+}
+
+$dcrAssociations = az resource list -g $ResourceGroup --resource-type Microsoft.Insights/dataCollectionRuleAssociations -o json | ConvertFrom-Json
+foreach ($association in @($dcrAssociations)) {
+  Write-Host "  Removing DCR association $($association.name)" -ForegroundColor DarkGray
+  az resource delete --ids $association.id --api-version 2023-03-11
+}
+
+$dcrs = az resource list -g $ResourceGroup --resource-type Microsoft.Insights/dataCollectionRules -o json | ConvertFrom-Json
+foreach ($dcr in @($dcrs)) {
+  Write-Host "  Removing DCR $($dcr.name)" -ForegroundColor DarkGray
+  az resource delete --ids $dcr.id --api-version 2024-03-11
+}
+
+$dces = az resource list -g $ResourceGroup --resource-type Microsoft.Insights/dataCollectionEndpoints -o json | ConvertFrom-Json
+foreach ($dce in @($dces)) {
+  Write-Host "  Removing DCE $($dce.name)" -ForegroundColor DarkGray
+  az resource delete --ids $dce.id --api-version 2023-03-11
 }
 
 # Tear down tenant-scoped artefacts FIRST (they survive RG delete otherwise and
