@@ -198,7 +198,7 @@ while ($true) {
   $matchedQuota = $quotaCodes    | Where-Object { $failMessages -match $_ } | Select-Object -First 1
   $sentinelQueryNotReady = $failMessages -match 'Failed to run the analytics rule query.*workspace.*could not be found'
   $appServiceCapacityNotReady = $failMessages -match 'No available instances to satisfy this request|App Service is attempting to increase capacity'
-  $ambaMetricNotReady = $failMessages -match "Couldn't find a metric named Http4xx"
+  $ambaMetricNotReady = $failMessages -match "Couldn't find a metric named (Http4xx|Http5xx|HttpResponseTime)"
 
   if ($sentinelQueryNotReady -and $sentinelRetryCount -lt 2) {
     $sentinelRetryCount++
@@ -216,7 +216,7 @@ while ($true) {
 
   if ($ambaMetricNotReady -and $ambaMetricRetryCount -lt 2) {
     $ambaMetricRetryCount++
-    Write-Host "`n   WARNING: AMBA App Service metrics are not ready yet. Waiting 60 seconds and retrying deployment ($ambaMetricRetryCount/2)..." -ForegroundColor Yellow
+    Write-Host "`n   WARNING: App Service metrics are not ready yet. Waiting 60 seconds and retrying deployment ($ambaMetricRetryCount/2)..." -ForegroundColor Yellow
     Start-Sleep -Seconds 60
     continue
   }
