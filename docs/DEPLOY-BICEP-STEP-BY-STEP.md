@@ -121,6 +121,12 @@ Notes:
 az deployment group create -g $rg --name stage-b-workloads --template-file infra/main.bicep --parameters @infra/main.parameters.json deployLinuxVm=true deployWindowsVm=true aksNodeCount=1 enableSentinel=false
 ```
 
+After Stage B, run the local post-deployment setup. This publishes the sample App Service, applies the AKS demo workloads, creates the summary rule, and provisions the health model and SLI prerequisites. The script discovers the suffixed resource names automatically:
+
+```powershell
+./scripts/post-staged-deploy.ps1 -ResourceGroup $rg
+```
+
 ### Stage C deploy
 
 ```powershell

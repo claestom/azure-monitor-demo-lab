@@ -192,6 +192,12 @@ If your shell reports "Too many command line arguments", retype the command manu
 
 Flip one stage flag at a time in `stages.tfvars` and re-run plan/apply. Each new `terraform plan` should show exactly one additional `azapi_resource.stage_*` add when you enable the next stage.
 
+After applying Stage B, run the local post-deployment setup. This publishes the sample App Service, applies the AKS demo workloads, creates the summary rule, and provisions the health model and SLI prerequisites. The script discovers the suffixed resource names automatically:
+
+```powershell
+./scripts/post-staged-deploy.ps1 -ResourceGroup $rg
+```
+
 ### Step 7 - Enable Stage AI (optional)
 
 Stage AI can be enabled after Stage A, independently of Stages B to E. It is off by default because the Foundry model deployments are billable and pinned to `swedencentral`.

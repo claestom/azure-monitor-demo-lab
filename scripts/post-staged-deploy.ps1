@@ -1,0 +1,92 @@
+<#
+.SYNOPSIS
+  Run the local post-deployment setup after staged Bicep or Terraform deployment.
+
+.DESCRIPTION
+  Discovers the staged lab's App Service, AKS cluster, and suffixed central Log
+  Analytics workspace, then runs the same post-deployment helpers used by deploy.ps1.
+
+.PARAMETER ResourceGroup
+  Resource group containing the staged lab deployment.
+
+.PARAMETER NamePrefix
+  Resource name prefix used by the deployment. Defaults to 'amlab'.
+
+.EXAMPLE
+  ./scripts/post-staged-deploy.ps1 -ResourceGroup rg-azure-monitor-lab
+
+.EXAMPLE
+  ./scripts/post-staged-deploy.ps1 -ResourceGroup rg-my-lab -NamePrefix demo
+#>
+[CmdletBinding()]
+param(
+  [Parameter(Mandatory)] [string] $ResourceGroup,
+  [string] $NamePrefix = 'amlab'
+)
+
+$ErrorActionPreference = 'Stop'
+function Write-Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
+function Write-Info($msg) { Write-Host "    $msg" -ForegroundColor DarkGray }
+
+# Honor the generated subscription and tenant guardrail when available.
+$targetFile = Join-Path $PSScriptRoot '..' '.azure-target.json'
+if (Test-Path $targetFile) {
+  $target = Get-Content -Raw $targetFile | ConvertFrom-Json
+  az account set --subscription $target.expectedSubscriptionId | Out-Null
+  $active = az account show --query "{id:id, tenantId:tenantId}" -o json | ConvertFrom-Json
+  if ($active.id -ne $target.expectedSubscriptionId -or $active.tenantId -ne $target.expectedTenantId) {
+    throw "BLOCKED: active subscription or tenant does not match .azure-target.json."
+  }
+} else {
+  $active = az account show --query "{id:id, tenantId:tenantId}" -o json | ConvertFrom-Json
+}
+
+Write-Info "Subscription: $($active.id)"
+Write-Info "Resource group: $ResourceGroup"
+Write-Info "Name prefix: $NamePrefix"
+
+Write-Step "Discovering staged deployment resources"
+$resources = az resource list -g $ResourceGroup -o json | ConvertFrom-Json
+$webApp = @($resources | Where-Object {
+  $_.type -ieq 'Microsoft.Web/sites' -and $_.name -like "app-$NamePrefix-*"
+}) | Select-Object -First 1
+$aks = @($resources | Where-Object {
+  $_.type -ieq 'Microsoft.ContainerService/managedClusters' -and $_.name -ieq "aks-$NamePrefix"
+}) | Select-Object -First 1
+$centralLaw = @($resources | Where-Object {
+  $_.type -ieq 'Microsoft.OperationalInsights/workspaces' -and $_.name -like "law-$NamePrefix-central-*"
+}) | Select-Object -First 1
+
+if (-not $webApp) {
+  throw "Could not find App Service 'app-$NamePrefix-<suffix>' in resource group '$ResourceGroup'. Complete the workload stage first."
+}
+if (-not $aks) {
+  throw "Could not find AKS cluster 'aks-$NamePrefix' in resource group '$ResourceGroup'. Complete the workload stage first."
+}
+if (-not $centralLaw) {
+  throw "Could not find central LAW 'law-$NamePrefix-central-<suffix>' in resource group '$ResourceGroup'. Complete the foundation stage first."
+}
+
+$webAppHost = "$($webApp.name).azurewebsites.net"
+Write-Info "Web App: $($webApp.name)"
+Write-Info "AKS: $($aks.name)"
+Write-Info "Central LAW: $($centralLaw.name)"
+
+Write-Step "Running App Service and AKS post-deployment setup"
+$postDeploy = Join-Path $PSScriptRoot 'post-deploy.ps1'
+& $postDeploy `
+  -ResourceGroup $ResourceGroup `
+  -WebAppName $webApp.name `
+  -AksName $aks.name `
+  -WebAppHost $webAppHost `
+  -CentralLawName $centralLaw.name
+
+Write-Step "Provisioning service group and health model prerequisites"
+$setupHm = Join-Path $PSScriptRoot 'setup-health-model.ps1'
+& $setupHm -ResourceGroup $ResourceGroup
+
+Write-Step "Provisioning demo SLI prerequisites"
+$setupSli = Join-Path $PSScriptRoot 'setup-slis.ps1'
+& $setupSli -ResourceGroup $ResourceGroup
+
+Write-Host "`nPost-staged deployment setup completed." -ForegroundColor Green
