@@ -47,15 +47,21 @@ Compress-Archive -Path "$pub\*" -DestinationPath $zip -Force
 $deployOutput = ''
 $deployExitCode = 1
 $scmRestartRetries = 0
+$zipDeployRetries = 0
 do {
   $deployOutput = & az webapp deploy `
     --resource-group $ResourceGroup --name $WebAppName `
     --src-path $zip --type zip --restart true --async true --track-status false --output none 2>&1 | Out-String
   $deployExitCode = $LASTEXITCODE
   $scmRestarted = $deployOutput -match 'SCM container restart|management operation and a deployment operation in quick succession'
+  $zipDeploymentFailed = $deployOutput -match 'Zip deployment failed|Status Code: 502|Deployment Failed.*OneDeploy'
   if ($deployExitCode -ne 0 -and $scmRestarted -and $scmRestartRetries -lt 2) {
     $scmRestartRetries++
     Write-Host "   SCM restarted during ZIP deployment. Waiting 60 seconds before retry $scmRestartRetries/2..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 60
+  } elseif ($deployExitCode -ne 0 -and $zipDeploymentFailed -and $zipDeployRetries -lt 2) {
+    $zipDeployRetries++
+    Write-Host "   OneDeploy failed after upload. Waiting 60 seconds before retry $zipDeployRetries/2..." -ForegroundColor Yellow
     Start-Sleep -Seconds 60
   } else {
     break
