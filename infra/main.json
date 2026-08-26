@@ -1,12 +1,11 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "languageVersion": "2.0",
   "contentVersion": "1.0.0.0",
   "metadata": {
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "2288080335292916194"
+      "templateHash": "7214497526092040420"
     }
   },
   "parameters": {
@@ -195,8 +194,8 @@
       "costCenter": "demo"
     }
   },
-  "resources": {
-    "dce": {
+  "resources": [
+    {
       "type": "Microsoft.Insights/dataCollectionEndpoints",
       "apiVersion": "2023-03-11",
       "name": "[variables('dceName')]",
@@ -209,36 +208,7 @@
         }
       }
     },
-    "vnetExisting": {
-      "existing": true,
-      "type": "Microsoft.Network/virtualNetworks",
-      "apiVersion": "2023-09-01",
-      "name": "[variables('vnetName')]",
-      "dependsOn": [
-        "network"
-      ]
-    },
-    "diagVnet": {
-      "type": "Microsoft.Insights/diagnosticSettings",
-      "apiVersion": "2021-05-01-preview",
-      "scope": "[format('Microsoft.Network/virtualNetworks/{0}', variables('vnetName'))]",
-      "name": "send-to-central-law",
-      "properties": {
-        "workspaceId": "[reference('lawCentral').outputs.id.value]",
-        "logAnalyticsDestinationType": "Dedicated",
-        "logs": [
-          {
-            "categoryGroup": "allLogs",
-            "enabled": true
-          }
-        ]
-      },
-      "dependsOn": [
-        "lawCentral",
-        "network"
-      ]
-    },
-    "dcrVmInsights": {
+    {
       "type": "Microsoft.Insights/dataCollectionRules",
       "apiVersion": "2023-03-11",
       "name": "[variables('dcrVmInsightsName')]",
@@ -272,7 +242,7 @@
         "destinations": {
           "logAnalytics": [
             {
-              "workspaceResourceId": "[reference('lawCentral').outputs.id.value]",
+              "workspaceResourceId": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]",
               "name": "centralLaw"
             }
           ]
@@ -297,10 +267,10 @@
         ]
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "alertVmCpuDynamic": {
+    {
       "condition": "[or(parameters('deployLinuxVm'), parameters('deployWindowsVm'))]",
       "type": "Microsoft.Insights/metricAlerts",
       "apiVersion": "2018-03-01",
@@ -311,7 +281,7 @@
         "description": "Lab VM CPU anomaly detected by ML-learned dynamic thresholds (medium sensitivity)",
         "severity": 3,
         "enabled": true,
-        "scopes": "[filter(createArray(if(parameters('deployLinuxVm'), reference('vmLinux').outputs.vmId.value, ''), if(parameters('deployWindowsVm'), reference('vmWindows').outputs.vmId.value, '')), lambda('id', not(empty(lambdaVariables('id')))))]",
+        "scopes": "[filter(createArray(if(parameters('deployLinuxVm'), reference(resourceId('Microsoft.Resources/deployments', 'vm-linux'), '2022-09-01').outputs.vmId.value, ''), if(parameters('deployWindowsVm'), reference(resourceId('Microsoft.Resources/deployments', 'vm-windows'), '2022-09-01').outputs.vmId.value, '')), lambda('id', not(empty(lambdaVariables('id')))))]",
         "targetResourceType": "Microsoft.Compute/virtualMachines",
         "targetResourceRegion": "[parameters('location')]",
         "evaluationFrequency": "PT5M",
@@ -336,17 +306,17 @@
         },
         "actions": [
           {
-            "actionGroupId": "[reference('actionGroup').outputs.id.value]"
+            "actionGroupId": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
           }
         ]
       },
       "dependsOn": [
-        "actionGroup",
-        "vmLinux",
-        "vmWindows"
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-linux')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-windows')]"
       ]
     },
-    "lawCentral": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "law-central",
@@ -502,7 +472,7 @@
         }
       }
     },
-    "lawAppInsights": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "law-appinsights",
@@ -646,7 +616,7 @@
         }
       }
     },
-    "appInsights": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "appi",
@@ -663,7 +633,7 @@
             "value": "[parameters('location')]"
           },
           "workspaceId": {
-            "value": "[reference('lawAppInsights').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-appinsights'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -744,10 +714,10 @@
         }
       },
       "dependsOn": [
-        "lawAppInsights"
+        "[resourceId('Microsoft.Resources/deployments', 'law-appinsights')]"
       ]
     },
-    "amw": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "amw",
@@ -825,7 +795,7 @@
         }
       }
     },
-    "network": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "network",
@@ -987,7 +957,7 @@
         }
       }
     },
-    "storageAccount": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "storage-account",
@@ -1004,7 +974,7 @@
             "value": "[parameters('location')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -1172,10 +1142,10 @@
         }
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "appDiagStorage": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "app-diag-storage",
@@ -1192,7 +1162,7 @@
             "value": "[variables('appServiceLocation')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -1360,10 +1330,10 @@
         }
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "eventHub": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "eventhub",
@@ -1380,7 +1350,7 @@
             "value": "[variables('appServiceLocation')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -1512,10 +1482,10 @@
         }
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "keyVault": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "keyvault",
@@ -1532,7 +1502,7 @@
             "value": "[parameters('location')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -1664,10 +1634,10 @@
         }
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "workspaceTransforms": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "workspace-transforms",
@@ -1684,10 +1654,10 @@
             "value": "[parameters('location')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "centralLawName": {
-            "value": "[reference('lawCentral').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -1793,10 +1763,10 @@
         }
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "vmLinux": {
+    {
       "condition": "[parameters('deployLinuxVm')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
@@ -1823,7 +1793,7 @@
             "value": "[parameters('vmAdminPassword')]"
           },
           "subnetId": {
-            "value": "[reference('network').outputs.workloadSubnetId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'network'), '2022-09-01').outputs.workloadSubnetId.value]"
           },
           "dcrId": {
             "value": "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrVmInsightsName'))]"
@@ -2052,11 +2022,11 @@
         }
       },
       "dependsOn": [
-        "dcrVmInsights",
-        "network"
+        "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrVmInsightsName'))]",
+        "[resourceId('Microsoft.Resources/deployments', 'network')]"
       ]
     },
-    "vmWindows": {
+    {
       "condition": "[parameters('deployWindowsVm')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
@@ -2083,7 +2053,7 @@
             "value": "[parameters('vmAdminPassword')]"
           },
           "subnetId": {
-            "value": "[reference('network').outputs.workloadSubnetId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'network'), '2022-09-01').outputs.workloadSubnetId.value]"
           },
           "dcrId": {
             "value": "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrVmInsightsName'))]"
@@ -2336,11 +2306,11 @@
         }
       },
       "dependsOn": [
-        "dcrVmInsights",
-        "network"
+        "[resourceId('Microsoft.Insights/dataCollectionRules', variables('dcrVmInsightsName'))]",
+        "[resourceId('Microsoft.Resources/deployments', 'network')]"
       ]
     },
-    "aks": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "aks",
@@ -2366,10 +2336,10 @@
             "value": "[parameters('aksNodeCount')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "azureMonitorWorkspaceId": {
-            "value": "[reference('amw').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'amw'), '2022-09-01').outputs.id.value]"
           },
           "dataCollectionEndpointId": {
             "value": "[resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dceName'))]"
@@ -2613,12 +2583,12 @@
         }
       },
       "dependsOn": [
-        "amw",
-        "dce",
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'amw')]",
+        "[resourceId('Microsoft.Insights/dataCollectionEndpoints', variables('dceName'))]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "grafana": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "grafana",
@@ -2635,7 +2605,7 @@
             "value": "[parameters('location')]"
           },
           "azureMonitorWorkspaceId": {
-            "value": "[reference('amw').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'amw'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -2735,10 +2705,10 @@
         }
       },
       "dependsOn": [
-        "amw"
+        "[resourceId('Microsoft.Resources/deployments', 'amw')]"
       ]
     },
-    "appService": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "appservice",
@@ -2758,22 +2728,22 @@
             "value": "[variables('appServiceLocation')]"
           },
           "appInsightsConnectionString": {
-            "value": "[reference('appInsights').outputs.connectionString.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.connectionString.value]"
           },
           "appInsightsInstrumentationKey": {
-            "value": "[reference('appInsights').outputs.instrumentationKey.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.instrumentationKey.value]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "diagStorageAccountId": {
-            "value": "[reference('appDiagStorage').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'app-diag-storage'), '2022-09-01').outputs.id.value]"
           },
           "diagEventHubAuthRuleId": {
-            "value": "[reference('eventHub').outputs.sendRuleId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'eventhub'), '2022-09-01').outputs.sendRuleId.value]"
           },
           "diagEventHubName": {
-            "value": "[reference('eventHub').outputs.hubName.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'eventhub'), '2022-09-01').outputs.hubName.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -3049,13 +3019,13 @@
         }
       },
       "dependsOn": [
-        "appDiagStorage",
-        "appInsights",
-        "eventHub",
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'app-diag-storage')]",
+        "[resourceId('Microsoft.Resources/deployments', 'appi')]",
+        "[resourceId('Microsoft.Resources/deployments', 'eventhub')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "automitigation": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "automitigation",
@@ -3271,7 +3241,7 @@
         }
       }
     },
-    "actionGroup": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "actiongroup",
@@ -3288,7 +3258,7 @@
             "value": "[parameters('alertEmail')]"
           },
           "webhookUrl": {
-            "value": "[reference('automitigation').outputs.callbackUrl.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'automitigation'), '2022-09-01').outputs.callbackUrl.value]"
           },
           "siemWebhookUrl": {
             "value": "[parameters('siemWebhookUrl')]"
@@ -3370,10 +3340,10 @@
         }
       },
       "dependsOn": [
-        "automitigation"
+        "[resourceId('Microsoft.Resources/deployments', 'automitigation')]"
       ]
     },
-    "alerts": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "alerts",
@@ -3387,22 +3357,22 @@
             "value": "[parameters('location')]"
           },
           "actionGroupId": {
-            "value": "[reference('actionGroup').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
           },
           "aksId": {
-            "value": "[reference('aks').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks'), '2022-09-01').outputs.id.value]"
           },
           "webAppId": {
-            "value": "[reference('appService').outputs.webAppId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appservice'), '2022-09-01').outputs.webAppId.value]"
           },
           "webAppRegion": {
             "value": "[variables('appServiceLocation')]"
           },
           "appInsightsId": {
-            "value": "[reference('appInsights').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.id.value]"
           },
-          "linuxVmId": "[if(parameters('deployLinuxVm'), createObject('value', reference('vmLinux').outputs.vmId.value), createObject('value', ''))]",
-          "windowsVmId": "[if(parameters('deployWindowsVm'), createObject('value', reference('vmWindows').outputs.vmId.value), createObject('value', ''))]",
+          "linuxVmId": "[if(parameters('deployLinuxVm'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'vm-linux'), '2022-09-01').outputs.vmId.value), createObject('value', ''))]",
+          "windowsVmId": "[if(parameters('deployWindowsVm'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'vm-windows'), '2022-09-01').outputs.vmId.value), createObject('value', ''))]",
           "tags": {
             "value": "[variables('commonTags')]"
           }
@@ -3672,15 +3642,15 @@
         }
       },
       "dependsOn": [
-        "actionGroup",
-        "aks",
-        "appInsights",
-        "appService",
-        "vmLinux",
-        "vmWindows"
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]",
+        "[resourceId('Microsoft.Resources/deployments', 'aks')]",
+        "[resourceId('Microsoft.Resources/deployments', 'appi')]",
+        "[resourceId('Microsoft.Resources/deployments', 'appservice')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-linux')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-windows')]"
       ]
     },
-    "amba": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "amba",
@@ -3694,19 +3664,19 @@
             "value": "[parameters('location')]"
           },
           "actionGroupId": {
-            "value": "[reference('actionGroup').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
           },
           "vmIds": {
-            "value": "[filter(createArray(if(parameters('deployLinuxVm'), reference('vmLinux').outputs.vmId.value, ''), if(parameters('deployWindowsVm'), reference('vmWindows').outputs.vmId.value, '')), lambda('id', not(empty(lambdaVariables('id')))))]"
+            "value": "[filter(createArray(if(parameters('deployLinuxVm'), reference(resourceId('Microsoft.Resources/deployments', 'vm-linux'), '2022-09-01').outputs.vmId.value, ''), if(parameters('deployWindowsVm'), reference(resourceId('Microsoft.Resources/deployments', 'vm-windows'), '2022-09-01').outputs.vmId.value, '')), lambda('id', not(empty(lambdaVariables('id')))))]"
           },
           "webAppId": {
-            "value": "[reference('appService').outputs.webAppId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appservice'), '2022-09-01').outputs.webAppId.value]"
           },
           "aksId": {
-            "value": "[reference('aks').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks'), '2022-09-01').outputs.id.value]"
           },
           "appPlanId": {
-            "value": "[reference('appService').outputs.planId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appservice'), '2022-09-01').outputs.planId.value]"
           },
           "webAppRegion": {
             "value": "[variables('appServiceLocation')]"
@@ -4134,14 +4104,14 @@
         }
       },
       "dependsOn": [
-        "actionGroup",
-        "aks",
-        "appService",
-        "vmLinux",
-        "vmWindows"
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]",
+        "[resourceId('Microsoft.Resources/deployments', 'aks')]",
+        "[resourceId('Microsoft.Resources/deployments', 'appservice')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-linux')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-windows')]"
       ]
     },
-    "healthAlerts": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "health-alerts",
@@ -4152,7 +4122,7 @@
         "mode": "Incremental",
         "parameters": {
           "actionGroupId": {
-            "value": "[reference('actionGroup').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -4258,10 +4228,10 @@
         }
       },
       "dependsOn": [
-        "actionGroup"
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]"
       ]
     },
-    "diagPolicy": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "policy-diagnostics",
@@ -4272,7 +4242,7 @@
         "mode": "Incremental",
         "parameters": {
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           }
         },
         "template": {
@@ -4388,10 +4358,10 @@
         }
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "savedQueries": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "saved-queries",
@@ -4402,10 +4372,10 @@
         "mode": "Incremental",
         "parameters": {
           "centralLawName": {
-            "value": "[reference('lawCentral').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
           },
           "appInsightsLawName": {
-            "value": "[reference('lawAppInsights').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-appinsights'), '2022-09-01').outputs.name.value]"
           }
         },
         "template": {
@@ -4607,11 +4577,11 @@
         }
       },
       "dependsOn": [
-        "lawAppInsights",
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-appinsights')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "workbook": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "workbook",
@@ -4628,10 +4598,10 @@
             "value": "[parameters('location')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "appInsightsLawName": {
-            "value": "[reference('lawAppInsights').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-appinsights'), '2022-09-01').outputs.name.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -5034,11 +5004,11 @@
         }
       },
       "dependsOn": [
-        "lawAppInsights",
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-appinsights')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "vmss": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "vmss",
@@ -5064,7 +5034,7 @@
             "value": "[parameters('vmAdminPassword')]"
           },
           "subnetId": {
-            "value": "[reference('network').outputs.workloadSubnetId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'network'), '2022-09-01').outputs.workloadSubnetId.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -5281,10 +5251,10 @@
         }
       },
       "dependsOn": [
-        "network"
+        "[resourceId('Microsoft.Resources/deployments', 'network')]"
       ]
     },
-    "availabilityTest": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "availability-test",
@@ -5301,13 +5271,13 @@
             "value": "[parameters('location')]"
           },
           "appInsightsId": {
-            "value": "[reference('appInsights').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.id.value]"
           },
           "testUrl": {
-            "value": "[format('https://{0}/', reference('appService').outputs.defaultHost.value)]"
+            "value": "[format('https://{0}/', reference(resourceId('Microsoft.Resources/deployments', 'appservice'), '2022-09-01').outputs.defaultHost.value)]"
           },
           "actionGroupId": {
-            "value": "[reference('actionGroup').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -5458,12 +5428,12 @@
         }
       },
       "dependsOn": [
-        "actionGroup",
-        "appInsights",
-        "appService"
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]",
+        "[resourceId('Microsoft.Resources/deployments', 'appi')]",
+        "[resourceId('Microsoft.Resources/deployments', 'appservice')]"
       ]
     },
-    "alertProcessingRules": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "alert-processing-rules",
@@ -5477,7 +5447,7 @@
             "value": "[parameters('namePrefix')]"
           },
           "primaryActionGroupId": {
-            "value": "[reference('actionGroup').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -5634,10 +5604,10 @@
         }
       },
       "dependsOn": [
-        "actionGroup"
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]"
       ]
     },
-    "customLogs": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "custom-logs",
@@ -5654,10 +5624,10 @@
             "value": "[parameters('location')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "centralLawName": {
-            "value": "[reference('lawCentral').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -5885,10 +5855,10 @@
         }
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "kqlFunctions": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "kql-functions",
@@ -5899,10 +5869,10 @@
         "mode": "Incremental",
         "parameters": {
           "centralLawName": {
-            "value": "[reference('lawCentral').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
           },
           "appInsightsLawName": {
-            "value": "[reference('lawAppInsights').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-appinsights'), '2022-09-01').outputs.name.value]"
           }
         },
         "template": {
@@ -5976,11 +5946,11 @@
         }
       },
       "dependsOn": [
-        "lawAppInsights",
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-appinsights')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "summaryRules": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "summary-rules",
@@ -5991,10 +5961,10 @@
         "mode": "Incremental",
         "parameters": {
           "centralLawName": {
-            "value": "[reference('lawCentral').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -6100,10 +6070,10 @@
         }
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "lawRbac": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "law-rbac",
@@ -6114,10 +6084,10 @@
         "mode": "Incremental",
         "parameters": {
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "centralLawName": {
-            "value": "[reference('lawCentral').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -6276,10 +6246,10 @@
         }
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "connectionMonitor": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "connection-monitor",
@@ -6294,12 +6264,12 @@
             "value": "[parameters('location')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
-          "linuxVmId": "[if(parameters('deployLinuxVm'), createObject('value', reference('vmLinux').outputs.vmId.value), createObject('value', ''))]",
-          "windowsVmId": "[if(parameters('deployWindowsVm'), createObject('value', reference('vmWindows').outputs.vmId.value), createObject('value', ''))]",
+          "linuxVmId": "[if(parameters('deployLinuxVm'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'vm-linux'), '2022-09-01').outputs.vmId.value), createObject('value', ''))]",
+          "windowsVmId": "[if(parameters('deployWindowsVm'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'vm-windows'), '2022-09-01').outputs.vmId.value), createObject('value', ''))]",
           "appServiceHost": {
-            "value": "[reference('appService').outputs.defaultHost.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appservice'), '2022-09-01').outputs.defaultHost.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -6414,13 +6384,13 @@
         }
       },
       "dependsOn": [
-        "appService",
-        "lawCentral",
-        "vmLinux",
-        "vmWindows"
+        "[resourceId('Microsoft.Resources/deployments', 'appservice')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-linux')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-windows')]"
       ]
     },
-    "flowLogs": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "flow-logs",
@@ -6438,22 +6408,22 @@
             "value": "[parameters('location')]"
           },
           "targetVnetId": {
-            "value": "[reference('network').outputs.vnetId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'network'), '2022-09-01').outputs.vnetId.value]"
           },
           "networkWatcherId": {
-            "value": "[reference('connectionMonitor').outputs.networkWatcherId.value]"
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, 'NetworkWatcherRG'), 'Microsoft.Resources/deployments', 'connection-monitor'), '2022-09-01').outputs.networkWatcherId.value]"
           },
           "storageAccountId": {
-            "value": "[reference('storageAccount').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-account'), '2022-09-01').outputs.id.value]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "centralLawRegion": {
             "value": "[parameters('location')]"
           },
           "centralLawCustomerId": {
-            "value": "[reference('lawCentral').outputs.customerId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.customerId.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -6577,13 +6547,13 @@
         }
       },
       "dependsOn": [
-        "connectionMonitor",
-        "lawCentral",
-        "network",
-        "storageAccount"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, 'NetworkWatcherRG'), 'Microsoft.Resources/deployments', 'connection-monitor')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]",
+        "[resourceId('Microsoft.Resources/deployments', 'network')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storage-account')]"
       ]
     },
-    "dataExport": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "data-export",
@@ -6597,10 +6567,10 @@
             "value": "[format('dx-{0}-heartbeat', parameters('namePrefix'))]"
           },
           "workspaceName": {
-            "value": "[reference('lawCentral').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
           },
           "storageAccountId": {
-            "value": "[reference('storageAccount').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-account'), '2022-09-01').outputs.id.value]"
           },
           "tables": {
             "value": [
@@ -6674,11 +6644,11 @@
         }
       },
       "dependsOn": [
-        "lawCentral",
-        "storageAccount"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storage-account')]"
       ]
     },
-    "platformLogsDcr": {
+    {
       "condition": "[parameters('enablePlatformLogsDcr')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
@@ -6696,7 +6666,7 @@
             "value": "[parameters('location')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "keyVaultName": {
             "value": "[variables('keyVaultName')]"
@@ -6826,11 +6796,11 @@
         }
       },
       "dependsOn": [
-        "keyVault",
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'keyvault')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "metricsExportDcr": {
+    {
       "condition": "[parameters('enableMetricsExportDcr')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
@@ -6848,7 +6818,7 @@
             "value": "[parameters('location')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "keyVaultName": {
             "value": "[variables('keyVaultName')]"
@@ -6978,11 +6948,11 @@
         }
       },
       "dependsOn": [
-        "keyVault",
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'keyvault')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "sentinel": {
+    {
       "condition": "[parameters('enableSentinel')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
@@ -6994,10 +6964,10 @@
         "mode": "Incremental",
         "parameters": {
           "workspaceName": {
-            "value": "[reference('lawCentral').outputs.name.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
           },
           "workspaceId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -7145,10 +7115,10 @@
         }
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "promRules": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "prom-rules",
@@ -7165,13 +7135,13 @@
             "value": "[parameters('location')]"
           },
           "azureMonitorWorkspaceId": {
-            "value": "[reference('amw').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'amw'), '2022-09-01').outputs.id.value]"
           },
           "aksClusterId": {
-            "value": "[reference('aks').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks'), '2022-09-01').outputs.id.value]"
           },
           "actionGroupId": {
-            "value": "[reference('actionGroup').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -7318,12 +7288,12 @@
         }
       },
       "dependsOn": [
-        "actionGroup",
-        "aks",
-        "amw"
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]",
+        "[resourceId('Microsoft.Resources/deployments', 'aks')]",
+        "[resourceId('Microsoft.Resources/deployments', 'amw')]"
       ]
     },
-    "costWorkbook": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "cost-workbook",
@@ -7340,7 +7310,7 @@
             "value": "[parameters('location')]"
           },
           "centralLawId": {
-            "value": "[reference('lawCentral').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -7496,10 +7466,10 @@
         }
       },
       "dependsOn": [
-        "lawCentral"
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
-    "healthModel": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "health-model",
@@ -7519,34 +7489,34 @@
             "value": "[variables('commonTags')]"
           },
           "webAppId": {
-            "value": "[reference('appService').outputs.webAppId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appservice'), '2022-09-01').outputs.webAppId.value]"
           },
           "appInsightsId": {
-            "value": "[reference('appInsights').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.id.value]"
           },
           "aksId": {
-            "value": "[reference('aks').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks'), '2022-09-01').outputs.id.value]"
           },
-          "linuxVmId": "[if(parameters('deployLinuxVm'), createObject('value', reference('vmLinux').outputs.vmId.value), createObject('value', ''))]",
-          "windowsVmId": "[if(parameters('deployWindowsVm'), createObject('value', reference('vmWindows').outputs.vmId.value), createObject('value', ''))]",
+          "linuxVmId": "[if(parameters('deployLinuxVm'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'vm-linux'), '2022-09-01').outputs.vmId.value), createObject('value', ''))]",
+          "windowsVmId": "[if(parameters('deployWindowsVm'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'vm-windows'), '2022-09-01').outputs.vmId.value), createObject('value', ''))]",
           "vmssId": {
-            "value": "[reference('vmss').outputs.vmssId.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vmss'), '2022-09-01').outputs.vmssId.value]"
           },
           "keyVaultId": {
-            "value": "[reference('keyVault').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyvault'), '2022-09-01').outputs.id.value]"
           },
           "storageAccountId": {
-            "value": "[reference('storageAccount').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-account'), '2022-09-01').outputs.id.value]"
           },
           "actionGroupId": {
-            "value": "[reference('actionGroup').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'actiongroup'), '2022-09-01').outputs.id.value]"
           },
           "enableAi": {
             "value": "[parameters('enableAi')]"
           },
-          "foundryAccountId": "[if(parameters('enableAi'), createObject('value', reference('foundry').outputs.accountId.value), createObject('value', ''))]",
+          "foundryAccountId": "[if(parameters('enableAi'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.accountId.value), createObject('value', ''))]",
           "appInsightsLawId": {
-            "value": "[reference('lawAppInsights').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-appinsights'), '2022-09-01').outputs.id.value]"
           }
         },
         "template": {
@@ -8968,20 +8938,20 @@
         }
       },
       "dependsOn": [
-        "actionGroup",
-        "aks",
-        "appInsights",
-        "appService",
-        "foundry",
-        "keyVault",
-        "lawAppInsights",
-        "storageAccount",
-        "vmLinux",
-        "vmss",
-        "vmWindows"
+        "[resourceId('Microsoft.Resources/deployments', 'actiongroup')]",
+        "[resourceId('Microsoft.Resources/deployments', 'aks')]",
+        "[resourceId('Microsoft.Resources/deployments', 'appi')]",
+        "[resourceId('Microsoft.Resources/deployments', 'appservice')]",
+        "[resourceId('Microsoft.Resources/deployments', 'foundry')]",
+        "[resourceId('Microsoft.Resources/deployments', 'keyvault')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-appinsights')]",
+        "[resourceId('Microsoft.Resources/deployments', 'storage-account')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-linux')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vmss')]",
+        "[resourceId('Microsoft.Resources/deployments', 'vm-windows')]"
       ]
     },
-    "sliIdentity": {
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "sli-identity",
@@ -9001,7 +8971,7 @@
             "value": "[variables('commonTags')]"
           },
           "azureMonitorWorkspaceId": {
-            "value": "[reference('amw').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'amw'), '2022-09-01').outputs.id.value]"
           }
         },
         "template": {
@@ -9106,10 +9076,10 @@
         }
       },
       "dependsOn": [
-        "amw"
+        "[resourceId('Microsoft.Resources/deployments', 'amw')]"
       ]
     },
-    "foundry": {
+    {
       "condition": "[parameters('enableAi')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
@@ -9127,10 +9097,10 @@
             "value": "[parameters('namePrefix')]"
           },
           "appInsightsId": {
-            "value": "[reference('appInsights').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.id.value]"
           },
           "appInsightsConnectionString": {
-            "value": "[reference('appInsights').outputs.connectionString.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.connectionString.value]"
           },
           "routerModelVersion": {
             "value": "[parameters('routerModelVersion')]"
@@ -9562,10 +9532,10 @@
         }
       },
       "dependsOn": [
-        "appInsights"
+        "[resourceId('Microsoft.Resources/deployments', 'appi')]"
       ]
     },
-    "aiObservability": {
+    {
       "condition": "[parameters('enableAi')]",
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
@@ -9580,7 +9550,7 @@
             "value": "[variables('aiLocation')]"
           },
           "appInsightsId": {
-            "value": "[reference('appInsights').outputs.id.value]"
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.id.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -9768,22 +9738,22 @@
         }
       },
       "dependsOn": [
-        "appInsights"
+        "[resourceId('Microsoft.Resources/deployments', 'appi')]"
       ]
     }
-  },
+  ],
   "outputs": {
     "centralLawId": {
       "type": "string",
-      "value": "[reference('lawCentral').outputs.id.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
     },
     "centralLawName": {
       "type": "string",
-      "value": "[reference('lawCentral').outputs.name.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.name.value]"
     },
     "appInsightsLawName": {
       "type": "string",
-      "value": "[reference('lawAppInsights').outputs.name.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-appinsights'), '2022-09-01').outputs.name.value]"
     },
     "appInsightsName": {
       "type": "string",
@@ -9791,11 +9761,11 @@
     },
     "appInsightsConnString": {
       "type": "string",
-      "value": "[reference('appInsights').outputs.connectionString.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.connectionString.value]"
     },
     "aksName": {
       "type": "string",
-      "value": "[reference('aks').outputs.name.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'aks'), '2022-09-01').outputs.name.value]"
     },
     "webAppName": {
       "type": "string",
@@ -9803,15 +9773,15 @@
     },
     "webAppDefaultHost": {
       "type": "string",
-      "value": "[reference('appService').outputs.defaultHost.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appservice'), '2022-09-01').outputs.defaultHost.value]"
     },
     "grafanaEndpoint": {
       "type": "string",
-      "value": "[reference('grafana').outputs.endpoint.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'grafana'), '2022-09-01').outputs.endpoint.value]"
     },
     "workbookId": {
       "type": "string",
-      "value": "[reference('workbook').outputs.id.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'workbook'), '2022-09-01').outputs.id.value]"
     },
     "linuxVmNameOut": {
       "type": "string",
@@ -9823,11 +9793,11 @@
     },
     "autoMitigationLogicAppName": {
       "type": "string",
-      "value": "[reference('automitigation').outputs.name.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'automitigation'), '2022-09-01').outputs.name.value]"
     },
     "workspaceTransformDcrName": {
       "type": "string",
-      "value": "[reference('workspaceTransforms').outputs.dcrName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'workspace-transforms'), '2022-09-01').outputs.dcrName.value]"
     },
     "appServiceRepoUrl": {
       "type": "string",
@@ -9835,63 +9805,63 @@
     },
     "vmssName": {
       "type": "string",
-      "value": "[reference('vmss').outputs.vmssName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vmss'), '2022-09-01').outputs.vmssName.value]"
     },
     "vmssAutoscaleName": {
       "type": "string",
-      "value": "[reference('vmss').outputs.autoscaleSettingName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'vmss'), '2022-09-01').outputs.autoscaleSettingName.value]"
     },
     "availabilityTestName": {
       "type": "string",
-      "value": "[reference('availabilityTest').outputs.testName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'availability-test'), '2022-09-01').outputs.testName.value]"
     },
     "maintenanceRuleName": {
       "type": "string",
-      "value": "[reference('alertProcessingRules').outputs.maintenanceRuleName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'alert-processing-rules'), '2022-09-01').outputs.maintenanceRuleName.value]"
     },
     "customLogsDceEndpoint": {
       "type": "string",
-      "value": "[reference('customLogs').outputs.dceEndpoint.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'custom-logs'), '2022-09-01').outputs.dceEndpoint.value]"
     },
     "customLogsDcrImmutableId": {
       "type": "string",
-      "value": "[reference('customLogs').outputs.dcrImmutableId.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'custom-logs'), '2022-09-01').outputs.dcrImmutableId.value]"
     },
     "summaryTableName": {
       "type": "string",
-      "value": "[reference('summaryRules').outputs.tableName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'summary-rules'), '2022-09-01').outputs.tableName.value]"
     },
     "rbacSummary": {
       "type": "string",
-      "value": "[reference('lawRbac').outputs.rbacSummary.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-rbac'), '2022-09-01').outputs.rbacSummary.value]"
     },
     "networkWatcherId": {
       "type": "string",
-      "value": "[reference('connectionMonitor').outputs.networkWatcherId.value]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, 'NetworkWatcherRG'), 'Microsoft.Resources/deployments', 'connection-monitor'), '2022-09-01').outputs.networkWatcherId.value]"
     },
     "connectionMonitorName": {
       "type": "string",
-      "value": "[reference('connectionMonitor').outputs.connectionMonitorName.value]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, 'NetworkWatcherRG'), 'Microsoft.Resources/deployments', 'connection-monitor'), '2022-09-01').outputs.connectionMonitorName.value]"
     },
     "flowLogName": {
       "type": "string",
-      "value": "[reference('flowLogs').outputs.name.value]"
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, 'NetworkWatcherRG'), 'Microsoft.Resources/deployments', 'flow-logs'), '2022-09-01').outputs.name.value]"
     },
     "storageAccountName": {
       "type": "string",
-      "value": "[reference('storageAccount').outputs.name.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'storage-account'), '2022-09-01').outputs.name.value]"
     },
     "eventHubNamespaceName": {
       "type": "string",
-      "value": "[reference('eventHub').outputs.namespaceName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'eventhub'), '2022-09-01').outputs.namespaceName.value]"
     },
     "keyVaultName": {
       "type": "string",
-      "value": "[reference('keyVault').outputs.name.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'keyvault'), '2022-09-01').outputs.name.value]"
     },
     "dataExportRuleName": {
       "type": "string",
-      "value": "[reference('dataExport').outputs.name.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'data-export'), '2022-09-01').outputs.name.value]"
     },
     "sentinelEnabled": {
       "type": "bool",
@@ -9899,23 +9869,23 @@
     },
     "prometheusRuleGroupName": {
       "type": "string",
-      "value": "[reference('promRules').outputs.name.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'prom-rules'), '2022-09-01').outputs.name.value]"
     },
     "costWorkbookId": {
       "type": "string",
-      "value": "[reference('costWorkbook').outputs.id.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'cost-workbook'), '2022-09-01').outputs.id.value]"
     },
     "healthModelName": {
       "type": "string",
-      "value": "[reference('healthModel').outputs.healthModelName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'health-model'), '2022-09-01').outputs.healthModelName.value]"
     },
     "healthModelId": {
       "type": "string",
-      "value": "[reference('healthModel').outputs.healthModelId.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'health-model'), '2022-09-01').outputs.healthModelId.value]"
     },
     "healthModelPrincipalId": {
       "type": "string",
-      "value": "[reference('healthModel').outputs.healthModelPrincipalId.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'health-model'), '2022-09-01').outputs.healthModelPrincipalId.value]"
     },
     "aiEnabled": {
       "type": "bool",
@@ -9923,47 +9893,47 @@
     },
     "aiFoundryAccountName": {
       "type": "string",
-      "value": "[if(parameters('enableAi'), reference('foundry').outputs.accountName.value, '')]"
+      "value": "[if(parameters('enableAi'), reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.accountName.value, '')]"
     },
     "aiProjectEndpoint": {
       "type": "string",
-      "value": "[if(parameters('enableAi'), reference('foundry').outputs.projectEndpoint.value, '')]"
+      "value": "[if(parameters('enableAi'), reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.projectEndpoint.value, '')]"
     },
     "aiChatDeployment": {
       "type": "string",
-      "value": "[if(parameters('enableAi'), reference('foundry').outputs.chatDeployment.value, '')]"
+      "value": "[if(parameters('enableAi'), reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.chatDeployment.value, '')]"
     },
     "aiRouterDeployment": {
       "type": "string",
-      "value": "[if(parameters('enableAi'), reference('foundry').outputs.routerDeployment.value, '')]"
+      "value": "[if(parameters('enableAi'), reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.routerDeployment.value, '')]"
     },
     "nightlyMaintenanceRuleName": {
       "type": "string",
-      "value": "[reference('alertProcessingRules').outputs.nightlyMaintenanceRuleName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'alert-processing-rules'), '2022-09-01').outputs.nightlyMaintenanceRuleName.value]"
     },
     "sliUamiName": {
       "type": "string",
-      "value": "[reference('sliIdentity').outputs.uamiName.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sli-identity'), '2022-09-01').outputs.uamiName.value]"
     },
     "sliUamiId": {
       "type": "string",
-      "value": "[reference('sliIdentity').outputs.uamiId.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sli-identity'), '2022-09-01').outputs.uamiId.value]"
     },
     "sliUamiPrincipalId": {
       "type": "string",
-      "value": "[reference('sliIdentity').outputs.uamiPrincipalId.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sli-identity'), '2022-09-01').outputs.uamiPrincipalId.value]"
     },
     "sliUamiClientId": {
       "type": "string",
-      "value": "[reference('sliIdentity').outputs.uamiClientId.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sli-identity'), '2022-09-01').outputs.uamiClientId.value]"
     },
     "amwId": {
       "type": "string",
-      "value": "[reference('amw').outputs.id.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'amw'), '2022-09-01').outputs.id.value]"
     },
     "amwName": {
       "type": "string",
-      "value": "[reference('amw').outputs.name.value]"
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'amw'), '2022-09-01').outputs.name.value]"
     }
   }
 }

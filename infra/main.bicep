@@ -256,30 +256,6 @@ module keyVault 'modules/keyvault.bicep' = {
 }
 
 // ---------------------------------------------------------------------------------
-// Diagnostic settings on the VNet itself -> central LAW
-// (VM/Service diag settings are in their own modules.)
-// ---------------------------------------------------------------------------------
-resource vnetExisting 'Microsoft.Network/virtualNetworks@2023-09-01' existing = {
-  name: vnetName
-  dependsOn: [ network ]
-}
-
-resource diagVnet 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  scope: vnetExisting
-  name: 'send-to-central-law'
-  properties: {
-    workspaceId: lawCentral.outputs.id
-    logAnalyticsDestinationType: 'Dedicated'
-    logs: [
-      {
-        categoryGroup: 'allLogs'
-        enabled: true
-      }
-    ]
-  }
-}
-
-// ---------------------------------------------------------------------------------
 // Data Collection Rule for VM Insights (Performance + Map data) -> central LAW
 // Depends on the VMInsights solution being installed on the LAW first.
 // ---------------------------------------------------------------------------------
