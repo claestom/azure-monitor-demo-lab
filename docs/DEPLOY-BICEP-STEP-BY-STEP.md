@@ -201,24 +201,19 @@ If count is zero, security-posture scenarios 47/48/49 will not fire.
 
 When done, run the teardown script. It first disables LAW replication and removes nested DCR associations, DCRs, and DCEs in dependency order, then starts the resource-group deletion. Azure-managed DCEs that reject direct deletion are left for the LAW/RG cascade.
 
-### Step 1 - Pin subscription
+### Step 1 - Run the teardown wrapper
 
 ```powershell
 $sub='<your-subscription-id>'
 $rg='rg-azure-monitor-lab'   # set this to the RG where you deployed the lab; this is the default
 az account set --subscription $sub
 az account show --query "{name:name,id:id,tenantId:tenantId}" -o table
+./scripts/teardown.ps1 -ResourceGroup $rg -Yes
 ```
 
-### Step 2 - Delete the resource group
+`teardown.ps1` validates the subscription guardrail, disables LAW replication, removes nested DCR associations and other monitoring dependencies, removes the tenant-scoped SLI and Service Group artifacts, and then deletes the resource group. This works for both staged Bicep and one-shot Bicep deployments.
 
-```powershell
-az group delete -n $rg --yes --no-wait
-```
-
-This removes every resource the staged Bicep deployments created in this RG (LAWs, App Insights, VMs, AKS, App Service, DCRs, alerts, action group, workbooks, etc.) plus the deployment history records.
-
-### Step 3 - Clean up artifacts that live outside the RG
+### Step 2 - Clean up artifacts that live outside the RG
 
 A few resources are subscription-scoped or live in `NetworkWatcherRG` and survive RG deletion.
 

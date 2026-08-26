@@ -268,30 +268,23 @@ For each stage:
 
 The resource group is BYO (Terraform does not own it via data source), so `terraform destroy` alone will not cascade-delete the LAWs, VMs, AKS, alerts, etc. — it only removes the five staged deployment records. Use Option A.
 
-### Option A - delete the resource group directly (recommended)
+### Option A - run the teardown wrapper (recommended)
 
-Cascade-delete the whole RG, then clear Terraform state so the next apply starts clean.
+The wrapper cleans up Azure dependencies before deleting the resource group. This is the same cleanup path used after one-shot or staged Bicep deployments.
 
 ```powershell
 $sub='<your-subscription-id>'
 $rg='rg-azure-monitor-lab'
 az account set --subscription $sub
 az account show --query "{name:name,id:id,tenantId:tenantId}" -o table
-
-# Direct deletion does not run the dependency cleanup. Prefer the wrapper below,
-# which removes LAW replication, nested DCR associations, DCRs, and DCEs first.
-az group delete -n $rg --yes --no-wait
-
-# Clear terraform state so the next apply starts clean
-cd terraform
-terraform state list | ForEach-Object { terraform state rm $_ }
+.\scripts\teardown.ps1 -ResourceGroup $rg -Yes
 ```
 
-Or just run the wrapper (update the resource group value if needed):
+After the asynchronous resource-group deletion completes, clear the Terraform deployment records so the next apply starts clean:
 
 ```powershell
-$rg = "rg-azure-monitor-lab"
-.\scripts\teardown.ps1 -ResourceGroup $rg -Yes
+cd terraform
+terraform state list | ForEach-Object { terraform state rm $_ }
 ```
 
 ### Option B - terraform destroy + manual RG cleanup
