@@ -188,6 +188,7 @@ while ($true) {
     --template-file $mainBicep `
     --parameters "@$ParametersFile" `
     --parameters location=$Location `
+    --only-show-errors `
     --output none
 
   if ($LASTEXITCODE -eq 0) { break }
