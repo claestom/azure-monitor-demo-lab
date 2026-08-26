@@ -21,7 +21,7 @@
 
   "enableLawReplication":   false,
   "lawReplicationLocation": "",
-  "_lawReplicationLocationDocs": "Doubles ingestion cost. lawReplicationLocation is required when enableLawReplication is true and must be a supported secondary region for the primary 'location' above — see https://learn.microsoft.com/en-us/azure/azure-monitor/logs/workspace-replication?tabs=azure-cli#supported-regions",
+  "_lawReplicationLocationDocs": "lawReplicationLocation is required when enableLawReplication is true and must be a supported secondary region for the primary 'location' above — see https://learn.microsoft.com/en-us/azure/azure-monitor/logs/workspace-replication?tabs=azure-cli#supported-regions",
 
   "siemWebhookUrl":   "",
   "forbiddenSubscriptionIds": [],
