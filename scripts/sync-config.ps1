@@ -77,6 +77,13 @@ $siemWebhookUrl   = Coalesce $cfg.siemWebhookUrl   ''
 $subscriptionName = Coalesce $cfg.subscriptionName '<unset>'
 $forbiddenSubs    = if ($null -eq $cfg.forbiddenSubscriptionIds) { @() } else { @($cfg.forbiddenSubscriptionIds) }
 
+$enableLawReplication   = if ($null -eq $cfg.enableLawReplication) { $false } else { [bool]$cfg.enableLawReplication }
+$lawReplicationLocation = Coalesce $cfg.lawReplicationLocation ''
+if ($enableLawReplication -and [string]::IsNullOrWhiteSpace($lawReplicationLocation)) {
+  Write-Error "lab.config.json has enableLawReplication=true but lawReplicationLocation is empty. Set it to a supported secondary region — see https://learn.microsoft.com/en-us/azure/azure-monitor/logs/workspace-replication?tabs=azure-cli#supported-regions"
+  return
+}
+
 $stages = $cfg.stageToggles
 if ($null -eq $stages) { $stages = [pscustomobject]@{ enableStageA=$true; enableStageB=$true; enableStageC=$true; enableStageD=$true; enableStageE=$true; enableStageAI=$false } }
 # AI stage is optional and defaults off when absent from the config.
@@ -124,6 +131,8 @@ $bicepParams = [ordered]@{
     'dailyCapGb'      = @{ value = [int]$dailyCapGb }
     'aksNodeCount'    = @{ value = [int]$aksNodeCount }
     'enableAi'        = @{ value = $enableStageAI }
+    'enableLawReplication'   = @{ value = $enableLawReplication }
+    'lawReplicationLocation' = @{ value = $lawReplicationLocation }
   }
 }
 if (-not [string]::IsNullOrWhiteSpace($siemWebhookUrl)) {
@@ -153,6 +162,8 @@ $tfLines = @(
   "deploy_windows_vm   = $($deployWindowsVm.ToString().ToLower())"
   "deploy_linux_vm     = $($deployLinuxVm.ToString().ToLower())"
   "siem_webhook_url    = `"$(Esc $siemWebhookUrl)`""
+  "enable_law_replication   = $($enableLawReplication.ToString().ToLower())"
+  "law_replication_location = `"$(Esc $lawReplicationLocation)`""
   ""
   "enable_stage_a = $((($stages.enableStageA -as [bool]).ToString()).ToLower())"
   "enable_stage_b = $((($stages.enableStageB -as [bool]).ToString()).ToLower())"
