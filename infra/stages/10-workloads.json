@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "6985087869596234590"
+      "templateHash": "16392891882887032285"
     }
   },
   "parameters": {
@@ -694,7 +694,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "10800112660087944742"
+              "templateHash": "4720308177047516325"
             }
           },
           "parameters": {
@@ -845,6 +845,67 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.ContainerService/managedClusters', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Insights/dataCollectionRules",
+              "apiVersion": "2023-03-11",
+              "name": "[format('MSCI-{0}-{1}', replace(parameters('location'), ' ', ''), parameters('name'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "kind": "Linux",
+              "properties": {
+                "dataSources": {
+                  "extensions": [
+                    {
+                      "name": "ContainerInsightsExtension",
+                      "streams": [
+                        "Microsoft-ContainerInsights-Group-Default"
+                      ],
+                      "extensionName": "ContainerInsights",
+                      "extensionSettings": {
+                        "dataCollectionSettings": {
+                          "interval": "1m",
+                          "namespaceFilteringMode": "Off",
+                          "namespaces": [],
+                          "enableContainerLogV2": true
+                        }
+                      }
+                    }
+                  ]
+                },
+                "destinations": {
+                  "logAnalytics": [
+                    {
+                      "workspaceResourceId": "[parameters('centralLawId')]",
+                      "name": "ciworkspace"
+                    }
+                  ]
+                },
+                "dataFlows": [
+                  {
+                    "streams": [
+                      "Microsoft-ContainerInsights-Group-Default"
+                    ],
+                    "destinations": [
+                      "ciworkspace"
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Insights/dataCollectionRuleAssociations",
+              "apiVersion": "2023-03-11",
+              "scope": "[format('Microsoft.ContainerService/managedClusters/{0}', parameters('name'))]",
+              "name": "ContainerInsightsExtension",
+              "properties": {
+                "dataCollectionRuleId": "[resourceId('Microsoft.Insights/dataCollectionRules', format('MSCI-{0}-{1}', replace(parameters('location'), ' ', ''), parameters('name')))]",
+                "description": "Send AKS Container Insights inventory and performance data to Log Analytics"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ContainerService/managedClusters', parameters('name'))]",
+                "[resourceId('Microsoft.Insights/dataCollectionRules', format('MSCI-{0}-{1}', replace(parameters('location'), ' ', ''), parameters('name')))]"
               ]
             },
             {

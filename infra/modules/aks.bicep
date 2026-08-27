@@ -103,6 +103,58 @@ resource diagAks 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
 }
 
 // ---------------------------------------------------------------------------------
+// Container Insights DCR + association on the AKS cluster
+// ---------------------------------------------------------------------------------
+resource dcrContainerInsights 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {
+  name: 'MSCI-${replace(location, ' ', '')}-${name}'
+  location: location
+  tags: tags
+  kind: 'Linux'
+  properties: {
+    dataSources: {
+      extensions: [
+        {
+          name: 'ContainerInsightsExtension'
+          streams: [ 'Microsoft-ContainerInsights-Group-Default' ]
+          extensionName: 'ContainerInsights'
+          extensionSettings: {
+            dataCollectionSettings: {
+              interval: '1m'
+              namespaceFilteringMode: 'Off'
+              namespaces: []
+              enableContainerLogV2: true
+            }
+          }
+        }
+      ]
+    }
+    destinations: {
+      logAnalytics: [
+        {
+          workspaceResourceId: centralLawId
+          name: 'ciworkspace'
+        }
+      ]
+    }
+    dataFlows: [
+      {
+        streams: [ 'Microsoft-ContainerInsights-Group-Default' ]
+        destinations: [ 'ciworkspace' ]
+      }
+    ]
+  }
+}
+
+resource dcraContainerInsights 'Microsoft.Insights/dataCollectionRuleAssociations@2023-03-11' = {
+  scope: aks
+  name: 'ContainerInsightsExtension'
+  properties: {
+    dataCollectionRuleId: dcrContainerInsights.id
+    description: 'Send AKS Container Insights inventory and performance data to Log Analytics'
+  }
+}
+
+// ---------------------------------------------------------------------------------
 // Managed Prometheus DCR + association on the AKS cluster
 // ---------------------------------------------------------------------------------
 resource dcrPrometheus 'Microsoft.Insights/dataCollectionRules@2023-03-11' = {

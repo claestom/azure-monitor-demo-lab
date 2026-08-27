@@ -30,18 +30,20 @@ let vm = Heartbeat
   | extend Status = case(SecondsSince <= 300, "🟢", SecondsSince <= 900, "🟠", "🔴")
   | project ResourceType = strcat("VM (", OSType, ")"), Resource = Computer, Status,
             Detail = strcat("Last heartbeat ", SecondsSince, "s ago");
-let aksNodes = KubeNodeInventory
+let aksNodes = Perf
   | where TimeGenerated > ago(15m)
-  | summarize arg_max(TimeGenerated, *) by Computer
-  | summarize NotReady = countif(Status != "Ready"), Total = count();
+  | where ObjectName == "K8SNode" and CounterName == "cpuUsageNanoCores"
+  | summarize LastSample = max(TimeGenerated) by Computer
+  | summarize Total = count();
 let aksRestarts = toscalar(KubePodInventory
   | where TimeGenerated > ago(15m)
-  | summarize Restarts = sum(toint(ContainerRestartCount))
+  | summarize MaxRestarts = max(toint(ContainerRestartCount)) by Namespace, Name
+  | summarize Restarts = sum(MaxRestarts)
   | project Restarts);
 let aks = aksNodes
   | extend Restarts = aksRestarts
-  | extend Status = case(Total == 0, "🔴", NotReady > 0, "🔴", Restarts > 5, "🟠", "🟢")
-  | extend Detail = strcat(Total - NotReady, "/", Total, " nodes Ready · ", Restarts, " restarts (15m)")
+  | extend Status = case(Total == 0, "🔴", Restarts > 5, "🟠", "🟢")
+  | extend Detail = strcat(Total, " nodes reporting · ", Restarts, " restarts (15m)")
   | project ResourceType = "AKS Cluster", Resource = "aks", Status, Detail;
 let app = AppServiceHTTPLogs
   | where TimeGenerated > ago(15m)
@@ -69,7 +71,7 @@ var queryFinal = replace(trafficLightsQuery, '__APPI_LAW__', appInsightsLawName)
 // ---------------------------------------------------------------
 
 var summaryTilesQuery = replace('''let vmsOnline = toscalar(Heartbeat | where TimeGenerated > ago(5m) | summarize dcount(Computer));
-let aksReady = toscalar(KubeNodeInventory | where TimeGenerated > ago(15m) | summarize arg_max(TimeGenerated, *) by Computer | where Status == "Ready" | summarize count());
+let aksReady = toscalar(Perf | where TimeGenerated > ago(15m) | where ObjectName == "K8SNode" and CounterName == "cpuUsageNanoCores" | summarize dcount(Computer));
 let totalReqs = toscalar(workspace("__APPI_LAW__").AppRequests | where TimeGenerated > ago(1h) | summarize count());
 let failedReqs = toscalar(workspace("__APPI_LAW__").AppRequests | where TimeGenerated > ago(1h) | where Success == false | summarize count());
 let avgLatency = toscalar(workspace("__APPI_LAW__").AppRequests | where TimeGenerated > ago(1h) | summarize round(avg(DurationMs), 0));
@@ -128,7 +130,6 @@ var alertActivityQuery = '''AzureActivity
 '''
 
 var dataIngestionQuery = '''Usage
-| where TimeGenerated > startofday(now())
 | summarize IngestedMB = round(sum(Quantity), 2) by DataType
 | where IngestedMB > 0.01
 | top 15 by IngestedMB desc
@@ -392,7 +393,8 @@ var workbookContent = {
         version: 'KqlItem/1.0'
         query: dataIngestionQuery
         size: 0
-        title: 'Data Ingestion Today (MB by table)'
+        title: 'Data Ingestion (MB by table)'
+        timeContextFromParameter: 'TimeRange'
         queryType: 0
         resourceType: 'microsoft.operationalinsights/workspaces'
       }
