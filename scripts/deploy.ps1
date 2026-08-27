@@ -146,7 +146,7 @@ Write-Step "Ensuring preview resource providers are registered"
 Register-ResourceProvider -Namespace 'Microsoft.CloudHealth'
 
 # 2. Deploy
-Write-Step "Deploying main.bicep (this takes 15-25 minutes — AKS + VMs + Grafana)"
+Write-Step "Deploying main.bicep (this takes about 5 minutes: AKS + VMs + Grafana)"
 $deploymentName = "amlab-$(Get-Date -Format 'yyyyMMddHHmmss')"
 $mainBicep = Join-Path $PSScriptRoot '..' 'infra' 'main.bicep'
 
