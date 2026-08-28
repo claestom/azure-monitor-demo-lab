@@ -13,6 +13,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 function Write-Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
+$tempDirectory = [System.IO.Path]::GetTempPath()
 
 # Subscription guardrail
 $targetFile = Join-Path $PSScriptRoot '..' '.azure-target.json'
@@ -39,11 +40,11 @@ az webapp config set `
 Start-Sleep -Seconds 30
 
 Write-Step "Publishing AmlabHello (workloads/webapp) and zip-deploying"
-$pub = Join-Path $env:TEMP "amlab-pub-$([guid]::NewGuid().ToString('N'))"
+$pub = Join-Path $tempDirectory "amlab-pub-$([guid]::NewGuid().ToString('N'))"
 $csproj = Join-Path $PSScriptRoot '..' 'workloads' 'webapp' 'AmlabHello.csproj'
 dotnet publish $csproj -c Release -o $pub --nologo --verbosity quiet
 $zip = "$pub.zip"
-Compress-Archive -Path "$pub\*" -DestinationPath $zip -Force
+Compress-Archive -Path (Join-Path $pub '*') -DestinationPath $zip -Force
 $deployOutput = ''
 $deployExitCode = 1
 $scmRestartRetries = 0
@@ -102,7 +103,7 @@ kubectl apply -f $frontendYaml
 
 Write-Step "Substituting App Service URL into the k6 CronJob and applying"
 $loadgenTemplate = Join-Path $PSScriptRoot '..' 'workloads' 'k8s' '02-loadgen.yaml'
-$loadgenRendered = Join-Path $env:TEMP "amlab-loadgen-$([guid]::NewGuid().ToString('N')).yaml"
+$loadgenRendered = Join-Path $tempDirectory "amlab-loadgen-$([guid]::NewGuid().ToString('N')).yaml"
 $webAppUrl = "https://$WebAppHost"
 (Get-Content -Raw $loadgenTemplate).Replace('__APP_SERVICE_URL__', "'$webAppUrl'") | Set-Content -Encoding UTF8 $loadgenRendered
 kubectl apply -f $loadgenRendered
@@ -115,7 +116,7 @@ $appiConn = az monitor app-insights component show -g $ResourceGroup -a $appiNam
 
 Write-Step "Rendering and applying OTel caller deployment"
 $otelTemplate = Join-Path $PSScriptRoot '..' 'workloads' 'k8s' '04-otel-caller.yaml'
-$otelRendered = Join-Path $env:TEMP "amlab-otel-$([guid]::NewGuid().ToString('N')).yaml"
+$otelRendered = Join-Path $tempDirectory "amlab-otel-$([guid]::NewGuid().ToString('N')).yaml"
 (Get-Content -Raw $otelTemplate).Replace('__APP_SERVICE_URL__', $webAppUrl).Replace('__APPI_CONN_STR__', $appiConn) | Set-Content -Encoding UTF8 $otelRendered
 kubectl apply -f $otelRendered
 Remove-Item $otelRendered -Force
@@ -123,7 +124,7 @@ Remove-Item $otelRendered -Force
 # NEW — Node.js auto-instrumentation via @azure/monitor-opentelemetry (GA distro).
 Write-Step "Rendering and applying Node.js OTel deployment"
 $nodeTemplate = Join-Path $PSScriptRoot '..' 'workloads' 'k8s' '05-nodeapp-otel.yaml'
-$nodeRendered = Join-Path $env:TEMP "amlab-nodeapp-$([guid]::NewGuid().ToString('N')).yaml"
+$nodeRendered = Join-Path $tempDirectory "amlab-nodeapp-$([guid]::NewGuid().ToString('N')).yaml"
 (Get-Content -Raw $nodeTemplate).Replace('__APP_SERVICE_URL__', $webAppUrl).Replace('__APPI_CONN_STR__', $appiConn) | Set-Content -Encoding UTF8 $nodeRendered
 kubectl apply -f $nodeRendered
 Remove-Item $nodeRendered -Force
