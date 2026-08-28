@@ -26,6 +26,10 @@
 .PARAMETER ProjectEndpoint
   Override the Foundry project endpoint (otherwise discovered from the resource group).
 
+.PARAMETER AppInsightsConnectionString
+  Optional pre-resolved connection string. The Cloud Shell wrapper supplies this
+  through the core ARM CLI surface to avoid installing the App Insights extension.
+
 .PARAMETER Conversations
   Number of simulated conversations for the traffic run. Default 150.
 
@@ -47,6 +51,7 @@ param(
   [string] $ResourceGroup,
   [string] $NamePrefix,
   [string] $ProjectEndpoint,
+  [string] $AppInsightsConnectionString,
   [string] $ChatDeployment   = 'gpt-5-mini',
   [string] $RouterDeployment = 'model-router',
   [int]    $Conversations    = 150,
@@ -83,7 +88,7 @@ if (Test-Path $targetFile) {
 }
 
 # Python must be on PATH.
-$python = (Get-Command python -ErrorAction SilentlyContinue) ?? (Get-Command python3 -ErrorAction SilentlyContinue)
+$python = (Get-Command python -ErrorAction SilentlyContinue | Select-Object -First 1) ?? (Get-Command python3 -ErrorAction SilentlyContinue | Select-Object -First 1)
 if (-not $python) { throw "Python 3.10+ is required on PATH (python/python3) to run the AI demo scripts." }
 $python = $python.Source
 
@@ -109,9 +114,11 @@ if ([string]::IsNullOrWhiteSpace($ProjectEndpoint)) {
 Write-Host "   Endpoint: $ProjectEndpoint" -ForegroundColor Green
 
 # --- App Insights connection string (enables tracing export) ---
-Write-Step "Looking up Application Insights connection string (appi-$NamePrefix)"
-$appiConn = az monitor app-insights component show -g $ResourceGroup -a "appi-$NamePrefix" --query connectionString -o tsv 2>$null
-if ([string]::IsNullOrWhiteSpace($appiConn)) {
+if ([string]::IsNullOrWhiteSpace($AppInsightsConnectionString)) {
+  Write-Step "Looking up Application Insights connection string (appi-$NamePrefix)"
+  $AppInsightsConnectionString = az monitor app-insights component show -g $ResourceGroup -a "appi-$NamePrefix" --query connectionString -o tsv 2>$null
+}
+if ([string]::IsNullOrWhiteSpace($AppInsightsConnectionString)) {
   Write-Host "   appi-$NamePrefix not found — traffic will run without tracing export." -ForegroundColor Yellow
 }
 
@@ -119,7 +126,7 @@ if ([string]::IsNullOrWhiteSpace($appiConn)) {
 $env:AZURE_AI_PROJECT_ENDPOINT              = $ProjectEndpoint
 $env:AZURE_CHAT_DEPLOYMENT                  = $ChatDeployment
 $env:AZURE_ROUTER_DEPLOYMENT               = $RouterDeployment
-$env:APPLICATIONINSIGHTS_CONNECTION_STRING = $appiConn
+$env:APPLICATIONINSIGHTS_CONNECTION_STRING = $AppInsightsConnectionString
 
 # --- Python deps + agents ---
 $aiDir = Join-Path $repoRoot 'workloads' 'ai'

@@ -78,10 +78,10 @@ git pull
 ./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
 ```
 
-The optional AI stage deploys Microsoft Foundry and four billable model deployments in `swedencentral`, together with AI monitoring, token alerts, and an AI FinOps workbook. If you enabled it in the portal, create the demo agents and generate simulated traffic afterward:
+The optional AI stage deploys Microsoft Foundry and four billable model deployments in `swedencentral`, together with AI monitoring, token alerts, and an AI FinOps workbook. If you enabled it in the portal, use the dedicated Cloud Shell AI wrapper to create the demo agents and generate simulated traffic without optional Azure CLI extensions:
 
 ```powershell
-./scripts/setup-ai.ps1 -ResourceGroup <resource-group>
+./scripts/setup-ai-cloud-shell.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
 ```
 
 > Use Option 2 for a scripted one-shot deployment, or Option 3 for the staged workshop and progressive deployment.
