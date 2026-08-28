@@ -70,6 +70,14 @@ az account set --subscription <subscription-id>
 ./scripts/post-staged-deploy.ps1 -ResourceGroup <resource-group>
 ```
 
+If the repository is already present in Cloud Shell, update it before rerunning the wrapper:
+
+```powershell
+cd ~/azure-monitor-demo-lab
+git pull
+./scripts/post-staged-deploy.ps1 -ResourceGroup <resource-group>
+```
+
 The optional AI stage deploys Microsoft Foundry and four billable model deployments in `swedencentral`, together with AI monitoring, token alerts, and an AI FinOps workbook. If you enabled it in the portal, create the demo agents and generate simulated traffic afterward:
 
 ```powershell
