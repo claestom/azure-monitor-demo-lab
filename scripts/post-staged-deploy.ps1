@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Run the local post-deployment setup after staged Bicep or Terraform deployment.
+  Run the local post-deployment setup after portal, staged Bicep, or Terraform deployment.
 
 .DESCRIPTION
-  Discovers the staged lab's App Service, AKS cluster, and suffixed central Log
+  Discovers the lab's App Service, AKS cluster, and suffixed central Log
   Analytics workspace, then runs the same post-deployment helpers used by deploy.ps1.
 
 .PARAMETER ResourceGroup

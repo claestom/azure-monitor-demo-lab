@@ -61,7 +61,16 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 | **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
 | **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook, optional AI stage |
 
-The optional AI stage deploys Microsoft Foundry and four billable model deployments in `swedencentral`, together with AI monitoring, token alerts, and an AI FinOps workbook. The portal deployment creates the AI infrastructure only. To create the demo agents and generate simulated traffic afterward, clone this repository and run `./scripts/setup-ai.ps1 -ResourceGroup <resource-group>`.
+After the portal deployment succeeds, run the post-deployment wrapper to publish the App Service sample and install the AKS, Health Model, and SLI demo components:
+
+```powershell
+git clone https://github.com/claestom/azure-monitor-demo-lab.git
+cd azure-monitor-demo-lab
+az account set --subscription <subscription-id>
+./scripts/post-staged-deploy.ps1 -ResourceGroup <resource-group>
+```
+
+The optional AI stage deploys Microsoft Foundry and four billable model deployments in `swedencentral`, together with AI monitoring, token alerts, and an AI FinOps workbook. If you enabled it in the portal, create the demo agents and generate simulated traffic afterward with `./scripts/setup-ai.ps1 -ResourceGroup <resource-group>`.
 
 > Use Option 2 for a scripted one-shot deployment, or Option 3 for the staged workshop and progressive deployment.
 
