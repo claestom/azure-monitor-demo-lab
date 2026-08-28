@@ -26,7 +26,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repositoryBaseUrl = "https://raw.githubusercontent.com/claestom/azure-monitor-demo-lab/$RepositoryRef"
-$curl = (Get-Command curl -CommandType Application -ErrorAction Stop).Source
+$curl = (Get-Command curl -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 
 foreach ($commandName in @('az', 'kubectl', 'dotnet')) {
   if (-not (Get-Command $commandName -ErrorAction SilentlyContinue)) {
