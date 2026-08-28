@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Run the local post-deployment setup after portal, staged Bicep, or Terraform deployment.
+  Run the local post-deployment setup after staged Bicep or Terraform deployment.
 
 .DESCRIPTION
   Discovers the lab's App Service, AKS cluster, and suffixed central Log
@@ -44,12 +44,6 @@ if (Test-Path $targetFile) {
 Write-Info "Subscription: $($active.id)"
 Write-Info "Resource group: $ResourceGroup"
 Write-Info "Name prefix: $NamePrefix"
-
-Write-Step "Allowing preview Azure CLI extensions in this Cloud Shell profile"
-az config set extension.dynamic_install_allow_preview=true 2>$null
-if ($LASTEXITCODE -ne 0) {
-  throw "Could not enable preview Azure CLI extension installation."
-}
 
 Write-Step "Discovering staged deployment resources"
 $resources = az resource list -g $ResourceGroup -o json | ConvertFrom-Json

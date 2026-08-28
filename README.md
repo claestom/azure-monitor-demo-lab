@@ -61,13 +61,13 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 | **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
 | **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook, optional AI stage |
 
-After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The wrapper discovers the deployed resources, publishes the App Service sample, and installs the AKS, Health Model, and SLI demo components:
+After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The Cloud Shell wrapper discovers the deployed resources, publishes the App Service sample, and installs the AKS, Health Model, and SLI demo components without requiring optional Azure CLI extensions:
 
 ```powershell
 git clone https://github.com/claestom/azure-monitor-demo-lab.git
 cd azure-monitor-demo-lab
 az account set --subscription <subscription-id>
-./scripts/post-staged-deploy.ps1 -ResourceGroup <resource-group>
+./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
 ```
 
 If the repository is already present in Cloud Shell, update it before rerunning the wrapper:
@@ -75,7 +75,7 @@ If the repository is already present in Cloud Shell, update it before rerunning 
 ```powershell
 cd ~/azure-monitor-demo-lab
 git pull
-./scripts/post-staged-deploy.ps1 -ResourceGroup <resource-group>
+./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
 ```
 
 The optional AI stage deploys Microsoft Foundry and four billable model deployments in `swedencentral`, together with AI monitoring, token alerts, and an AI FinOps workbook. If you enabled it in the portal, create the demo agents and generate simulated traffic afterward:

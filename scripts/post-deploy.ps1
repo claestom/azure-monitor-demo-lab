@@ -1,6 +1,10 @@
 <#
 .SYNOPSIS
   Post-deploy steps: push sample app to App Service + apply AKS workloads.
+
+.PARAMETER AppInsightsConnectionString
+  Optional pre-resolved connection string. The Cloud Shell wrapper supplies this
+  through the core ARM CLI surface to avoid installing the App Insights extension.
 #>
 [CmdletBinding()]
 param(
@@ -8,7 +12,8 @@ param(
   [Parameter(Mandatory)] [string] $WebAppName,
   [Parameter(Mandatory)] [string] $AksName,
   [Parameter(Mandatory)] [string] $WebAppHost,
-  [string] $CentralLawName
+  [string] $CentralLawName,
+  [string] $AppInsightsConnectionString
 )
 
 $ErrorActionPreference = 'Stop'
@@ -110,14 +115,16 @@ kubectl apply -f $loadgenRendered
 Remove-Item $loadgenRendered -Force
 
 # FEATURE 4 — Apply the OpenTelemetry distributed-tracing demo (AKS → App Service).
-Write-Step "Looking up App Insights connection string for the OTel caller"
-$appiName = az resource list -g $ResourceGroup --resource-type Microsoft.Insights/components --query "[0].name" -o tsv
-$appiConn = az monitor app-insights component show -g $ResourceGroup -a $appiName --query connectionString -o tsv
+if ([string]::IsNullOrWhiteSpace($AppInsightsConnectionString)) {
+  Write-Step "Looking up App Insights connection string for the OTel caller"
+  $appiName = az resource list -g $ResourceGroup --resource-type Microsoft.Insights/components --query "[0].name" -o tsv
+  $AppInsightsConnectionString = az monitor app-insights component show -g $ResourceGroup -a $appiName --query connectionString -o tsv
+}
 
 Write-Step "Rendering and applying OTel caller deployment"
 $otelTemplate = Join-Path $PSScriptRoot '..' 'workloads' 'k8s' '04-otel-caller.yaml'
 $otelRendered = Join-Path $tempDirectory "amlab-otel-$([guid]::NewGuid().ToString('N')).yaml"
-(Get-Content -Raw $otelTemplate).Replace('__APP_SERVICE_URL__', $webAppUrl).Replace('__APPI_CONN_STR__', $appiConn) | Set-Content -Encoding UTF8 $otelRendered
+(Get-Content -Raw $otelTemplate).Replace('__APP_SERVICE_URL__', $webAppUrl).Replace('__APPI_CONN_STR__', $AppInsightsConnectionString) | Set-Content -Encoding UTF8 $otelRendered
 kubectl apply -f $otelRendered
 Remove-Item $otelRendered -Force
 
@@ -125,7 +132,7 @@ Remove-Item $otelRendered -Force
 Write-Step "Rendering and applying Node.js OTel deployment"
 $nodeTemplate = Join-Path $PSScriptRoot '..' 'workloads' 'k8s' '05-nodeapp-otel.yaml'
 $nodeRendered = Join-Path $tempDirectory "amlab-nodeapp-$([guid]::NewGuid().ToString('N')).yaml"
-(Get-Content -Raw $nodeTemplate).Replace('__APP_SERVICE_URL__', $webAppUrl).Replace('__APPI_CONN_STR__', $appiConn) | Set-Content -Encoding UTF8 $nodeRendered
+(Get-Content -Raw $nodeTemplate).Replace('__APP_SERVICE_URL__', $webAppUrl).Replace('__APPI_CONN_STR__', $AppInsightsConnectionString) | Set-Content -Encoding UTF8 $nodeRendered
 kubectl apply -f $nodeRendered
 Remove-Item $nodeRendered -Force
 
