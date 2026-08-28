@@ -61,17 +61,19 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 | **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
 | **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook, optional AI stage |
 
-After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The bootstrap uses `curl` to download only the required scripts and workload files, then publishes the App Service sample and installs the AKS, Health Model, and SLI demo components:
+After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The wrapper discovers the deployed resources, publishes the App Service sample, and installs the AKS, Health Model, and SLI demo components:
 
 ```powershell
-curl -fsSL https://raw.githubusercontent.com/claestom/azure-monitor-demo-lab/master/scripts/cloud-shell-post-deploy.ps1 -o cloud-shell-post-deploy.ps1
-pwsh ./cloud-shell-post-deploy.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
+git clone https://github.com/claestom/azure-monitor-demo-lab.git
+cd azure-monitor-demo-lab
+az account set --subscription <subscription-id>
+./scripts/post-staged-deploy.ps1 -ResourceGroup <resource-group>
 ```
 
-The optional AI stage deploys Microsoft Foundry and four billable model deployments in `swedencentral`, together with AI monitoring, token alerts, and an AI FinOps workbook. If you enabled it in the portal, add `-SetupAi` to the second command to download the AI workload files, create the demo agents, and generate simulated traffic.
+The optional AI stage deploys Microsoft Foundry and four billable model deployments in `swedencentral`, together with AI monitoring, token alerts, and an AI FinOps workbook. If you enabled it in the portal, create the demo agents and generate simulated traffic afterward:
 
 ```powershell
-pwsh ./cloud-shell-post-deploy.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group> -SetupAi
+./scripts/setup-ai.ps1 -ResourceGroup <resource-group>
 ```
 
 > Use Option 2 for a scripted one-shot deployment, or Option 3 for the staged workshop and progressive deployment.
