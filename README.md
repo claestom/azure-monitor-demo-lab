@@ -59,7 +59,9 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 | **Basics** | Resource group (recommended `rg-azure-monitor-lab`), Region (recommended `northeurope`), name prefix, alert email, VM admin username + password |
 | **Workloads** | Deploy Linux/Windows VMs, VM size, AKS node size + count |
 | **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
-| **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook |
+| **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook, optional AI stage |
+
+The optional AI stage deploys Microsoft Foundry and four billable model deployments in `swedencentral`, together with AI monitoring, token alerts, and an AI FinOps workbook. The portal deployment creates the AI infrastructure only. To create the demo agents and generate simulated traffic afterward, clone this repository and run `./scripts/setup-ai.ps1 -ResourceGroup <resource-group>`.
 
 > Use Option 2 for a scripted one-shot deployment, or Option 3 for the staged workshop and progressive deployment.
 

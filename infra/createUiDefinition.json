@@ -287,6 +287,21 @@
             "constraints": {
               "required": false
             }
+          },
+          {
+            "name": "enableAi",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Enable optional AI stage",
+            "defaultValue": false,
+            "toolTip": "Deploys Microsoft Foundry, four billable model deployments, AI monitoring, alerts, and an AI FinOps workbook in swedencentral. Off by default."
+          },
+          {
+            "name": "aiPostDeployInfo",
+            "type": "Microsoft.Common.TextBlock",
+            "visible": "[equals(steps('advanced').enableAi, true)]",
+            "options": {
+              "text": "The AI stage deploys billable Microsoft Foundry models in swedencentral. The portal deployment creates the infrastructure only. After deployment, run ./scripts/setup-ai.ps1 -ResourceGroup <resource-group> to create the agents and generate simulated traffic."
+            }
           }
         ]
       }
@@ -310,7 +325,8 @@
       "lawReplicationLocation": "[steps('monitoring').lawReplicationLocation]",
       "ownerTag": "[steps('advanced').ownerTag]",
       "appServiceRepoUrl": "[steps('advanced').appServiceRepoUrl]",
-      "siemWebhookUrl": "[steps('advanced').siemWebhookUrl]"
+      "siemWebhookUrl": "[steps('advanced').siemWebhookUrl]",
+      "enableAi": "[steps('advanced').enableAi]"
     }
   }
 }
