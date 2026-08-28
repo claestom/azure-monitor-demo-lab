@@ -10,10 +10,9 @@
 //   per-resource diagnostic setting model (scenario 5 DINE policy) with one rule
 //   that can be associated with many resources.
 //
-// Why Key Vault as the demo target:
-//   The lab already deploys a Key Vault (`kv-<prefix>-<suffix>`) whose AuditEvent
-//   logs are a clean, low-volume platform-log stream — ideal to prove the pattern
-//   without generating noise.
+// Why Azure Managed Grafana as the demo target:
+//   The PlatformTelemetry preview currently supports Microsoft.Dashboard/grafana,
+//   and the lab already deploys one for its Managed Prometheus dashboards.
 //
 // Design notes / preview constraints:
 //   * kind MUST be 'PlatformTelemetry' and api-version 2024-03-11 (DCR + DCRA).
@@ -35,23 +34,23 @@ param location string
 @description('Central LAW resource ID (Log Analytics destination + DCR data path).')
 param centralLawId string
 
-@description('Name of the Key Vault to associate the DCR with (the monitored resource).')
-param keyVaultName string
+@description('Name of the Azure Managed Grafana instance to associate the DCR with.')
+param grafanaName string
 
 @description('Platform-telemetry log streams to collect (resourceType:Logs-Group-All).')
 param streams array = [
-  'microsoft.keyvault/vaults:Logs-Group-All'
+  'microsoft.dashboard/grafana:Logs-Group-All'
 ]
 
-@description('Name of the data collection rule association created on the Key Vault.')
+@description('Name of the data collection rule association created on the monitored resource.')
 param associationName string = 'amlab-platformlogs'
 
 @description('Resource tags.')
 param tags object = {}
 
-// The monitored resource — an existing Key Vault deployed by the foundation stage.
-resource keyVault 'Microsoft.KeyVault/vaults@2024-04-01-preview' existing = {
-  name: keyVaultName
+// The monitored resource is the existing Azure Managed Grafana instance.
+resource grafana 'Microsoft.Dashboard/grafana@2024-10-01' existing = {
+  name: grafanaName
 }
 
 // ---------------------------------------------------------------------------------
@@ -95,7 +94,7 @@ resource dcr 'Microsoft.Insights/dataCollectionRules@2024-03-11' = {
 //  identical DCRA object to fan the rule out).
 // ---------------------------------------------------------------------------------
 resource dcra 'Microsoft.Insights/dataCollectionRuleAssociations@2024-03-11' = {
-  scope: keyVault
+  scope: grafana
   name: associationName
   properties: {
     dataCollectionRuleId: dcr.id

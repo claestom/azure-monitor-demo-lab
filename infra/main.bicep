@@ -714,7 +714,7 @@ module dataExport 'modules/data-export.bicep' = {
 
 // ---------------------------------------------------------------------------------
 // Scenario 51 — Platform logs at scale with DCRs (public preview).
-//   One PlatformTelemetry DCR + association on the Key Vault, replacing the
+//   One PlatformTelemetry DCR + association on Azure Managed Grafana, replacing the
 //   per-resource diagnostic-setting model with a single, scale-out rule.
 //   Off by default (enablePlatformLogsDcr=false) — preview + region-limited.
 // ---------------------------------------------------------------------------------
@@ -724,10 +724,9 @@ module platformLogsDcr 'modules/platform-logs-dcr.bicep' = if (enablePlatformLog
     name: platformLogsDcrName
     location: location
     centralLawId: lawCentral.outputs.id
-    keyVaultName: keyVaultName
+    grafanaName: grafana.outputs.name
     tags: commonTags
   }
-  dependsOn: [ keyVault ]
 }
 
 // ---------------------------------------------------------------------------------

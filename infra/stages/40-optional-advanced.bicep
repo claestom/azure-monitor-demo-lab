@@ -32,6 +32,7 @@ param enableAi bool = false
 var suffix = uniqueString(resourceGroup().id)
 var lawCentralName = 'law-${namePrefix}-central-${take(suffix, 5)}'
 var amwName = 'amw-${namePrefix}'
+var grafanaName = 'amg-${namePrefix}-${take(suffix, 4)}'
 var aksName = 'aks-${namePrefix}'
 var actionGroupName = 'ag-${namePrefix}-email'
 var storageAccountName = 'st${namePrefix}${take(suffix, 8)}'
@@ -172,7 +173,7 @@ module sliIdentity '../modules/sli-identity.bicep' = {
 
 // ---------------------------------------------------------------------------------
 // Scenario 51 — Platform logs at scale with DCRs (public preview).
-//   Single PlatformTelemetry DCR + association on the Key Vault, replacing the
+//   Single PlatformTelemetry DCR + association on Azure Managed Grafana, replacing the
 //   per-resource diagnostic-setting model. Off by default (preview + region-limited).
 // ---------------------------------------------------------------------------------
 module platformLogsDcr '../modules/platform-logs-dcr.bicep' = if (enablePlatformLogsDcr) {
@@ -181,7 +182,7 @@ module platformLogsDcr '../modules/platform-logs-dcr.bicep' = if (enablePlatform
     name: 'dcr-${namePrefix}-platformlogs'
     location: location
     centralLawId: lawCentral.id
-    keyVaultName: keyVaultName
+    grafanaName: grafanaName
     tags: commonTags
   }
 }

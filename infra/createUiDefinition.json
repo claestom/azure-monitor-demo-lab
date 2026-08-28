@@ -188,7 +188,7 @@
             "type": "Microsoft.Common.OptionsGroup",
             "label": "Enable platform-logs DCR (preview)",
             "defaultValue": "No",
-            "toolTip": "Scenario 51 (public preview). Requires a region that supports the preview.",
+            "toolTip": "Scenario 51 (public preview). Collects Azure Managed Grafana platform logs in the central workspace and requires a supported region.",
             "constraints": {
               "allowedValues": [
                 { "label": "Yes", "value": true },

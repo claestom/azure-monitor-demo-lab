@@ -2334,8 +2334,8 @@ The lab ships the DCR as code but **off by default** — the DCR and the central
 |---|---|
 | Module | [`infra/modules/platform-logs-dcr.bicep`](../infra/modules/platform-logs-dcr.bicep) — `PlatformTelemetry` DCR + DCR association |
 | Feature flag | `enablePlatformLogsDcr` (Bicep) / `enable_platform_logs_dcr` (Terraform) — default `false` |
-| Stream | `microsoft.keyvault/vaults:Logs-Group-All` |
-| Monitored resource | `kv-amlab-<suffix>` (via one DCR association — swap in any/many resources) |
+| Stream | `microsoft.dashboard/grafana:Logs-Group-All` |
+| Monitored resource | `amg-amlab-<suffix>` (via one DCR association; add any supported resources as needed) |
 | Destination | `law-amlab-central` (Log Analytics — no managed identity / RBAC required) |
 
 > Enable it: `az deployment group create ... --parameters enablePlatformLogsDcr=true` (Bicep) or `enable_platform_logs_dcr = true` in `stages.tfvars` (Terraform).

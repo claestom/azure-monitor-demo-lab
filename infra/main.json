@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "2581999306849713554"
+      "templateHash": "6028420974919139294"
     }
   },
   "parameters": {
@@ -6730,8 +6730,8 @@
           "centralLawId": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
           },
-          "keyVaultName": {
-            "value": "[variables('keyVaultName')]"
+          "grafanaName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'grafana'), '2022-09-01').outputs.name.value]"
           },
           "tags": {
             "value": "[variables('commonTags')]"
@@ -6744,7 +6744,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "8576984864352820430"
+              "templateHash": "11452206091059677665"
             }
           },
           "parameters": {
@@ -6766,16 +6766,16 @@
                 "description": "Central LAW resource ID (Log Analytics destination + DCR data path)."
               }
             },
-            "keyVaultName": {
+            "grafanaName": {
               "type": "string",
               "metadata": {
-                "description": "Name of the Key Vault to associate the DCR with (the monitored resource)."
+                "description": "Name of the Azure Managed Grafana instance to associate the DCR with."
               }
             },
             "streams": {
               "type": "array",
               "defaultValue": [
-                "microsoft.keyvault/vaults:Logs-Group-All"
+                "microsoft.dashboard/grafana:Logs-Group-All"
               ],
               "metadata": {
                 "description": "Platform-telemetry log streams to collect (resourceType:Logs-Group-All)."
@@ -6785,7 +6785,7 @@
               "type": "string",
               "defaultValue": "amlab-platformlogs",
               "metadata": {
-                "description": "Name of the data collection rule association created on the Key Vault."
+                "description": "Name of the data collection rule association created on the monitored resource."
               }
             },
             "tags": {
@@ -6834,7 +6834,7 @@
             {
               "type": "Microsoft.Insights/dataCollectionRuleAssociations",
               "apiVersion": "2024-03-11",
-              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+              "scope": "[format('Microsoft.Dashboard/grafana/{0}', parameters('grafanaName'))]",
               "name": "[parameters('associationName')]",
               "properties": {
                 "dataCollectionRuleId": "[resourceId('Microsoft.Insights/dataCollectionRules', parameters('name'))]",
@@ -6858,7 +6858,7 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Resources/deployments', 'keyvault')]",
+        "[resourceId('Microsoft.Resources/deployments', 'grafana')]",
         "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
       ]
     },
