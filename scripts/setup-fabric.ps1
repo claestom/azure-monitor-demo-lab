@@ -254,7 +254,7 @@ if ([string]::IsNullOrWhiteSpace($eventHubNamespace)) {
 } else {
   Write-Info "Namespace: $eventHubNamespace"
   Write-Info 'Event Hub: diagnostics'
-  Write-Info 'Authorization rule: diagnostics-send'
+  Write-Info 'Listen authorization rule: diagnostics-listen'
 }
 
 Write-Host "`nFabric setup completed." -ForegroundColor Green
@@ -263,8 +263,11 @@ Write-Host "Eventhouse ID: $($eventhouse.id)"
 Write-Host "KQL database ID: $($kqlDatabase.id)"
 Write-Host "Eventstream ID: $($eventstream.id)"
 Write-Host "`nManual Eventstream connection:" -ForegroundColor Cyan
-Write-Host "1. Open the Eventstream '$EventstreamName' in the workspace."
-Write-Host "2. Add an Azure Event Hubs source for '$eventHubNamespace' / 'diagnostics'."
-Write-Host "3. Select or create the Fabric connection interactively; do not paste credentials into this script."
-Write-Host "4. Route the stream to '$KqlDatabaseName', then create the Real-Time Dashboard from the KQL database."
+Write-Host "1. Open '$EventstreamName', switch to Edit mode, and select Add source > Connect data sources > Azure Event Hubs."
+Write-Host "2. Create a Shared Access Key connection to namespace '$eventHubNamespace' and Event Hub 'diagnostics'."
+Write-Host "3. Use Shared Access Key Name 'diagnostics-listen' and its primary or secondary key from the Event Hubs namespace."
+Write-Host "4. Set Consumer group to '`$Default', Data format to JSON, Data gateway to none, then add the source."
+Write-Host "5. Add an Eventhouse destination, select the existing Eventhouse and '$KqlDatabaseName', and create a new destination table such as 'AzureDiagnosticsRaw'."
+Write-Host "6. Select Publish, confirm events arrive, then create the Real-Time Dashboard from '$KqlDatabaseName'."
+Write-Host "The connection key is entered only in Fabric; do not paste it into this script or source control."
 Write-Host "`nSuspend F2 when idle: ./scripts/suspend-fabric.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup" -ForegroundColor Yellow

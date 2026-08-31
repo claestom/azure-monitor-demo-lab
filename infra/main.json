@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "1448145297491993924"
+      "templateHash": "16165442486144509148"
     }
   },
   "parameters": {
@@ -1380,7 +1380,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "17713457183335564880"
+              "templateHash": "13427846610720516459"
             }
           },
           "parameters": {
@@ -1454,6 +1454,19 @@
               ]
             },
             {
+              "type": "Microsoft.EventHub/namespaces/authorizationRules",
+              "apiVersion": "2024-01-01",
+              "name": "[format('{0}/{1}', parameters('namespaceName'), 'diagnostics-listen')]",
+              "properties": {
+                "rights": [
+                  "Listen"
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.EventHub/namespaces', parameters('namespaceName'))]"
+              ]
+            },
+            {
               "type": "Microsoft.Insights/diagnosticSettings",
               "apiVersion": "2021-05-01-preview",
               "scope": "[format('Microsoft.EventHub/namespaces/{0}', parameters('namespaceName'))]",
@@ -1494,6 +1507,10 @@
             "sendRuleId": {
               "type": "string",
               "value": "[resourceId('Microsoft.EventHub/namespaces/authorizationRules', parameters('namespaceName'), 'diagnostics-send')]"
+            },
+            "listenRuleName": {
+              "type": "string",
+              "value": "diagnostics-listen"
             }
           }
         }

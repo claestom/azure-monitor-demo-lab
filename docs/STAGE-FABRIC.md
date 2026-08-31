@@ -114,10 +114,12 @@ terraform -chdir=terraform apply -var-file stages.tfvars
 
 1. Open the workspace URL printed by `setup-fabric.ps1`.
 2. Open the `AzureMonitorEvents` Eventstream.
-3. Add an Azure Event Hubs source.
-4. Select the deployed namespace, the `diagnostics` Event Hub, and an interactive Fabric connection.
-5. Route the stream to the `MonitoringTelemetry` KQL database.
-6. Create a Real-Time Dashboard from the KQL database after events arrive.
+3. Switch to **Edit** mode and select **Add source** > **Connect data sources** > **Azure Event Hubs**.
+4. Create a **Shared Access Key** connection for the deployed namespace and the `diagnostics` Event Hub.
+5. Use Shared Access Key Name `diagnostics-listen` and retrieve its primary or secondary key from **Event Hubs namespace** > **Shared access policies**. Do not use `diagnostics-send`; it cannot consume events.
+6. Set Consumer group to `$Default`, Data format to **JSON**, and Data gateway to **none**.
+7. Add an **Eventhouse** destination, select `Azure Monitor Demo Eventhouse` and `MonitoringTelemetry`, and create a destination table such as `AzureDiagnosticsRaw`.
+8. Select **Publish**, confirm events arrive, then create a Real-Time Dashboard from the KQL database.
 
 ## Suspend and resume
 
