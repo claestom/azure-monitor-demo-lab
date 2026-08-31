@@ -184,6 +184,7 @@ $attempt = 0
 $sentinelRetryCount = 0
 $appServiceCapacityRetryCount = 0
 $ambaMetricRetryCount = 0
+$foundrySoftDeleteRetryCount = 0
 while ($true) {
   $attempt++
   if ($attempt -gt 1) {
@@ -208,6 +209,36 @@ while ($true) {
   $sentinelQueryNotReady = $failMessages -match 'Failed to run the analytics rule query.*workspace.*could not be found'
   $appServiceCapacityNotReady = $failMessages -match 'No available instances to satisfy this request|App Service is attempting to increase capacity'
   $ambaMetricNotReady = $failMessages -match "Couldn't find a metric named (Http4xx|Http5xx|HttpResponseTime)"
+  $foundrySoftDeleted = $failMessages -match 'FlagMustBeSetForRestore'
+
+  if ($foundrySoftDeleted -and $foundrySoftDeleteRetryCount -lt 1) {
+    $foundrySoftDeleteRetryCount++
+    $deletedAccountMatch = [regex]::Match($failMessages, 'Microsoft\.CognitiveServices/accounts/([a-zA-Z0-9-]+)')
+    if (-not $deletedAccountMatch.Success) {
+      throw "Foundry deployment is blocked by a soft-deleted account, but its name could not be extracted from the failed operation details:`n$failMessages"
+    }
+
+    $deletedAccountName = $deletedAccountMatch.Groups[1].Value
+    $deletedAccount = az cognitiveservices account list-deleted `
+      --subscription $target.expectedSubscriptionId `
+      --query "[?name=='$deletedAccountName' && location=='swedencentral'] | [0].{name:name,location:location}" `
+      -o json | ConvertFrom-Json
+    if (-not $deletedAccount) {
+      throw "Foundry account '$deletedAccountName' reported a soft-delete collision but was not found in the deleted accounts list. Failed operation details:`n$failMessages"
+    }
+
+    Write-Host "`n   Foundry account '$deletedAccountName' is soft-deleted. Purging that exact lab account before one retry..." -ForegroundColor Yellow
+    az cognitiveservices account purge `
+      --subscription $target.expectedSubscriptionId `
+      --name $deletedAccountName `
+      --resource-group $ResourceGroup `
+      --location swedencentral `
+      --only-show-errors
+    if ($LASTEXITCODE -ne 0) {
+      throw "Failed to purge soft-deleted Foundry account '$deletedAccountName'. Purge it manually, then rerun deployment."
+    }
+    continue
+  }
 
   if ($sentinelQueryNotReady -and $sentinelRetryCount -lt 2) {
     $sentinelRetryCount++

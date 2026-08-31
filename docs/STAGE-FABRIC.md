@@ -120,6 +120,16 @@ terraform -chdir=terraform apply -var-file stages.tfvars
 
 Both commands require confirmation by default and verify the explicit subscription before changing the capacity.
 
+## Authorization troubleshooting
+
+`Unable to authorize with Azure Active Directory` during `Microsoft.Fabric/capacities` creation means the administrator value could not be authorized in the deployment tenant. Confirm that:
+
+1. `fabricAdminEmail` is not empty.
+2. It is a Microsoft Entra user UPN in the subscription tenant, not an external alert address.
+3. The user can sign in to Microsoft Fabric and the tenant has Fabric enabled.
+
+For this sponsored lab tenant, the known working administrator format is `admin@MngEnvMCAP363544.onmicrosoft.com`. The portal, Bicep, config-sync, and Terraform inputs now require a separate Fabric administrator value. `setup-fabric.ps1` also compares the signed-in Azure CLI user with the deployed capacity administrators before requesting a Fabric API token.
+
 ## Demo scenarios
 
 See scenarios 54 through 59 in [DEMO-SCENARIOS.md](DEMO-SCENARIOS.md).
