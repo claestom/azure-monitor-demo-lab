@@ -84,7 +84,7 @@ if (Test-Path $labConfigPath) {
 function Assert-AllowedSubscription {
   $targetFile = Join-Path $PSScriptRoot '..' '.azure-target.json'
   if (-not (Test-Path $targetFile)) { throw ".azure-target.json not found at $targetFile. Bootstrap with: Copy-Item lab.config.json.example lab.config.json; edit it; re-run this script." }
-  $target = Get-Content -Raw $targetFile | ConvertFrom-Json
+  $script:target = Get-Content -Raw $targetFile | ConvertFrom-Json
 
   Write-Host "==> Pinning active az subscription to $($target.expectedSubscriptionName) ($($target.expectedSubscriptionId))" -ForegroundColor Cyan
   az account set --subscription $target.expectedSubscriptionId | Out-Null
@@ -144,6 +144,15 @@ function Register-ResourceProvider {
 
 Write-Step "Ensuring preview resource providers are registered"
 Register-ResourceProvider -Namespace 'Microsoft.CloudHealth'
+
+$fabricEnabled = $false
+if ($null -ne $labCfg -and $null -ne $labCfg.stageToggles -and $null -ne $labCfg.stageToggles.enableStageFabric) {
+  $fabricEnabled = [bool]$labCfg.stageToggles.enableStageFabric
+}
+if ($fabricEnabled) {
+  Write-Step "Fabric feature enabled - ensuring Microsoft.Fabric is registered"
+  Register-ResourceProvider -Namespace 'Microsoft.Fabric'
+}
 
 # 2. Deploy
 Write-Step "Deploying main.bicep (this takes about 5 minutes: AKS + VMs + Grafana)"
@@ -333,6 +342,21 @@ if ($aiEnabled) {
   } catch {
     Write-Host "  AI setup failed: $($_.Exception.Message)" -ForegroundColor Yellow
     Write-Host "  Re-run manually once Python + az are ready: ./scripts/setup-ai.ps1" -ForegroundColor Yellow
+  }
+}
+
+# 7. Optional Fabric feature - create the tenant-scoped workspace and Real-Time
+#    Intelligence items after the ARM capacity is ready.
+if ($fabricEnabled) {
+  Write-Step "Fabric feature enabled - creating workspace and Real-Time Intelligence items"
+  $setupFabric = Join-Path $PSScriptRoot 'setup-fabric.ps1'
+  try {
+    & $setupFabric -SubscriptionId $target.expectedSubscriptionId -ResourceGroup $ResourceGroup
+  } catch {
+    Write-Host "  Fabric SaaS setup failed: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "  The F2 capacity may still be active and billable. Re-run setup manually or suspend it:" -ForegroundColor Yellow
+    Write-Host "  ./scripts/setup-fabric.ps1 -SubscriptionId $($target.expectedSubscriptionId) -ResourceGroup $ResourceGroup" -ForegroundColor Yellow
+    Write-Host "  ./scripts/suspend-fabric.ps1 -SubscriptionId $($target.expectedSubscriptionId) -ResourceGroup $ResourceGroup" -ForegroundColor Yellow
   }
 }
 

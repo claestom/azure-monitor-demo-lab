@@ -75,6 +75,12 @@ param enableAi bool = false
 @description('Model Router deployment version for the AI feature. VERIFY for your region with "az cognitiveservices account list-models".')
 param routerModelVersion string = '2025-08-07'
 
+@description('Enable the optional Microsoft Fabric F2 capacity. Off by default. F2 is pinned to swedencentral and costs about $0.36/hour ($262.80/month PAYG) while active.')
+param enableFabric bool = false
+
+@description('Administrator UPN for the Fabric capacity. Defaults to alertEmail when empty.')
+param fabricAdminEmail string = ''
+
 // ---------------------------------------------------------------------------------
 // Naming
 // ---------------------------------------------------------------------------------
@@ -108,10 +114,15 @@ var costWorkbookName    = 'wb-${namePrefix}-cost'
 var sliUamiName         = 'id-sli-${namePrefix}'
 var platformLogsDcrName = 'dcr-${namePrefix}-platformlogs'
 var metricsExportDcrName = 'dcr-${namePrefix}-metricsexport'
+var fabricCapacityName  = toLower('fab${namePrefix}${take(suffix, 8)}')
 
 // AI feature (Foundry) is pinned to swedencentral, independent of the lab region —
 // the gpt-5-* / model-router SKUs + Foundry portal + CloudHealth preview are region-limited.
 var aiLocation = 'swedencentral'
+
+// Fabric F2 is pinned independently from the main lab region. The capacity is
+// expensive while active, so it is opt-in and can be suspended after demos.
+var fabricLocation = 'swedencentral'
 
 // App Service is pinned to westeurope, independent of the lab region — the sponsored
 // lab subscriptions have no Basic (B1) App Service quota in northeurope, so the plan
@@ -869,6 +880,22 @@ module aiObservability 'modules/ai-observability.bicep' = if (enableAi) {
 }
 
 // ---------------------------------------------------------------------------------
+// Optional Microsoft Fabric capacity. Fabric workspace and Real-Time Intelligence
+// items are tenant-scoped SaaS objects created afterward by scripts/setup-fabric.ps1.
+// ---------------------------------------------------------------------------------
+module fabricCapacity 'modules/fabric-capacity.bicep' = if (enableFabric) {
+  name: 'fabric-capacity'
+  params: {
+    name: fabricCapacityName
+    location: fabricLocation
+    administrators: [ empty(fabricAdminEmail) ? alertEmail : fabricAdminEmail ]
+    tags: union(commonTags, {
+      costWarning: 'F2-about-USD-0.36-per-hour-while-active'
+    })
+  }
+}
+
+// ---------------------------------------------------------------------------------
 // Outputs (consumed by post-deploy scripts)
 // ---------------------------------------------------------------------------------
 output centralLawId string         = lawCentral.outputs.id
@@ -933,6 +960,12 @@ output aiFoundryAccountName string     = enableAi ? foundry!.outputs.accountName
 output aiProjectEndpoint string        = enableAi ? foundry!.outputs.projectEndpoint : ''
 output aiChatDeployment string         = enableAi ? foundry!.outputs.chatDeployment : ''
 output aiRouterDeployment string       = enableAi ? foundry!.outputs.routerDeployment : ''
+
+// Optional Fabric capacity (empty unless enableFabric = true)
+output fabricEnabled bool            = enableFabric
+output fabricCapacityId string       = enableFabric ? fabricCapacity!.outputs.id : ''
+output fabricCapacityName string     = enableFabric ? fabricCapacity!.outputs.name : ''
+output fabricCapacityLocation string = enableFabric ? fabricCapacity!.outputs.location : ''
 
 // NEW — Alert Processing Rules nightly window
 output nightlyMaintenanceRuleName string = alertProcessingRules.outputs.nightlyMaintenanceRuleName

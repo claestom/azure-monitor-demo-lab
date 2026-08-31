@@ -20,6 +20,7 @@ This one-pager helps customers decide how far to go in a workshop or pilot.
 | Stage D - Security posture | Monitor-native detections for drift, IAM changes, exfil signals (scenarios 27, 47, 48, 49) | 5-12 min | EUR 0-15 | AzureActivity ingestion and scheduled query alerts |
 | Stage E - Optional advanced add-ons | Sentinel/reliability/archival extras (scenarios 43, 44, 45, 46) | 10-20 min | EUR 0-40 | Sentinel analytics usage, archive/restore/search workloads, preview feature telemetry |
 | Stage AI - Optional GenAI workload | Microsoft Foundry account + models (chat/embed/optimize/router), token alerts, AI FinOps observability | 5-10 min + traffic | EUR 5-30 | Per-token model usage while the traffic simulator runs (small at capacity 10; stop it to zero it out); minimal idle cost |
+| Stage Fabric - Optional Real-Time Intelligence | Fabric F2 capacity, Eventhouse, KQL database, Eventstream, and dashboard scenarios | 5-10 min + portal connection | About $262.80 USD | F2 compute while active, about $0.36/hour or $8.64/day; OneLake storage and other meters may add cost |
 
 ## Cumulative monthly range by stop point
 
@@ -31,6 +32,7 @@ This one-pager helps customers decide how far to go in a workshop or pilot.
 | Stage D | EUR 105-195 |
 | Stage E | EUR 105-235 |
 | Stage AI (add-on) | + EUR 5-30 while traffic runs |
+| Stage Fabric (add-on) | + about $262.80 USD while active all month |
 
 ## Practical guidance for customer conversations
 
@@ -39,9 +41,11 @@ This one-pager helps customers decide how far to go in a workshop or pilot.
 3. Add Stage D for security posture outcomes without requiring SIEM.
 4. Add Stage E only when customer explicitly wants Sentinel/reliability-preview and accepts extra complexity.
 5. Add Stage AI when the customer wants a GenAI/FinOps observability story (token/cost telemetry, model-router, token-spike alerts). It is independent of Stages B-E and only needs Stage A.
+6. Add Stage Fabric when the customer wants Real-Time Intelligence and streaming analytics. It is independent at the ARM layer but needs Stage A's Event Hub for the end-to-end stream.
 
 ## Cost optimization notes
 
 1. Stop AKS and deallocate VMs outside workshop windows.
 2. Keep LAW caps and table plans under review.
 3. Use staged rollout so customers only pay for scenarios they are currently validating.
+4. Suspend the Fabric F2 capacity immediately after each demo session.

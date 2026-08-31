@@ -170,6 +170,23 @@ az deployment group create -g $rg --name stage-ai-foundry --template-file infra/
 
 Stage AI depends only on Stage A and can be deployed before or after Stages B to E. If you are using the central config workflow, set `stageToggles.enableStageAI` to `true` in `lab.config.json`, run `./scripts/sync-config.ps1`, and deploy the generated parameters with the same Stage AI template. The stage is off by default because the model deployments are billable.
 
+### Stage Fabric deploy (optional)
+
+Stage Fabric deploys an F2 capacity pinned to `swedencentral`. It is off by default because indicative PAYG retail pricing while active is about $0.36/hour, $8.64/day, or $262.80/month, plus possible OneLake storage and other usage charges.
+
+```powershell
+az deployment group create -g $rg --name stage-fabric-capacity --template-file infra/stages/60-fabric.bicep --parameters namePrefix=amlab fabricAdminEmail=your.alias@example.com
+./scripts/setup-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup $rg
+```
+
+The Bicep stage creates the ARM capacity. The setup script creates the Fabric workspace, Eventhouse, KQL database, and Eventstream shell. Complete the Event Hub connection interactively, then suspend F2 when the demo is idle:
+
+```powershell
+./scripts/suspend-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup $rg
+```
+
+See [STAGE-FABRIC.md](STAGE-FABRIC.md) for permissions, setup, and demo flow.
+
 ## 6) Recommended repo evolution for clean staging
 
 For a cleaner customer story, split orchestration into:

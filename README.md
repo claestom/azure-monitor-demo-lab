@@ -5,7 +5,7 @@ A self-contained demo of the Azure Monitor and Microsoft Sentinel stack. Everyth
 - One resource group: the whole lab lands in `rg-azure-monitor-lab`.
 - Two ways to deploy it: Bicep or Terraform.
 - Two ways to run it: one-shot for a quick internal demo, or a 5-stage workshop if you'd rather walk through it piece by piece.
-- 53 demo scenarios that cover Azure Monitor and Sentinel from end to end.
+- 59 demo scenarios that cover Azure Monitor, Sentinel, and optional Fabric Real-Time Intelligence from end to end.
 
 It's built for demos, microhacks, and hackathons. Deploy it, poke around, break it, restore it, and tear it down.
 
@@ -23,6 +23,8 @@ There's also an optional GenAI workload (off by default) that plugs into the sam
 - What it adds: a Microsoft Foundry account and project with chat, embedding, optimization, and model-router deployments, plus a few agents and a traffic simulator.
 - How it's observed: token, trace, and cost telemetry flows into Application Insights, which drives token anomaly and spike alerts and an AI FinOps query pack and workbook, and adds an AI tier to the workload health model.
 
+An optional Microsoft Fabric stage (off by default) adds an F2 capacity in `swedencentral`, then provisions a workspace, Eventhouse, KQL database, and Eventstream shell for Real-Time Intelligence scenarios. F2 costs about $0.36/hour, $8.64/day, or $262.80/month while active at indicative PAYG retail pricing, so suspend it when idle.
+
 > 📦 For a full, resource-by-resource list of what gets created, see [REFERENCE.md → What gets deployed](docs/REFERENCE.md#what-gets-deployed).
 
 [![Azure Monitor Demo Lab architecture - Azure-icon overview](docs/architecture-overview.svg)](docs/architecture.drawio)
@@ -37,6 +39,7 @@ There's also an optional GenAI workload (off by default) that plugs into the sam
 - PowerShell 7+
 - A subscription with quota for ~5 small VMs/nodes (`Standard_B2s`), 1 App Service B1, Managed Grafana, Storage, Event Hub, and Key Vault
 - For the optional AI stage only: Python 3.10+. `scripts/setup-ai.ps1` provisions the demo agents and traffic simulator from [`workloads/ai/`](workloads/ai/), and the models it deploys are billable.
+- For the optional Fabric stage only: the tenant must have Fabric enabled, and the caller needs workspace creation and capacity administration permissions. The F2 capacity is billable while active.
 
 > Two IaC paths, one config. Bicep is the primary one (`infra/`); Terraform (`terraform/`) is a parallel implementation driven from the same `lab.config.json`. Pick one and don't mix them.
 
@@ -59,7 +62,7 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 | **Basics** | Resource group (recommended `rg-azure-monitor-lab`), Region (recommended `northeurope`), name prefix, alert email, VM admin username + password |
 | **Workloads** | Deploy Linux/Windows VMs, VM size, AKS node size + count |
 | **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
-| **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook, optional AI stage |
+| **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook, optional AI stage, optional Fabric F2 capacity |
 
 After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The Cloud Shell wrapper discovers the deployed resources, publishes the App Service sample, and installs the AKS, Health Model, and SLI demo components without requiring optional Azure CLI extensions:
 
@@ -84,6 +87,13 @@ The optional AI stage deploys Microsoft Foundry and four billable model deployme
 ./scripts/setup-ai-cloud-shell.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
 ```
 
+If you enabled Fabric, run its Cloud Shell setup to create the tenant-scoped workspace and Real-Time Intelligence items. The F2 capacity is pinned to `swedencentral` and costs about $0.36/hour, $8.64/day, or $262.80/month while active at indicative PAYG retail pricing.
+
+```powershell
+./scripts/setup-fabric-cloud-shell.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
+./scripts/suspend-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
+```
+
 > Use Option 2 for a scripted one-shot deployment, or Option 3 for the staged workshop and progressive deployment.
 
 ### Option 2: Scripted one-shot (Bicep / Terraform, full control)
@@ -101,7 +111,8 @@ notepad lab.config.json
 #    → edit the values, then save the file (Ctrl+S) and close Notepad before continuing
 #    → stageToggles.enableStageA-E are only used by the staged/Terraform paths; the
 #      one-shot deploy always deploys everything and can leave them untouched. Only
-#      stageToggles.enableStageAI matters here (it maps to main.bicep's enableAi param).
+#      stageToggles.enableStageAI and enableStageFabric matter here (they map to
+#      main.bicep's enableAi and enableFabric parameters).
 
 # 3. Deploy (deploy.ps1 calls sync-config.ps1 for you)
 ./scripts/deploy.ps1
@@ -123,9 +134,11 @@ The pre-flight checks *availability and quota*, not *live service capacity*. Tra
 
 > Optional AI stage. An extra stage (off by default) adds a Microsoft Foundry GenAI workload (pinned to `swedencentral`) that emits token, trace, and cost telemetry, plus token-spike alerts and an AI FinOps query pack and workbook. Turn it on with `stageToggles.enableStageAI` (Bicep one-shot) or Terraform's `enable_stage_ai`, then run `./scripts/setup-ai.ps1` to create the demo agents and simulate traffic. Check the Model Router version for your region first (`az cognitiveservices account list-models`).
 
+> Optional Fabric stage. Set `stageToggles.enableStageFabric` for one-shot Bicep or `enable_stage_fabric` for Terraform. It deploys an F2 capacity pinned to `swedencentral`; then `setup-fabric.ps1` creates the Fabric SaaS items. Indicative PAYG retail cost while active is about $0.36/hour, $8.64/day, or $262.80/month, plus possible storage and usage charges. See [STAGE-FABRIC.md](docs/STAGE-FABRIC.md).
+
 ### Option 3: Staged workshop (progressive deployment)
 
-Use the staged approach when you want to pause between capabilities, walk through the lab with an audience, or deploy only the stages needed for a particular demo. Stages A to E can be toggled in `lab.config.json`, and the optional AI stage can be enabled separately after Stage A.
+Use the staged approach when you want to pause between capabilities, walk through the lab with an audience, or deploy only the stages needed for a particular demo. Stages A to E can be toggled in `lab.config.json`; the optional AI and Fabric stages can be enabled separately.
 
 Step-by-step guides:
 
@@ -134,7 +147,7 @@ Step-by-step guides:
 
 ## Cost and lifecycle
 
-The full lab is roughly **€6-11 per day** when left running 24/7, based on the indicative list-price estimate in [REFERENCE.md](docs/REFERENCE.md#cost-notes-north-europe-list-pricing-may-2026). The optional AI stage adds model usage when `setup-ai.ps1` generates traffic. Do not leave the environment deployed when it is not needed: stop or deallocate compute between sessions, or run `./scripts/teardown.ps1 -Yes` and redeploy the stages for the next demo. Actual costs vary by region, usage, retention, and Azure pricing.
+The full lab is roughly **€6-11 per day** when left running 24/7, based on the indicative list-price estimate in [REFERENCE.md](docs/REFERENCE.md#cost-notes-north-europe-list-pricing-may-2026). The optional AI stage adds model usage when `setup-ai.ps1` generates traffic. The optional Fabric F2 stage adds about **$8.64 USD per active day** or **$262.80 USD per active month** at indicative PAYG retail pricing, plus possible OneLake storage and other usage charges. Suspend Fabric and stop or deallocate other compute between sessions, or run `./scripts/teardown.ps1 -Yes`. Actual costs vary by agreement, currency, region, usage, retention, and Azure pricing.
 
 When the lab is no longer needed, set `$rg` to the resource group where you deployed the lab, then run the command below. If you used the default configuration, use `rg-azure-monitor-lab`.
 
@@ -148,9 +161,9 @@ $rg = "rg-azure-monitor-lab"   # change this to the RG used for your deployment
 | Doc | What's in it |
 |---|---|
 | [REFERENCE.md](docs/REFERENCE.md) | Full capability matrix · every deployed resource · demo walkthrough · cost breakdown · folder layout · optional add-ons · troubleshooting |
-| [DEMO-SCENARIOS.md](docs/DEMO-SCENARIOS.md) | All 53 demo scenarios, each with a story, a click-path, and a "killer line", plus audience-pivoted shortlists |
+| [DEMO-SCENARIOS.md](docs/DEMO-SCENARIOS.md) | All 59 demo scenarios, each with a story, a click-path, and a "killer line", plus audience-pivoted shortlists |
 | [docs/DEPLOY-BICEP-STEP-BY-STEP.md](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md) | Staged deployment tutorials |
-| Stage notes: [A](docs/STAGE-A-FOUNDATION.md) · [B](docs/STAGE-B-WORKLOADS.md) · [C](docs/STAGE-C-ALERTING.md) · [D](docs/STAGE-D-SECURITY-POSTURE.md) · [E](docs/STAGE-E-OPTIONAL-ADVANCED.md) · [AI](docs/STAGE-AI.md) | Per-stage speaker notes (incl. the optional GenAI / AI FinOps stage) |
+| Stage notes: [A](docs/STAGE-A-FOUNDATION.md) · [B](docs/STAGE-B-WORKLOADS.md) · [C](docs/STAGE-C-ALERTING.md) · [D](docs/STAGE-D-SECURITY-POSTURE.md) · [E](docs/STAGE-E-OPTIONAL-ADVANCED.md) · [AI](docs/STAGE-AI.md) · [Fabric](docs/STAGE-FABRIC.md) | Per-stage speaker notes, including the optional AI and Fabric stages |
 | [docs/CUSTOMER-STAGE-HANDOUT.md](docs/CUSTOMER-STAGE-HANDOUT.md) | Per-stage time + cost cheat sheet |
 
 ## Contributing & license

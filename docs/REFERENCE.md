@@ -2,7 +2,7 @@
 
 > 👈 **New here? Start with the [README](../README.md).** This is the deep-dive reference: full capability matrix, every deployed resource, the demo walkthrough, cost breakdown, folder layout, optional add-ons, and troubleshooting.
 
-A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for customer-facing progressive enablement), 53 demo scenarios — all driven from one central config file.
+A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel** stack. One resource group, two IaC paths (Bicep or Terraform), two delivery modes (**one-shot** for internal demos or a **5-stage workshop** for customer-facing progressive enablement), and 59 demo scenarios, all driven from one central config file.
 
 ## Capabilities
 
@@ -28,6 +28,7 @@ A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel*
 | **Granular RBAC** | 3 service principals scoped at workspace / table / row level (`setup-rbac-demo.ps1` + `demo-granular-rbac.ps1`). | [docs](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/manage-access) |
 | **Service Groups + Health Models (preview)** | `setup-health-model.ps1` provisions an Azure **Service Group** and links the RG. SLI/SLO scaffolding in `setup-slis.ps1`. | [docs](https://learn.microsoft.com/en-us/azure/azure-monitor/health-model) |
 | **GenAI observability (optional AI stage)** | Off-by-default Microsoft **Foundry** workload (account + project pinned to swedencentral) with chat / embedding / optimization / **model-router** deployments; OpenTelemetry `gen_ai.*` tracing into App Insights; **token anomaly + spike** alerts; an **AI FinOps** query pack + workbook; an AI tier folded into the workload health model; demo agents + traffic via `setup-ai.ps1`. | [docs](https://learn.microsoft.com/en-us/azure/ai-foundry/concepts/trace) · [stage](STAGE-AI.md) |
+| **Fabric Real-Time Intelligence (optional Fabric stage)** | Off-by-default Microsoft Fabric **F2** capacity pinned to swedencentral, with scripted workspace, Eventhouse, KQL database, and Eventstream shell provisioning. The Event Hub connection remains an interactive credential boundary. | [stage](STAGE-FABRIC.md) |
 | **"Break the lab" + "Start the lab"** | Scripted incident injection (`break-the-lab.ps1`, `start-the-lab.ps1`, `start-ramp.ps1`) + one-shot restore (`restore-the-lab.ps1`). | — |
 
 ---
@@ -84,7 +85,9 @@ rg-azure-monitor-lab/
 
 > **Optional AI stage (default off, billable):** a Microsoft **Foundry** account + project (pinned to `swedencentral`) with `gpt-5-mini` / `text-embedding-3-small` / `gpt-5.4` / **`model-router`** deployments, App Insights `gen_ai.*` tracing, **token anomaly + spike** alerts, an **AI FinOps** query pack + workbook, and an AI tier folded into the workload health model. Enable via `enableStageAI` (Bicep) / `enable_stage_ai` (Terraform), then run `scripts/setup-ai.ps1`. See [STAGE-AI.md](STAGE-AI.md).
 
-> **Region pinning:** the **App Service** (plan + site) and its diagnostic sinks (dedicated storage + Event Hub) are pinned to **`westeurope`**; the **Health Model** preview and the **AI stage** are pinned to **`swedencentral`**. Everything else follows the lab region (default `northeurope`).
+> **Optional Fabric stage (default off, expensive):** a Microsoft Fabric F2 capacity pinned to `swedencentral`. Indicative PAYG retail cost while active is about $0.36/hour, $8.64/day, or $262.80/month, plus possible OneLake storage and usage charges. Enable via `enableStageFabric` / `enable_stage_fabric`, run `scripts/setup-fabric.ps1`, and suspend the capacity when idle. See [STAGE-FABRIC.md](STAGE-FABRIC.md).
+
+> **Region pinning:** the **App Service** (plan + site) and its diagnostic sinks (dedicated storage + Event Hub) are pinned to **`westeurope`**; the **Health Model** preview, **AI stage**, and **Fabric F2 capacity** are pinned to **`swedencentral`**. Everything else follows the lab region (default `northeurope`).
 
 Inside the central LAW you also get **12+ saved KQL searches** and **KQL functions** under category `AzureMonitorDemoLab` (Logs → Saved searches / Functions). Optional one-shot scripts (`create-summary-rule.ps1`, `setup-rbac-demo.ps1`, `setup-health-model.ps1`, `setup-slis.ps1`) layer additional artefacts on top — see [Optional add-ons](#optional-add-ons-opt-in-scripts) below.
 

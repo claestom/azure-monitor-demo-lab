@@ -302,6 +302,21 @@
             "options": {
               "text": "The AI stage deploys billable Microsoft Foundry models in swedencentral. The portal deployment creates the infrastructure only. After deployment, run ./scripts/setup-ai.ps1 -ResourceGroup <resource-group> to create the agents and generate simulated traffic."
             }
+          },
+          {
+            "name": "enableFabric",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Enable optional Microsoft Fabric F2 capacity",
+            "defaultValue": false,
+            "toolTip": "Deploys an F2 Fabric capacity pinned to swedencentral. Indicative PAYG retail cost while active: about $0.36/hour, $8.64/day, or $262.80/month. Actual pricing varies; OneLake storage and other meters can add cost. Off by default."
+          },
+          {
+            "name": "fabricPostDeployInfo",
+            "type": "Microsoft.Common.TextBlock",
+            "visible": "[equals(steps('advanced').enableFabric, true)]",
+            "options": {
+              "text": "Cost warning: Fabric F2 is pinned to swedencentral and bills while active at an indicative PAYG retail cost of about $0.36/hour, $8.64/day, or $262.80/month. Actual pricing varies and additional Fabric usage may add charges. The deployment creates only the ARM capacity. Run ./scripts/setup-fabric.ps1 afterward to create Fabric SaaS items, and suspend the capacity when the demo is idle."
+            }
           }
         ]
       }
@@ -326,7 +341,8 @@
       "ownerTag": "[steps('advanced').ownerTag]",
       "appServiceRepoUrl": "[steps('advanced').appServiceRepoUrl]",
       "siemWebhookUrl": "[steps('advanced').siemWebhookUrl]",
-      "enableAi": "[steps('advanced').enableAi]"
+      "enableAi": "[steps('advanced').enableAi]",
+      "enableFabric": "[steps('advanced').enableFabric]"
     }
   }
 }

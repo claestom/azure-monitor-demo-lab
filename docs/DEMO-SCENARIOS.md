@@ -2447,6 +2447,136 @@ Every other scenario watches infra/platform telemetry. This one points the **exa
 
 ---
 
+## 54 · Azure Event Hubs to Fabric Real-Time Intelligence
+
+**Audience:** Data platform teams, SRE, architects.
+**Time:** 4 min.
+
+> **Requires Stage Fabric.** F2 is off by default, pinned to `swedencentral`, and costs about $0.36/hour while active at indicative PAYG retail pricing.
+
+### Story
+The lab already sends platform events to Azure Event Hubs. Fabric Eventstream turns that operational feed into a no-code streaming pipeline without replacing Azure Monitor.
+
+### Click-path
+
+1. Open the Fabric workspace created by `setup-fabric.ps1`.
+2. Open `AzureMonitorEvents` and show the Azure Event Hubs source.
+3. Show the live event preview and the destination route to `MonitoringTelemetry`.
+4. Contrast Azure Monitor alerting with Fabric streaming transformation and enrichment.
+
+### Killer line
+> *"Azure Monitor operates the service; Fabric turns the same event stream into a real-time analytics product."*
+
+---
+
+## 55 · Eventhouse operational telemetry
+
+**Audience:** Operations analysts, data engineers, KQL users.
+**Time:** 4 min.
+
+### Story
+Eventhouse provides a high-volume KQL surface for streamed operational data. Teams can keep hot event analytics close to the stream while Azure Monitor retains its purpose-built monitoring experience.
+
+### Click-path
+
+1. Open `Azure Monitor Demo Eventhouse`.
+2. Select the `MonitoringTelemetry` KQL database.
+3. Inspect table ingestion and query recent events with KQL.
+4. Group events by source, severity, or business dimension.
+
+### Killer line
+> *"The monitoring signal becomes a reusable real-time data asset without moving the operational alerting system."*
+
+---
+
+## 56 · Real-Time Dashboard for application health
+
+**Audience:** NOC teams, service owners, executives.
+**Time:** 4 min.
+
+### Story
+A Fabric Real-Time Dashboard presents live health and throughput alongside business context, using the Eventhouse as its query layer.
+
+### Click-path
+
+1. Create or open a Real-Time Dashboard connected to `MonitoringTelemetry`.
+2. Add tiles for event rate, errors, affected service, and recent incidents.
+3. Apply a time range and service filter.
+4. Pin the dashboard for an operations wallboard view.
+
+### Killer line
+> *"This is live operational context designed for broad consumption, backed by the same KQL skills the team already has."*
+
+---
+
+## 57 · Correlate monitoring data with business events
+
+**Audience:** Product owners, FinOps, business operations.
+**Time:** 5 min.
+
+### Story
+Infrastructure health matters because it affects an outcome. Fabric can join operational events with orders, releases, campaigns, or customer journeys to show that impact in real time.
+
+### Click-path
+
+1. Show operational events in `MonitoringTelemetry`.
+2. Add or identify a business event stream with a shared service or correlation ID.
+3. Join the streams in KQL by time window and correlation ID.
+4. Chart failed requests beside affected transactions or revenue.
+
+### Killer line
+> *"The question changes from 'is CPU high?' to 'which customers and outcomes are affected right now?'"*
+
+---
+
+## 58 · Fabric capacity monitoring and throttling
+
+**Audience:** Fabric administrators, FinOps, platform engineering.
+**Time:** 4 min.
+
+### Story
+F2 is intentionally small and can throttle under sustained demand. Capacity Metrics shows CU consumption, overload, and smoothing so teams can distinguish a query problem from a sizing problem.
+
+### Click-path
+
+1. Open the Microsoft Fabric Capacity Metrics app for the lab capacity.
+2. Show CU utilization and timepoint detail.
+3. Identify interactive versus background operations.
+4. Explain how throttling and smoothing protect the capacity.
+
+### Killer line
+> *"Capacity telemetry turns a slow dashboard from guesswork into a concrete choice: optimize the workload, schedule it, or resize."*
+
+---
+
+## 59 · Fabric suspend and resume cost control
+
+**Audience:** FinOps, lab owners, platform administrators.
+**Time:** 3 min.
+
+### Story
+Fabric F2 bills while active. The lab makes lifecycle control part of the demo, with explicit subscription guardrails and confirmation before suspend or resume.
+
+### Click-path
+
+1. Show the indicative active cost: $0.36/hour, $8.64/day, or $262.80/month.
+2. Suspend after the demo:
+   ```powershell
+   ./scripts/suspend-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
+   ```
+3. Resume before the next session:
+   ```powershell
+   ./scripts/resume-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
+   ```
+4. Explain that storage and other metered usage may continue separately.
+
+### Killer line
+> *"The cheapest idle capacity is a suspended capacity, so shutdown is part of the runbook rather than an afterthought."*
+
+**Reference:** [docs/STAGE-FABRIC.md](STAGE-FABRIC.md)
+
+---
+
 ## Updated demo flow (≈50 min)
 
 | Min | Scenario |
@@ -2487,6 +2617,7 @@ Every other scenario watches infra/platform telemetry. This one points the **exa
 | **FinOps** | 9 → 11 → 20 → 21 → 39 → 42 → 51 → 52 |
 | **SecOps** | 27 → 47 → 48 → 49 → 44 |
 | **AI/ML curious** | 16 → 13 → 17 → 18 → 19 → 53 |
+| **Real-Time Intelligence** | 54 → 55 → 56 → 57 → 58 → 59 |
 | **Workload owners / SRE leads** | 1 → 45 → 12 → 7 → 8 (Root entity flips Unhealthy) |
 
 ## Reset between demos

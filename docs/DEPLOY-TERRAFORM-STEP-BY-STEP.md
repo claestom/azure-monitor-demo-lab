@@ -222,7 +222,33 @@ terraform apply -var-file stages.tfvars
 
 The AI stage creates the Foundry account, project, four model deployments, App Insights connection, token alerts, AI FinOps query pack and workbook, and the AI tier in the workload health model. It requires the Stage A Application Insights resource but does not require Stages B to E.
 
-### Step 8 - Security stage validation
+### Step 8 - Enable Stage Fabric (optional)
+
+Stage Fabric deploys an F2 capacity pinned to `swedencentral`. It is off by default because indicative PAYG retail pricing while active is about $0.36/hour, $8.64/day, or $262.80/month, plus possible OneLake storage and other usage charges.
+
+Set the Fabric flag in `stages.tfvars`:
+
+```hcl
+enable_stage_fabric = true
+```
+
+Then apply and create the tenant-scoped Fabric items:
+
+```powershell
+terraform plan -var-file stages.tfvars
+terraform apply -var-file stages.tfvars
+./scripts/setup-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup $rg
+```
+
+Complete the Event Hub connection interactively and suspend F2 when the demo is idle:
+
+```powershell
+./scripts/suspend-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup $rg
+```
+
+See [STAGE-FABRIC.md](STAGE-FABRIC.md) for permissions, setup, and demo flow.
+
+### Step 9 - Security stage validation
 
 After Stage D, verify Activity Log ingestion:
 

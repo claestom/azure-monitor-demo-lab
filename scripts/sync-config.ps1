@@ -85,9 +85,10 @@ if ($enableLawReplication -and [string]::IsNullOrWhiteSpace($lawReplicationLocat
 }
 
 $stages = $cfg.stageToggles
-if ($null -eq $stages) { $stages = [pscustomobject]@{ enableStageA=$true; enableStageB=$true; enableStageC=$true; enableStageD=$true; enableStageE=$true; enableStageAI=$false } }
-# AI stage is optional and defaults off when absent from the config.
+if ($null -eq $stages) { $stages = [pscustomobject]@{ enableStageA=$true; enableStageB=$true; enableStageC=$true; enableStageD=$true; enableStageE=$true; enableStageAI=$false; enableStageFabric=$false } }
+# AI and Fabric stages are optional and default off when absent from the config.
 $enableStageAI = if ($null -eq $stages.enableStageAI) { $false } else { [bool]$stages.enableStageAI }
+$enableStageFabric = if ($null -eq $stages.enableStageFabric) { $false } else { [bool]$stages.enableStageFabric }
 
 # ---------------------------------------------------------------------------
 # Resolve target paths
@@ -131,6 +132,7 @@ $bicepParams = [ordered]@{
     'dailyCapGb'      = @{ value = [int]$dailyCapGb }
     'aksNodeCount'    = @{ value = [int]$aksNodeCount }
     'enableAi'        = @{ value = $enableStageAI }
+    'enableFabric'    = @{ value = $enableStageFabric }
     'enableLawReplication'   = @{ value = $enableLawReplication }
     'lawReplicationLocation' = @{ value = $lawReplicationLocation }
   }
@@ -171,6 +173,7 @@ $tfLines = @(
   "enable_stage_d = $((($stages.enableStageD -as [bool]).ToString()).ToLower())"
   "enable_stage_e = $((($stages.enableStageE -as [bool]).ToString()).ToLower())"
   "enable_stage_ai = $($enableStageAI.ToString().ToLower())"
+  "enable_stage_fabric = $($enableStageFabric.ToString().ToLower())"
 )
 Set-Content -Path $tfVarsPath -Value ($tfLines -join "`r`n") -Encoding UTF8
 Write-Done "OK"

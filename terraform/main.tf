@@ -173,3 +173,25 @@ resource "azapi_resource" "stage_ai" {
     }
   }
 }
+
+# Optional Fabric stage: an F2 capacity pinned to swedencentral. The alert email is
+# used as the capacity administrator. Fabric workspace and Real-Time Intelligence
+# items are created afterward by scripts/setup-fabric.ps1.
+resource "azapi_resource" "stage_fabric" {
+  count     = var.enable_stage_fabric ? 1 : 0
+  type      = "Microsoft.Resources/deployments@2022-09-01"
+  name      = "stage-fabric-capacity"
+  parent_id = data.azurerm_resource_group.lab.id
+
+  body = {
+    properties = {
+      mode     = "Incremental"
+      template = sensitive(jsondecode(file("${path.module}/../infra/stages/60-fabric.json")))
+      parameters = {
+        namePrefix       = { value = var.name_prefix }
+        fabricAdminEmail = { value = var.alert_email }
+        ownerTag         = { value = var.owner_tag }
+      }
+    }
+  }
+}

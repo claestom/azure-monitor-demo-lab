@@ -53,6 +53,10 @@ For a fresh deployment, use `deploy.ps1` rather than calling `post-deploy.ps1` d
 |---|---|---|
 | `setup-ai.ps1` | Creates the four Foundry demo agents and optionally simulates traffic. Use `-g <rg>` or `-ResourceGroup <rg>` to override a stale local config value. | `./scripts/setup-ai.ps1 -g <rg> -Conversations 150` |
 | `setup-ai-cloud-shell.ps1` | Cloud Shell-specific AI wrapper that pins the subscription and resolves Foundry and Application Insights through ARM without optional Azure CLI extensions. | `./scripts/setup-ai-cloud-shell.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` |
+| `setup-fabric.ps1` | Creates or reuses the Fabric workspace, Eventhouse, KQL database, and Eventstream shell. It does not handle Event Hub keys. | `./scripts/setup-fabric.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` |
+| `setup-fabric-cloud-shell.ps1` | Cloud Shell wrapper for the Fabric setup workflow. | `./scripts/setup-fabric-cloud-shell.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` |
+| `suspend-fabric.ps1` | Suspends the F2 capacity to stop active compute billing. | `./scripts/suspend-fabric.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` |
+| `resume-fabric.ps1` | Resumes the F2 capacity and active compute billing. | `./scripts/resume-fabric.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` |
 | `setup-health-model.ps1` | Creates or removes the optional tenant-scoped Service Group and its RG relationship. | `./scripts/setup-health-model.ps1 -ResourceGroup <rg>` or add `-Teardown` |
 | `setup-slis.ps1` | Creates or removes the optional SLI resources attached to the Health Model Service Group. | `./scripts/setup-slis.ps1 -ResourceGroup <rg>` or add `-Teardown` |
 | `setup-rbac-demo.ps1` | Creates the service principals and role assignments used by the granular RBAC demonstration. | `./scripts/setup-rbac-demo.ps1 -ResourceGroup <rg>` |

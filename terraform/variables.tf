@@ -100,6 +100,12 @@ variable "enable_stage_ai" {
   default = false
 }
 
+variable "enable_stage_fabric" {
+  type        = bool
+  default     = false
+  description = "Deploy the optional Microsoft Fabric F2 capacity in swedencentral. Indicative PAYG retail cost while active: about $0.36/hour, $8.64/day, or $262.80/month."
+}
+
 variable "ai_location" {
   type        = string
   default     = "swedencentral"

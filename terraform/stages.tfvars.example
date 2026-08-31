@@ -29,6 +29,13 @@ enable_stage_c = false  # Alerting (metric/log/health alerts, action groups, AMB
 enable_stage_d = false  # Security posture (Sentinel, custom logs, exfil early warning)
 enable_stage_e = false  # Optional advanced (auto-mitigation Logic App, availability test, etc.)
 
+# Optional Microsoft Fabric stage - deploys an F2 capacity pinned to swedencentral.
+# Off by default because the capacity bills while active. Indicative PAYG retail price:
+# about $0.36/hour, $8.64/day, or $262.80/month. Actual pricing varies; OneLake storage
+# and other meters can add cost. Run scripts/setup-fabric.ps1 after apply, and suspend
+# the capacity when the demo is idle.
+enable_stage_fabric = false
+
 # Optional AI stage - Microsoft Foundry GenAI workload (account, project, chat/embed/
 # optimize/model-router deployments) + App Insights connection + token metric alerts.
 # Pinned to swedencentral (ai_location) independent of `location`; depends on Stage A.
