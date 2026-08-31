@@ -54,7 +54,7 @@ After deployment, `setup-fabric.ps1` creates or reuses:
 - Read-write KQL database
 - Empty Eventstream
 
-The Event Hub source connection and Real-Time Dashboard are guided portal steps. This keeps connection credentials out of scripts and avoids relying on evolving dashboard item definitions.
+Setup attempts to create the Event Hub connection and publish the source-to-Eventhouse topology automatically. The Listen-only key is held only in process memory, never printed or persisted, and cleared immediately. Some tenants reject Shared Access Key connection creation through the public Fabric API even though the same connection works in the portal. In that case, create the connection once through the guided portal flow and rerun setup; the script discovers it by endpoint and publishes the topology automatically. Real-Time Dashboard creation remains a guided portal step.
 
 The Azure Monitor workbook reports the ARM capacity state and provisioning state. Fabric Eventstream is a tenant-scoped SaaS item rather than an ARM resource, so its item and data-flow status is inspected in the Fabric workspace instead of queried directly by the Azure workbook.
 
@@ -112,14 +112,18 @@ terraform -chdir=terraform apply -var-file stages.tfvars
 
 ## Complete the Eventstream in Fabric
 
-1. Open the workspace URL printed by `setup-fabric.ps1`.
-2. Open the `AzureMonitorEvents` Eventstream.
-3. Switch to **Edit** mode and select **Add source** > **Connect data sources** > **Azure Event Hubs**.
-4. Create a **Shared Access Key** connection for the deployed namespace and the `diagnostics` Event Hub.
-5. Use Shared Access Key Name `diagnostics-listen` and retrieve its primary or secondary key from **Event Hubs namespace** > **Shared access policies**. Do not use `diagnostics-send`; it cannot consume events.
-6. Set Consumer group to `$Default`, Data format to **JSON**, and Data gateway to **none**.
-7. Add an **Eventhouse** destination, select `Azure Monitor Demo Eventhouse` and `MonitoringTelemetry`, and create a destination table such as `AzureDiagnosticsRaw`.
-8. Select **Publish**, confirm events arrive, then create a Real-Time Dashboard from the KQL database.
+Normally `setup-fabric.ps1` creates the Event Hubs connection and publishes the complete Eventstream topology automatically. Confirm that `AzureDiagnosticsRaw` receives events, then create a Real-Time Dashboard from `MonitoringTelemetry`.
+
+Some tenants reject Event Hubs Shared Access Key credentials through the public Fabric Connections API even though the portal supports them. In that case, create only the connection once:
+
+1. Open `AzureMonitorEvents`, switch to **Edit** mode, and select **Add source** > **Connect data sources** > **Azure Event Hubs**.
+2. Create a **Shared Access Key** connection for the deployed namespace and the `diagnostics` Event Hub.
+3. Use Shared Access Key Name `diagnostics-listen` and retrieve its primary or secondary key from **Event Hubs namespace** > **Shared access policies**. Do not use `diagnostics-send`; it cannot consume events.
+4. Set Consumer group to `$Default`, Data format to **JSON**, and Data gateway to **none**.
+5. After the connection test succeeds, cancel before adding or publishing the source.
+6. Rerun `setup-fabric.ps1`. It discovers the connection by Event Hub endpoint and publishes the source, default stream, and `MonitoringTelemetry` Eventhouse destination automatically.
+
+Use `-SkipEventstreamConnection` to keep all connection and topology configuration manual.
 
 ## Suspend and resume
 
