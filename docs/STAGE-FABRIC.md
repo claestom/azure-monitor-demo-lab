@@ -85,6 +85,8 @@ Then deploy and configure the Fabric items:
 ./scripts/setup-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
 ```
 
+Fabric item creation is asynchronous and can be slower on F2. The setup script waits up to 30 minutes by default, honors the service `Retry-After` header, and prints operation IDs and progress. Override the ceiling with `-MaxOperationMinutes <5-120>`. If a caller times out, the Fabric operation can still finish; rerun the same command safely and the script will reuse every item that already exists.
+
 ## Staged Bicep deployment
 
 ```powershell

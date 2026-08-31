@@ -19,6 +19,7 @@ param(
   [string] $EventhouseName = 'Azure Monitor Demo Eventhouse',
   [string] $KqlDatabaseName = 'MonitoringTelemetry',
   [string] $EventstreamName = 'AzureMonitorEvents',
+  [ValidateRange(5, 120)] [int] $MaxOperationMinutes = 30,
   [switch] $Teardown
 )
 
@@ -39,22 +40,53 @@ function Get-CollectionItem {
 }
 
 function Wait-FabricOperation {
-  param([Parameter(Mandatory)] [string] $OperationUrl)
+  param(
+    [Parameter(Mandatory)] [string] $OperationUrl,
+    [string] $OperationId = ''
+  )
 
   if ($OperationUrl.StartsWith('/')) {
     $OperationUrl = "https://api.fabric.microsoft.com$OperationUrl"
   }
-
-  for ($attempt = 1; $attempt -le 60; $attempt++) {
-    $operation = Invoke-RestMethod -Method Get -Uri $OperationUrl -Headers $script:fabricHeaders
-    if ($operation.status -eq 'Succeeded') { return }
-    if ($operation.status -in @('Failed', 'Cancelled')) {
-      throw "Fabric operation ended with status '$($operation.status)': $($operation.error.message)"
-    }
-    Start-Sleep -Seconds 5
+  if ([string]::IsNullOrWhiteSpace($OperationId)) {
+    $OperationId = ($OperationUrl.TrimEnd('/') -split '/')[-1]
   }
 
-  throw 'Fabric operation did not complete within five minutes.'
+  $deadline = [DateTime]::UtcNow.AddMinutes($MaxOperationMinutes)
+  $lastStatus = ''
+  $operation = $null
+  while ([DateTime]::UtcNow -lt $deadline) {
+    $pollHeaders = $null
+    $operation = Invoke-RestMethod `
+      -Method Get `
+      -Uri $OperationUrl `
+      -Headers $script:fabricHeaders `
+      -ResponseHeadersVariable pollHeaders
+    if ($operation.status -ne $lastStatus) {
+      $progress = if ($null -ne $operation.percentComplete) { " ($($operation.percentComplete)%)" } else { '' }
+      Write-Info "Fabric operation $OperationId`: $($operation.status)$progress"
+      $lastStatus = $operation.status
+    }
+    if ($operation.status -eq 'Succeeded') { return }
+    if ($operation.status -in @('Failed', 'Cancelled')) {
+      $errorDetails = $operation.error | ConvertTo-Json -Depth 8 -Compress
+      throw "Fabric operation '$OperationId' ended with status '$($operation.status)': $errorDetails"
+    }
+
+    $retryAfter = 10
+    if ($pollHeaders -and $pollHeaders.'Retry-After') {
+      $parsedRetryAfter = 0
+      if ([int]::TryParse(($pollHeaders.'Retry-After' | Select-Object -First 1), [ref]$parsedRetryAfter)) {
+        $retryAfter = [Math]::Min([Math]::Max($parsedRetryAfter, 1), 60)
+      }
+    }
+    Start-Sleep -Seconds $retryAfter
+  }
+
+  $lastOperationStatus = if ($operation -and $operation.status) { $operation.status } else { '<unknown>' }
+  $lastUpdated = if ($operation.lastUpdatedTimeUtc) { $operation.lastUpdatedTimeUtc } else { '<unknown>' }
+  $percentComplete = if ($null -ne $operation.percentComplete) { $operation.percentComplete } else { '<unknown>' }
+  throw "Fabric operation '$OperationId' did not complete within $MaxOperationMinutes minutes. Last status: '$lastOperationStatus', progress: $percentComplete%, last updated: $lastUpdated. The operation may still complete; rerun this script safely to discover and reuse the item. Operation URL: $OperationUrl"
 }
 
 function New-FabricItem {
@@ -74,8 +106,9 @@ function New-FabricItem {
   }
   $result = Invoke-RestMethod @request
   $operationUrl = $responseHeaders.Location | Select-Object -First 1
+  $operationId = $responseHeaders.'x-ms-operation-id' | Select-Object -First 1
   if ($operationUrl) {
-    Wait-FabricOperation -OperationUrl $operationUrl
+    Wait-FabricOperation -OperationUrl $operationUrl -OperationId $operationId
   }
   return $result
 }
