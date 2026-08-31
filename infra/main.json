@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "14504040056980816490"
+      "templateHash": "1448145297491993924"
     }
   },
   "parameters": {
@@ -4692,7 +4692,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "1558985903203888194"
+              "templateHash": "273673866403430652"
             }
           },
           "parameters": {
@@ -4741,6 +4741,7 @@
             "slowestOpsQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\r\n| summarize AvgDuration = round(avg(DurationMs), 1), Requests = count() by OperationName\r\n| top 10 by AvgDuration desc\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
             "appiDetailQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\r\n| summarize Failed = countif(Success == false), OK = countif(Success == true) by bin(TimeGenerated, 5m)\r\n| render timechart\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
             "alertActivityQuery": "AzureActivity\r\n| where CategoryValue == \"Alert\"\r\n| project TimeGenerated, Operation = OperationNameValue, Status = ActivityStatusValue, Caller\r\n| order by TimeGenerated desc\r\n| take 25\r\n",
+            "fabricCapacityHealthQuery": "[replace('resources\r\n| where type =~ \"microsoft.fabric/capacities\"\r\n| where resourceGroup =~ \"__RESOURCE_GROUP__\"\r\n| extend CapacityState = tostring(properties.state), ProvisioningState = tostring(properties.provisioningState)\r\n| extend Status = case(\r\n  ProvisioningState !~ \"Succeeded\", \"🔴\",\r\n  CapacityState =~ \"Active\", \"🟢\",\r\n  CapacityState =~ \"Suspended\", \"🟠\",\r\n  \"⚪\")\r\n| project Status,\r\n      ResourceType = \"Microsoft Fabric F2\",\r\n      Capacity = name,\r\n      State = CapacityState,\r\n      Provisioning = ProvisioningState,\r\n      Region = location,\r\n          SKU = tostring(sku.name)\r\n', '__RESOURCE_GROUP__', resourceGroup().name)]",
             "dataIngestionQuery": "Usage\r\n| summarize IngestedMB = round(sum(Quantity), 2) by DataType\r\n| where IngestedMB > 0.01\r\n| top 15 by IngestedMB desc\r\n| render barchart\r\n",
             "workbookContent": {
               "version": "Notebook/1.0",
@@ -5009,6 +5010,30 @@
                   },
                   "customWidth": "50",
                   "name": "dataIngestion"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "---\n## Microsoft Fabric Real-Time Intelligence Health\n\nThe capacity is discovered dynamically. This section is empty when Stage Fabric is disabled. Eventstream item and data-flow health remain available in the Fabric workspace."
+                  },
+                  "name": "fabricHealthHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('fabricCapacityHealthQuery')]",
+                    "size": 1,
+                    "title": "Fabric F2 Capacity Health",
+                    "queryType": 1,
+                    "resourceType": "microsoft.resourcegraph/resources",
+                    "visualization": "table",
+                    "gridSettings": {
+                      "rowLimit": 10,
+                      "filter": true
+                    }
+                  },
+                  "name": "fabricCapacityHealth"
                 },
                 {
                   "type": 1,
@@ -7596,7 +7621,11 @@
           "foundryAccountId": "[if(parameters('enableAi'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.accountId.value), createObject('value', ''))]",
           "appInsightsLawId": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-appinsights'), '2022-09-01').outputs.id.value]"
-          }
+          },
+          "enableFabric": {
+            "value": "[parameters('enableFabric')]"
+          },
+          "fabricCapacityId": "[if(parameters('enableFabric'), createObject('value', reference(resourceId('Microsoft.Resources/deployments', 'fabric-capacity'), '2022-09-01').outputs.id.value), createObject('value', ''))]"
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -7605,7 +7634,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "14459821496710233331"
+              "templateHash": "957911454967488347"
             }
           },
           "parameters": {
@@ -7715,6 +7744,20 @@
               "defaultValue": "",
               "metadata": {
                 "description": "Resource ID of the App Insights backing Log Analytics workspace (per-agent AI signals). Required when enableAi = true."
+              }
+            },
+            "enableFabric": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Fold Microsoft Fabric Real-Time Intelligence into this model as an optional workload tier."
+              }
+            },
+            "fabricCapacityId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Resource ID of the Microsoft Fabric F2 capacity. Required when enableFabric = true."
               }
             }
           },
@@ -8602,6 +8645,64 @@
               ]
             },
             {
+              "condition": "[parameters('enableFabric')]",
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'realtimeintelligence')]",
+              "properties": {
+                "displayName": "Real-Time Intelligence",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": 750,
+                  "y": 200
+                },
+                "icon": {
+                  "iconName": "Analytics"
+                },
+                "signalGroups": {
+                  "dependencies": {
+                    "aggregationType": "WorstOf",
+                    "ignoreUnknown": true
+                  }
+                },
+                "alerts": "[if(empty(parameters('actionGroupId')), null(), createObject('unhealthy', createObject('severity', 'Sev2', 'description', 'AMLAB Real-Time Intelligence workload unhealthy (Fabric capacity rollup).', 'actionGroupIds', variables('actionGroupIds'))))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableFabric')]",
+              "type": "Microsoft.CloudHealth/healthmodels/entities",
+              "apiVersion": "2026-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'fabriccapacity')]",
+              "properties": {
+                "displayName": "Microsoft Fabric F2 capacity",
+                "impact": "Standard",
+                "canvasPosition": {
+                  "x": 750,
+                  "y": 450
+                },
+                "icon": {
+                  "iconName": "Analytics"
+                },
+                "signalGroups": {
+                  "azureResource": {
+                    "authenticationSetting": "[variables('authName')]",
+                    "azureResourceId": "[parameters('fabricCapacityId')]",
+                    "azureResourceKind": "capacity",
+                    "resourceHealth": {
+                      "enabled": "Enabled"
+                    }
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/authenticationsettings', parameters('healthModelName'), 'systemAssigned')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
               "condition": "[parameters('enableAi')]",
               "type": "Microsoft.CloudHealth/healthmodels/entities",
               "apiVersion": "2026-01-01-preview",
@@ -8951,6 +9052,36 @@
               ]
             },
             {
+              "condition": "[parameters('enableFabric')]",
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'realtimeintelligence-to-root')]",
+              "properties": {
+                "parentEntityName": "[variables('rootName')]",
+                "childEntityName": "realtimeintelligence",
+                "displayName": "Real-Time Intelligence"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'realtimeintelligence')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
+              "condition": "[parameters('enableFabric')]",
+              "type": "Microsoft.CloudHealth/healthmodels/relationships",
+              "apiVersion": "2026-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('healthModelName'), 'fabriccapacity-to-realtimeintelligence')]",
+              "properties": {
+                "parentEntityName": "realtimeintelligence",
+                "childEntityName": "fabriccapacity"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'fabriccapacity')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels/entities', parameters('healthModelName'), 'realtimeintelligence')]",
+                "[resourceId('Microsoft.CloudHealth/healthmodels', parameters('healthModelName'))]"
+              ]
+            },
+            {
               "condition": "[parameters('enableAi')]",
               "type": "Microsoft.CloudHealth/healthmodels/relationships",
               "apiVersion": "2026-01-01-preview",
@@ -9021,6 +9152,7 @@
         "[resourceId('Microsoft.Resources/deployments', 'aks')]",
         "[resourceId('Microsoft.Resources/deployments', 'appi')]",
         "[resourceId('Microsoft.Resources/deployments', 'appservice')]",
+        "[resourceId('Microsoft.Resources/deployments', 'fabric-capacity')]",
         "[resourceId('Microsoft.Resources/deployments', 'foundry')]",
         "[resourceId('Microsoft.Resources/deployments', 'keyvault')]",
         "[resourceId('Microsoft.Resources/deployments', 'law-appinsights')]",

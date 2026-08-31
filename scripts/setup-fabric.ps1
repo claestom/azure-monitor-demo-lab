@@ -18,7 +18,8 @@ param(
   [string] $WorkspaceName = 'Azure Monitor Demo Lab',
   [string] $EventhouseName = 'Azure Monitor Demo Eventhouse',
   [string] $KqlDatabaseName = 'MonitoringTelemetry',
-  [string] $EventstreamName = 'AzureMonitorEvents'
+  [string] $EventstreamName = 'AzureMonitorEvents',
+  [switch] $Teardown
 )
 
 $ErrorActionPreference = 'Stop'
@@ -146,6 +147,22 @@ Write-Step 'Authenticating to the Fabric API'
 $fabricToken = az account get-access-token --resource https://api.fabric.microsoft.com --query accessToken -o tsv
 if ([string]::IsNullOrWhiteSpace($fabricToken)) { throw 'Could not acquire a Microsoft Fabric API token.' }
 $script:fabricHeaders = @{ Authorization = "Bearer $fabricToken" }
+
+if ($Teardown) {
+  Write-Step 'Removing the Fabric workspace and contained items'
+  $workspace = Get-CollectionItem -Path 'workspaces' -DisplayName $WorkspaceName
+  if (-not $workspace) {
+    Write-Info "Workspace '$WorkspaceName' does not exist; nothing to remove."
+    return
+  }
+
+  Invoke-RestMethod `
+    -Method Delete `
+    -Uri "$fabricApi/workspaces/$($workspace.id)" `
+    -Headers $script:fabricHeaders | Out-Null
+  Write-Host "Fabric workspace '$WorkspaceName' and its contained items were deleted." -ForegroundColor Green
+  return
+}
 
 $capacities = Invoke-RestMethod -Method Get -Uri "$fabricApi/capacities" -Headers $script:fabricHeaders
 $fabricCapacity = @($capacities.value | Where-Object { $_.displayName -eq $armCapacity.name }) | Select-Object -First 1

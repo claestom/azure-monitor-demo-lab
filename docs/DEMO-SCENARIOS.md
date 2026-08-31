@@ -51,9 +51,10 @@ Modern teams don't want to chain through 10 portal blades to know "is anything b
 
 ### Click-path
 1. **Monitor → Workbooks** → search **"Azure Monitor Demo Lab"** → open *Traffic Lights*.
-2. Read the **legend table** out loud (Green/Orange/Red thresholds per resource type).
-3. Click any Red or Orange row → scroll down to the matching detail pane (VM heartbeat / AKS pods / App Service status codes / App Insights timechart).
-4. Change the time-range pill (15 min / 1 hour / 24 h) and re-run.
+2. If Stage Fabric is enabled, scroll to **Microsoft Fabric Real-Time Intelligence Health** and show the dynamically discovered F2 capacity state. Suspended appears Orange; a failed provisioning state appears Red.
+3. Read the **legend table** out loud (Green/Orange/Red thresholds per resource type).
+4. Click any Red or Orange row → scroll down to the matching detail pane (VM heartbeat / AKS pods / App Service status codes / App Insights timechart).
+5. Change the time-range pill (15 min / 1 hour / 24 h) and re-run.
 
 ### Killer line
 > *"This is just KQL — including a `workspace()` join across two LAWs in one query. You can build the same in 10 minutes for your environment."*
@@ -1996,7 +1997,7 @@ Root (hm-amlab-workload, auto-created)
 
 Then open the model in the portal (link printed at the end of `deploy.ps1`, or navigate to **Resource group → hm-amlab-workload → Designer**):
 
-1. **Graph view** already shows the three-tier tree — no portal authoring needed.
+1. **Graph view** already shows the workload tree - no portal authoring needed. Optional AI and Real-Time Intelligence tiers appear when their stages are enabled.
 2. **Optional**: run `./scripts/setup-health-model.ps1` to also create the service group + RG-member relationship if you want to demo the Designer's "Add from service group" flow on top of the existing model.
 3. Wait ~5 min for the first health rollup. The system-assigned MI on the Health Model auto-gets *Monitoring Reader* on the resources whose IDs are wired into the signals.
 
@@ -2569,6 +2570,7 @@ Fabric F2 bills while active. The lab makes lifecycle control part of the demo, 
    ./scripts/resume-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
    ```
 4. Explain that storage and other metered usage may continue separately.
+5. Open `hm-amlab-workload` and show the optional **Real-Time Intelligence** tier rolling the Fabric F2 Resource Health state into workload health.
 
 ### Killer line
 > *"The cheapest idle capacity is a suspended capacity, so shutdown is part of the runbook rather than an afterthought."*

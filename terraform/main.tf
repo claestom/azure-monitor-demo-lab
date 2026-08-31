@@ -125,8 +125,8 @@ resource "azapi_resource" "stage_e" {
   # Action Group ('ag-${namePrefix}-email') as an alert target. Without depending
   # on C, an all-at-once apply races C and E in parallel and Azure rejects the
   # alerts with `BadRequest: Action Group ... is invalid`.
-  # Also depends on the AI stage so the workload health model can fold in the AI tier.
-  depends_on = [azapi_resource.stage_a, azapi_resource.stage_b, azapi_resource.stage_c, azapi_resource.stage_ai]
+  # Also depends on the AI and Fabric stages so the workload health model can fold in optional tiers.
+  depends_on = [azapi_resource.stage_a, azapi_resource.stage_b, azapi_resource.stage_c, azapi_resource.stage_ai, azapi_resource.stage_fabric]
 
   body = {
     properties = {
@@ -142,6 +142,7 @@ resource "azapi_resource" "stage_e" {
         enablePlatformLogsDcr  = { value = var.enable_platform_logs_dcr }
         enableMetricsExportDcr = { value = var.enable_metrics_export_dcr }
         enableAi               = { value = var.enable_stage_ai }
+        enableFabric           = { value = var.enable_stage_fabric }
       }
     }
   }

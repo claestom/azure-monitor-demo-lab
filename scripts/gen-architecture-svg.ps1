@@ -36,6 +36,13 @@ $iconPaths = @{
   foundry  = 'ai_machine_learning/AI_Foundry.svg'
   agents   = 'ai_machine_learning/Bot_Services.svg'
   router   = 'general/Gear.svg'
+  fabric   = 'Fabric.png'
+  eventstream = 'Eventstream.svg'
+}
+
+$iconUrls = @{
+  fabric = 'https://learn.microsoft.com/en-us/fabric/media/fabric-icon.png'
+  eventstream = 'https://raw.githubusercontent.com/FabricTools/fabric-icons/main/node_modules/@fabric-msft/svg-icons/svg/eventstream_48_item.svg'
 }
 
 $repoRoot = Split-Path $PSScriptRoot -Parent
@@ -48,10 +55,12 @@ foreach ($k in $iconPaths.Keys) {
   $name = Split-Path $iconPaths[$k] -Leaf
   $dest = Join-Path $iconDir $name
   if (-not (Test-Path $dest)) {
-    Invoke-WebRequest "$base/$($iconPaths[$k])" -UseBasicParsing -OutFile $dest
+    $iconUrl = if ($iconUrls.ContainsKey($k)) { $iconUrls[$k] } else { "$base/$($iconPaths[$k])" }
+    Invoke-WebRequest $iconUrl -UseBasicParsing -OutFile $dest
   }
   $bytes = [IO.File]::ReadAllBytes($dest)
-  $dataUri[$k] = 'data:image/svg+xml;base64,' + [Convert]::ToBase64String($bytes)
+  $mediaType = if ([IO.Path]::GetExtension($dest) -eq '.png') { 'image/png' } else { 'image/svg+xml' }
+  $dataUri[$k] = "data:$mediaType;base64," + [Convert]::ToBase64String($bytes)
 }
 
 # --- tiers (columns) ------------------------------------------------------------------
@@ -70,6 +79,7 @@ $nodes = [ordered]@{
   APP   = @{ col = 'WL';   i = 3; lines = @('.NET 8 App Service','auto-instrumented'); icons = @('app') }
   NET   = @{ col = 'WL';   i = 4; lines = @('VNet / NSG','Connection Monitor'); icons = @('net') }
   FDRY  = @{ col = 'WL';   i = 5; lines = @('GenAI · Foundry + agents','chat/embed/router · optional'); icons = @('foundry','agents','router') }
+  FAB   = @{ col = 'WL';   i = 6; lines = @('Microsoft Fabric F2','Real-Time Intelligence · optional'); icons = @('fabric') }
 
   AMA   = @{ col = 'COL';  i = 0; lines = @('Azure Monitor Agent','DCRs · DCE'); icons = @('ama') }
   FLOW  = @{ col = 'COL';  i = 1; lines = @('NSG Flow Logs');                   icons = @('flow') }
@@ -81,6 +91,7 @@ $nodes = [ordered]@{
   AI     = @{ col = 'DATA'; i = 3; lines = @('Application Insights');             icons = @('ai') }
   AMW    = @{ col = 'DATA'; i = 4; lines = @('Azure Monitor Workspace','Managed Prometheus'); icons = @('amw') }
   PLAT   = @{ col = 'DATA'; i = 5; lines = @('Storage · Event Hub · Key Vault');  icons = @('storage','eventhub','keyvault') }
+  EVSTR  = @{ col = 'DATA'; i = 6; lines = @('Fabric Eventstream','stream processing · optional'); icons = @('eventstream') }
 
   GRAF  = @{ col = 'USE';  i = 0; lines = @('Managed Grafana');                  icons = @('graf') }
   WB    = @{ col = 'USE';  i = 1; lines = @('Workbooks','Traffic Lights · Cost · AI FinOps'); icons = @('wb') }
@@ -92,14 +103,14 @@ $nodes = [ordered]@{
 
 # --- edges (source -> target) ---------------------------------------------------------
 $edges = @(
-  @('VM','AMA'), @('VMSS','AMA'), @('AKS','AMA'), @('AKS','AMW'), @('APP','AI'), @('NET','FLOW'), @('FDRY','AI'),
+  @('VM','AMA'), @('VMSS','AMA'), @('AKS','AMA'), @('AKS','AMW'), @('APP','AI'), @('NET','FLOW'), @('FDRY','AI'), @('FAB','EVSTR'),
   @('AMA','LAW'), @('AMA','AMW'), @('FLOW','PLAT'), @('POL','LAW'), @('LAW','QUERY'), @('AI','LAWAI'), @('PLAT','LAW'),
-  @('LAW','WB'), @('LAWAI','WB'), @('AMW','GRAF'), @('LAW','AG'), @('AI','AG'), @('AG','LOGIC'), @('LAW','SENT'), @('LAW','HEALTH')
+  @('PLAT','EVSTR'), @('LAW','WB'), @('LAWAI','WB'), @('AMW','GRAF'), @('LAW','AG'), @('AI','AG'), @('AG','LOGIC'), @('LAW','SENT'), @('LAW','HEALTH'), @('EVSTR','HEALTH')
 )
 
 # --- geometry -------------------------------------------------------------------------
-$W = 1320; $H = 680
-$grpY = 60; $grpH = 560
+$W = 1320; $H = 770
+$grpY = 60; $grpH = 650
 $cellH = 66; $cellStep = 84; $firstTop = 108
 function NodeTop($n) { $firstTop + ($n.i * $cellStep) }
 function ColOf($n)   { $cols[$n.col] }
@@ -109,7 +120,7 @@ $sb = New-Object System.Text.StringBuilder
 [void]$sb.AppendLine("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 $W $H' font-family='Segoe UI, Helvetica, Arial, sans-serif'>")
 [void]$sb.AppendLine("<rect x='0' y='0' width='$W' height='$H' rx='10' fill='#0D1117'/>")
 [void]$sb.AppendLine("<text x='$($W/2)' y='34' fill='#E6EDF3' font-size='20' font-weight='700' text-anchor='middle'>rg-azure-monitor-lab · northeurope</text>")
-[void]$sb.AppendLine("<text x='$($W/2)' y='52' fill='#9DA7B3' font-size='11' text-anchor='middle'>optional GenAI workload (Microsoft Foundry) pinned to swedencentral</text>")
+[void]$sb.AppendLine("<text x='$($W/2)' y='52' fill='#9DA7B3' font-size='11' text-anchor='middle'>optional Microsoft Foundry and Fabric F2 workloads pinned to swedencentral</text>")
 [void]$sb.AppendLine("<defs><marker id='arrow' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#7D8590'/></marker></defs>")
 
 # group boxes

@@ -833,6 +833,9 @@ module healthModel 'modules/health-model.bicep' = {
     enableAi: enableAi
     foundryAccountId: enableAi ? foundry!.outputs.accountId : ''
     appInsightsLawId: lawAppInsights.outputs.id
+    // Fold the Fabric F2 capacity into a Real-Time Intelligence tier when enabled.
+    enableFabric: enableFabric
+    fabricCapacityId: enableFabric ? fabricCapacity!.outputs.id : ''
   }
 }
 

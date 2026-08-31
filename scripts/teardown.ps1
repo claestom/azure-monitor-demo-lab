@@ -18,6 +18,8 @@ if (Test-Path $targetFile) {
   if ($active.id -ne $target.expectedSubscriptionId -or $active.tenantId -ne $target.expectedTenantId) {
     throw "BLOCKED: not on allowed lab subscription. Aborting teardown."
   }
+} else {
+  $active = az account show --query "{id:id, tenantId:tenantId}" -o json | ConvertFrom-Json
 }
 
 if (-not $Yes) {
@@ -87,6 +89,20 @@ Write-Host "Removing service group + member relationship (scenario 45) ..." -For
 $setupHm = Join-Path $PSScriptRoot 'setup-health-model.ps1'
 if (Test-Path $setupHm) {
   & $setupHm -ResourceGroup $ResourceGroup -Teardown
+}
+
+$fabricCapacity = @($allResources | Where-Object { $_.type -ieq 'Microsoft.Fabric/capacities' }) | Select-Object -First 1
+if ($fabricCapacity) {
+  Write-Host "Removing tenant-scoped Fabric workspace and items ..." -ForegroundColor Yellow
+  $setupFabric = Join-Path $PSScriptRoot 'setup-fabric.ps1'
+  if (Test-Path $setupFabric) {
+    try {
+      & $setupFabric -SubscriptionId $active.id -ResourceGroup $ResourceGroup -Teardown
+    } catch {
+      Write-Host "  Fabric workspace cleanup failed: $($_.Exception.Message)" -ForegroundColor Yellow
+      Write-Host "  Resource-group deletion will still remove the F2 capacity. Delete the 'Azure Monitor Demo Lab' workspace manually if it remains." -ForegroundColor Yellow
+    }
+  }
 }
 
 Write-Host "Deleting $ResourceGroup ..." -ForegroundColor Yellow

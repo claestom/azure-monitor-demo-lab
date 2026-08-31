@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "13016862071312405527"
+      "templateHash": "2142452099319577421"
     }
   },
   "parameters": {
@@ -1883,7 +1883,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "1558985903203888194"
+              "templateHash": "273673866403430652"
             }
           },
           "parameters": {
@@ -1932,6 +1932,7 @@
             "slowestOpsQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\r\n| summarize AvgDuration = round(avg(DurationMs), 1), Requests = count() by OperationName\r\n| top 10 by AvgDuration desc\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
             "appiDetailQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\r\n| summarize Failed = countif(Success == false), OK = countif(Success == true) by bin(TimeGenerated, 5m)\r\n| render timechart\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
             "alertActivityQuery": "AzureActivity\r\n| where CategoryValue == \"Alert\"\r\n| project TimeGenerated, Operation = OperationNameValue, Status = ActivityStatusValue, Caller\r\n| order by TimeGenerated desc\r\n| take 25\r\n",
+            "fabricCapacityHealthQuery": "[replace('resources\r\n| where type =~ \"microsoft.fabric/capacities\"\r\n| where resourceGroup =~ \"__RESOURCE_GROUP__\"\r\n| extend CapacityState = tostring(properties.state), ProvisioningState = tostring(properties.provisioningState)\r\n| extend Status = case(\r\n  ProvisioningState !~ \"Succeeded\", \"🔴\",\r\n  CapacityState =~ \"Active\", \"🟢\",\r\n  CapacityState =~ \"Suspended\", \"🟠\",\r\n  \"⚪\")\r\n| project Status,\r\n      ResourceType = \"Microsoft Fabric F2\",\r\n      Capacity = name,\r\n      State = CapacityState,\r\n      Provisioning = ProvisioningState,\r\n      Region = location,\r\n          SKU = tostring(sku.name)\r\n', '__RESOURCE_GROUP__', resourceGroup().name)]",
             "dataIngestionQuery": "Usage\r\n| summarize IngestedMB = round(sum(Quantity), 2) by DataType\r\n| where IngestedMB > 0.01\r\n| top 15 by IngestedMB desc\r\n| render barchart\r\n",
             "workbookContent": {
               "version": "Notebook/1.0",
@@ -2200,6 +2201,30 @@
                   },
                   "customWidth": "50",
                   "name": "dataIngestion"
+                },
+                {
+                  "type": 1,
+                  "content": {
+                    "json": "---\n## Microsoft Fabric Real-Time Intelligence Health\n\nThe capacity is discovered dynamically. This section is empty when Stage Fabric is disabled. Eventstream item and data-flow health remain available in the Fabric workspace."
+                  },
+                  "name": "fabricHealthHeader"
+                },
+                {
+                  "type": 3,
+                  "content": {
+                    "version": "KqlItem/1.0",
+                    "query": "[variables('fabricCapacityHealthQuery')]",
+                    "size": 1,
+                    "title": "Fabric F2 Capacity Health",
+                    "queryType": 1,
+                    "resourceType": "microsoft.resourcegraph/resources",
+                    "visualization": "table",
+                    "gridSettings": {
+                      "rowLimit": 10,
+                      "filter": true
+                    }
+                  },
+                  "name": "fabricCapacityHealth"
                 },
                 {
                   "type": 1,

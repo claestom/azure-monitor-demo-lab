@@ -14,6 +14,8 @@ The deployment is pinned to **F2 in Sweden Central**. Indicative Microsoft PAYG 
 
 Actual pricing varies by agreement, currency, and region. OneLake storage and other Fabric meters can add charges. Suspend the capacity whenever the demo is idle.
 
+> Microsoft currently recommends at least four capacity units (F4) for Eventstreams. This lab intentionally pins to F2 to limit demo cost. F2 is suitable for light, short-lived sample traffic but can throttle under sustained ingestion; use the Capacity Metrics app in scenario 58 to show that tradeoff.
+
 ## Architecture
 
 ```text
@@ -42,6 +44,8 @@ The Bicep or Terraform deployment creates:
 - SKU fixed to `F2`
 - Location fixed to `swedencentral`
 - Capacity administrator set to the explicit `fabricAdminEmail` tenant user UPN
+- A **Real-Time Intelligence** tier in `hm-amlab-workload`, with the F2 capacity represented as an Azure resource entity using Resource Health
+- A dynamic **Fabric F2 Capacity Health** section in the main Azure Monitor Health Dashboard workbook, discovered through Azure Resource Graph
 
 After deployment, `setup-fabric.ps1` creates or reuses:
 
@@ -51,6 +55,8 @@ After deployment, `setup-fabric.ps1` creates or reuses:
 - Empty Eventstream
 
 The Event Hub source connection and Real-Time Dashboard are guided portal steps. This keeps connection credentials out of scripts and avoids relying on evolving dashboard item definitions.
+
+The Azure Monitor workbook reports the ARM capacity state and provisioning state. Fabric Eventstream is a tenant-scoped SaaS item rather than an ARM resource, so its item and data-flow status is inspected in the Fabric workspace instead of queried directly by the Azure workbook.
 
 ## Prerequisites
 
@@ -120,6 +126,12 @@ terraform -chdir=terraform apply -var-file stages.tfvars
 
 Both commands require confirmation by default and verify the explicit subscription before changing the capacity.
 
+Full lab teardown also removes the tenant-scoped workspace and its contained Eventhouse, KQL database, and Eventstream before deleting the resource group. To run only that cleanup:
+
+```powershell
+./scripts/setup-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group> -Teardown
+```
+
 ## Authorization troubleshooting
 
 `Unable to authorize with Azure Active Directory` during `Microsoft.Fabric/capacities` creation means the administrator value could not be authorized in the deployment tenant. Confirm that:
@@ -133,3 +145,5 @@ For this sponsored lab tenant, the known working administrator format is `admin@
 ## Demo scenarios
 
 See scenarios 54 through 59 in [DEMO-SCENARIOS.md](DEMO-SCENARIOS.md).
+
+For staged Bicep deployment, deploy Stage Fabric before Stage E, or rerun `40-optional-advanced.bicep` with `enableFabric=true` afterward so the Real-Time Intelligence tier is added to the Health Model. Terraform enforces this dependency automatically.

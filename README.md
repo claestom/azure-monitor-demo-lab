@@ -23,7 +23,7 @@ There's also an optional GenAI workload (off by default) that plugs into the sam
 - What it adds: a Microsoft Foundry account and project with chat, embedding, optimization, and model-router deployments, plus a few agents and a traffic simulator.
 - How it's observed: token, trace, and cost telemetry flows into Application Insights, which drives token anomaly and spike alerts and an AI FinOps query pack and workbook, and adds an AI tier to the workload health model.
 
-An optional Microsoft Fabric stage (off by default) adds an F2 capacity in `swedencentral`, then provisions a workspace, Eventhouse, KQL database, and Eventstream shell for Real-Time Intelligence scenarios. F2 costs about $0.36/hour, $8.64/day, or $262.80/month while active at indicative PAYG retail pricing, so suspend it when idle.
+An optional Microsoft Fabric stage (off by default) adds an F2 capacity in `swedencentral`, then provisions a workspace, Eventhouse, KQL database, and Eventstream shell for Real-Time Intelligence scenarios. The architecture shows the Eventstream path from Azure Event Hubs using the official Fabric item icon, and the capacity appears under an optional Real-Time Intelligence tier in the workload Health Model. F2 costs about $0.36/hour, $8.64/day, or $262.80/month while active at indicative PAYG retail pricing, so suspend it when idle. Microsoft recommends at least F4 for Eventstreams; this lab keeps F2 for light demo traffic and cost control.
 
 > 📦 For a full, resource-by-resource list of what gets created, see [REFERENCE.md → What gets deployed](docs/REFERENCE.md#what-gets-deployed).
 
