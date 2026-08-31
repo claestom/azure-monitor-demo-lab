@@ -78,8 +78,12 @@ param routerModelVersion string = '2025-08-07'
 @description('Enable the optional Microsoft Fabric F2 capacity. Off by default. F2 is pinned to swedencentral and costs about $0.36/hour ($262.80/month PAYG) while active.')
 param enableFabric bool = false
 
-@description('Administrator UPN for the Fabric capacity. Defaults to alertEmail when empty.')
+@description('Microsoft Entra user UPN that administers the Fabric capacity. Must be a user in the deployment tenant, not an external notification address.')
 param fabricAdminEmail string = ''
+
+var validatedFabricAdminEmail = !enableFabric || (!empty(fabricAdminEmail) && contains(fabricAdminEmail, '@'))
+  ? fabricAdminEmail
+  : fail('fabricAdminEmail is required when enableFabric is true and must be a Microsoft Entra user UPN in the deployment tenant.')
 
 // ---------------------------------------------------------------------------------
 // Naming
@@ -888,7 +892,7 @@ module fabricCapacity 'modules/fabric-capacity.bicep' = if (enableFabric) {
   params: {
     name: fabricCapacityName
     location: fabricLocation
-    administrators: [ empty(fabricAdminEmail) ? alertEmail : fabricAdminEmail ]
+    administrators: [ validatedFabricAdminEmail ]
     tags: union(commonTags, {
       costWarning: 'F2-about-USD-0.36-per-hour-while-active'
     })

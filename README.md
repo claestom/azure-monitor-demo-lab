@@ -39,7 +39,7 @@ An optional Microsoft Fabric stage (off by default) adds an F2 capacity in `swed
 - PowerShell 7+
 - A subscription with quota for ~5 small VMs/nodes (`Standard_B2s`), 1 App Service B1, Managed Grafana, Storage, Event Hub, and Key Vault
 - For the optional AI stage only: Python 3.10+. `scripts/setup-ai.ps1` provisions the demo agents and traffic simulator from [`workloads/ai/`](workloads/ai/), and the models it deploys are billable.
-- For the optional Fabric stage only: the tenant must have Fabric enabled, and the caller needs workspace creation and capacity administration permissions. The F2 capacity is billable while active.
+- For the optional Fabric stage only: the tenant must have Fabric enabled, and `fabricAdminEmail` must be a Microsoft Entra user UPN in that tenant with workspace creation and capacity administration permissions. Do not reuse an external alert alias. The F2 capacity is billable while active.
 
 > Two IaC paths, one config. Bicep is the primary one (`infra/`); Terraform (`terraform/`) is a parallel implementation driven from the same `lab.config.json`. Pick one and don't mix them.
 
@@ -55,7 +55,7 @@ An optional Microsoft Fabric stage (off by default) adds an F2 capacity in `swed
 
 </div>
 
-Opens a guided Custom deployment wizard in the Azure Portal, where you enter every value in the UI and don't need any local files. Sensible defaults are pre-filled throughout; the only things you have to supply are an alert email and a VM admin password.
+Opens a guided Custom deployment wizard in the Azure Portal, where you enter every value in the UI and don't need any local files. Sensible defaults are pre-filled throughout; you supply an alert email and VM admin password, plus a tenant user UPN when enabling Fabric.
 
 | Tab | You provide |
 |---|---|

@@ -41,7 +41,7 @@ The Bicep or Terraform deployment creates:
 - One `Microsoft.Fabric/capacities` resource
 - SKU fixed to `F2`
 - Location fixed to `swedencentral`
-- Capacity administrator set to the configured alert email
+- Capacity administrator set to the explicit `fabricAdminEmail` tenant user UPN
 
 After deployment, `setup-fabric.ps1` creates or reuses:
 
@@ -57,6 +57,7 @@ The Event Hub source connection and Real-Time Dashboard are guided portal steps.
 - Microsoft Fabric enabled for the tenant
 - Permission to create Fabric workspaces
 - Capacity administrator or contributor access
+- A Microsoft Entra user UPN from the deployment tenant for `fabricAdminEmail`; an external alert or guest notification address is not sufficient
 - Stage A deployed if the Eventstream will use the lab Event Hub
 - Azure CLI and PowerShell 7+
 
@@ -67,7 +68,8 @@ Set the Fabric toggle in `lab.config.json`:
 ```json
 "stageToggles": {
   "enableStageFabric": true
-}
+},
+"fabricAdminEmail": "admin@yourtenant.onmicrosoft.com"
 ```
 
 Then deploy and configure the Fabric items:
@@ -85,7 +87,7 @@ az deployment group create `
   --resource-group <resource-group> `
   --name stage-fabric-capacity `
   --template-file infra/stages/60-fabric.bicep `
-  --parameters namePrefix=amlab fabricAdminEmail=your.alias@example.com
+        --parameters namePrefix=amlab fabricAdminEmail=admin@yourtenant.onmicrosoft.com
 
 ./scripts/setup-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
 ```

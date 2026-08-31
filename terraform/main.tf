@@ -174,8 +174,8 @@ resource "azapi_resource" "stage_ai" {
   }
 }
 
-# Optional Fabric stage: an F2 capacity pinned to swedencentral. The alert email is
-# used as the capacity administrator. Fabric workspace and Real-Time Intelligence
+# Optional Fabric stage: an F2 capacity pinned to swedencentral. An explicit tenant
+# user UPN is used as the capacity administrator. Fabric workspace and Real-Time Intelligence
 # items are created afterward by scripts/setup-fabric.ps1.
 resource "azapi_resource" "stage_fabric" {
   count     = var.enable_stage_fabric ? 1 : 0
@@ -189,7 +189,7 @@ resource "azapi_resource" "stage_fabric" {
       template = sensitive(jsondecode(file("${path.module}/../infra/stages/60-fabric.json")))
       parameters = {
         namePrefix       = { value = var.name_prefix }
-        fabricAdminEmail = { value = var.alert_email }
+        fabricAdminEmail = { value = var.fabric_admin_email }
         ownerTag         = { value = var.owner_tag }
       }
     }

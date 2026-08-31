@@ -103,12 +103,13 @@ function Ensure-FabricItem {
 
 Write-Step 'Pinning the Azure subscription'
 az account set --subscription $SubscriptionId | Out-Null
-$active = az account show --query '{id:id,tenantId:tenantId}' -o json | ConvertFrom-Json
+$active = az account show --query '{id:id,tenantId:tenantId,userName:user.name,userType:user.type}' -o json | ConvertFrom-Json
 if ($active.id -ne $SubscriptionId) {
   throw "Subscription guardrail failed: expected '$SubscriptionId', got '$($active.id)'."
 }
 Write-Info "Subscription: $($active.id)"
 Write-Info "Tenant: $($active.tenantId)"
+Write-Info "Signed-in identity: $($active.userName) ($($active.userType))"
 
 Write-Step 'Discovering the deployed Fabric capacity'
 $armCapacity = az resource list `
@@ -126,11 +127,23 @@ if ($armCapacity.sku -ne 'F2' -or $armCapacity.location.Replace(' ', '').ToLower
 Write-Info "Capacity: $($armCapacity.name) (F2, swedencentral)"
 Write-Host '    Cost warning: indicative PAYG retail cost while active is about $0.36/hour, $8.64/day, or $262.80/month.' -ForegroundColor Yellow
 
+$capacityDetails = az resource show `
+  --ids $armCapacity.id `
+  --api-version 2023-11-01 `
+  --query '{state:properties.state,administrators:properties.administration.members}' `
+  -o json | ConvertFrom-Json
+$capacityAdministrators = @($capacityDetails.administrators)
+Write-Info "Capacity state: $($capacityDetails.state)"
+Write-Info "Capacity administrators: $($capacityAdministrators -join ', ')"
+if ($active.userType -ne 'user') {
+  throw "Fabric setup requires an interactive Microsoft Entra user. Azure CLI is signed in as '$($active.userType)'."
+}
+if ($capacityAdministrators -notcontains $active.userName) {
+  throw "Signed-in user '$($active.userName)' is not a configured Fabric capacity administrator. Redeploy with fabricAdminEmail set to this tenant user UPN, or sign in as one of: $($capacityAdministrators -join ', ')."
+}
+
 Write-Step 'Authenticating to the Fabric API'
-$fabricToken = az account get-access-token `
-  --resource https://api.fabric.microsoft.com `
-  --query accessToken `
-  -o tsv
+$fabricToken = az account get-access-token --resource https://api.fabric.microsoft.com --query accessToken -o tsv
 if ([string]::IsNullOrWhiteSpace($fabricToken)) { throw 'Could not acquire a Microsoft Fabric API token.' }
 $script:fabricHeaders = @{ Authorization = "Bearer $fabricToken" }
 

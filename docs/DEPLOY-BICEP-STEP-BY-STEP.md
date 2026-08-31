@@ -175,7 +175,7 @@ Stage AI depends only on Stage A and can be deployed before or after Stages B to
 Stage Fabric deploys an F2 capacity pinned to `swedencentral`. It is off by default because indicative PAYG retail pricing while active is about $0.36/hour, $8.64/day, or $262.80/month, plus possible OneLake storage and other usage charges.
 
 ```powershell
-az deployment group create -g $rg --name stage-fabric-capacity --template-file infra/stages/60-fabric.bicep --parameters namePrefix=amlab fabricAdminEmail=your.alias@example.com
+az deployment group create -g $rg --name stage-fabric-capacity --template-file infra/stages/60-fabric.bicep --parameters namePrefix=amlab fabricAdminEmail=admin@yourtenant.onmicrosoft.com
 ./scripts/setup-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup $rg
 ```
 

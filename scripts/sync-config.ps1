@@ -74,6 +74,7 @@ $aksNodeCount     = Coalesce $cfg.aksNodeCount     2
 $deployWindowsVm  = if ($null -eq $cfg.deployWindowsVm) { $true } else { [bool]$cfg.deployWindowsVm }
 $deployLinuxVm    = if ($null -eq $cfg.deployLinuxVm)   { $true } else { [bool]$cfg.deployLinuxVm }
 $siemWebhookUrl   = Coalesce $cfg.siemWebhookUrl   ''
+$fabricAdminEmail = Coalesce $cfg.fabricAdminEmail ''
 $subscriptionName = Coalesce $cfg.subscriptionName '<unset>'
 $forbiddenSubs    = if ($null -eq $cfg.forbiddenSubscriptionIds) { @() } else { @($cfg.forbiddenSubscriptionIds) }
 
@@ -89,6 +90,10 @@ if ($null -eq $stages) { $stages = [pscustomobject]@{ enableStageA=$true; enable
 # AI and Fabric stages are optional and default off when absent from the config.
 $enableStageAI = if ($null -eq $stages.enableStageAI) { $false } else { [bool]$stages.enableStageAI }
 $enableStageFabric = if ($null -eq $stages.enableStageFabric) { $false } else { [bool]$stages.enableStageFabric }
+if ($enableStageFabric -and [string]::IsNullOrWhiteSpace($fabricAdminEmail)) {
+  Write-Error 'lab.config.json has enableStageFabric=true but fabricAdminEmail is empty. Set it to a Microsoft Entra user UPN in the deployment tenant; do not use an external alert alias.'
+  return
+}
 
 # ---------------------------------------------------------------------------
 # Resolve target paths
@@ -133,6 +138,7 @@ $bicepParams = [ordered]@{
     'aksNodeCount'    = @{ value = [int]$aksNodeCount }
     'enableAi'        = @{ value = $enableStageAI }
     'enableFabric'    = @{ value = $enableStageFabric }
+    'fabricAdminEmail'= @{ value = $fabricAdminEmail }
     'enableLawReplication'   = @{ value = $enableLawReplication }
     'lawReplicationLocation' = @{ value = $lawReplicationLocation }
   }
@@ -174,6 +180,7 @@ $tfLines = @(
   "enable_stage_e = $((($stages.enableStageE -as [bool]).ToString()).ToLower())"
   "enable_stage_ai = $($enableStageAI.ToString().ToLower())"
   "enable_stage_fabric = $($enableStageFabric.ToString().ToLower())"
+  "fabric_admin_email = `"$(Esc $fabricAdminEmail)`""
 )
 Set-Content -Path $tfVarsPath -Value ($tfLines -join "`r`n") -Encoding UTF8
 Write-Done "OK"

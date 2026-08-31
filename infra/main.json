@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "4855044313850020757"
+      "templateHash": "14504040056980816490"
     }
   },
   "parameters": {
@@ -167,11 +167,12 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Administrator UPN for the Fabric capacity. Defaults to alertEmail when empty."
+        "description": "Microsoft Entra user UPN that administers the Fabric capacity. Must be a user in the deployment tenant, not an external notification address."
       }
     }
   },
   "variables": {
+    "validatedFabricAdminEmail": "[if(or(not(parameters('enableFabric')), and(not(empty(parameters('fabricAdminEmail'))), contains(parameters('fabricAdminEmail'), '@'))), parameters('fabricAdminEmail'), fail('fabricAdminEmail is required when enableFabric is true and must be a Microsoft Entra user UPN in the deployment tenant.'))]",
     "suffix": "[uniqueString(resourceGroup().id)]",
     "lawCentralName": "[format('law-{0}-central-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
     "lawAppInsightsName": "[format('law-{0}-appinsights-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
@@ -9838,7 +9839,7 @@
           },
           "administrators": {
             "value": [
-              "[if(empty(parameters('fabricAdminEmail')), parameters('alertEmail'), parameters('fabricAdminEmail'))]"
+              "[variables('validatedFabricAdminEmail')]"
             ]
           },
           "tags": {

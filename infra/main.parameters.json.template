@@ -5,6 +5,7 @@
     "location": { "value": "northeurope" },
     "namePrefix": { "value": "amlab" },
     "alertEmail": { "value": "<YOUR-EMAIL>" },
+    "fabricAdminEmail": { "value": "<ENTRA-USER-UPN-IN-DEPLOYMENT-TENANT>" },
     "vmAdminUsername": { "value": "azureuser" },
     "vmAdminPassword": { "value": "<STRONG-PASSWORD>" },
     "deployWindowsVm": { "value": true },

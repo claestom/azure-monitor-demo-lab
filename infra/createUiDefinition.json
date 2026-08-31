@@ -311,6 +311,19 @@
             "toolTip": "Deploys an F2 Fabric capacity pinned to swedencentral. Indicative PAYG retail cost while active: about $0.36/hour, $8.64/day, or $262.80/month. Actual pricing varies; OneLake storage and other meters can add cost. Off by default."
           },
           {
+            "name": "fabricAdminEmail",
+            "type": "Microsoft.Common.TextBox",
+            "label": "Fabric administrator UPN",
+            "defaultValue": "",
+            "toolTip": "Microsoft Entra user UPN in the selected subscription tenant, for example admin@contoso.onmicrosoft.com. Do not use an external notification alias.",
+            "constraints": {
+              "required": "[equals(steps('advanced').enableFabric, true)]",
+              "regex": "^[^@\\s]+@[^@\\s]+$",
+              "validationMessage": "Enter a Microsoft Entra user UPN from the deployment tenant."
+            },
+            "visible": "[equals(steps('advanced').enableFabric, true)]"
+          },
+          {
             "name": "fabricPostDeployInfo",
             "type": "Microsoft.Common.TextBlock",
             "visible": "[equals(steps('advanced').enableFabric, true)]",
@@ -342,7 +355,8 @@
       "appServiceRepoUrl": "[steps('advanced').appServiceRepoUrl]",
       "siemWebhookUrl": "[steps('advanced').siemWebhookUrl]",
       "enableAi": "[steps('advanced').enableAi]",
-      "enableFabric": "[steps('advanced').enableFabric]"
+      "enableFabric": "[steps('advanced').enableFabric]",
+      "fabricAdminEmail": "[steps('advanced').fabricAdminEmail]"
     }
   }
 }
