@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Start every startable lab resource: VMs, VMSS, AKS cluster, Web Apps.
+  Start every startable lab resource: VMs, VMSS, AKS cluster, Web Apps, Fabric.
 .DESCRIPTION
   Counterpart to the nightly stop policy (which deallocates VMs / stops AKS /
   stops web apps to keep lab cost low). Idempotent: only kicks off a start on
@@ -11,6 +11,7 @@
     - VM Scale Sets          (az vmss start)
     - AKS managed clusters   (az aks start)
     - App Service Web Apps   (az webapp start)
+    - Microsoft Fabric F2    (ARM resume action)
 
   By default, calls return immediately (--no-wait where supported). Pass -Wait
   to poll until every resource reaches a Running state.
@@ -39,6 +40,8 @@ if (Test-Path $targetFile) {
   if ($active.id -ne $target.expectedSubscriptionId -or $active.tenantId -ne $target.expectedTenantId) {
     throw "BLOCKED: not on allowed lab subscription. Aborting start-the-lab."
   }
+} else {
+  $active = az account show --query "{id:id, tenantId:tenantId}" -o json | ConvertFrom-Json
 }
 
 # Verify the RG exists before we fan out queries.
@@ -46,8 +49,8 @@ if (-not (az group exists -n $ResourceGroup | ConvertFrom-Json)) {
   throw "Resource group '$ResourceGroup' not found in the active subscription."
 }
 
-$started = @{ vm = @(); vmss = @(); aks = @(); webapp = @() }
-$skipped = @{ vm = @(); vmss = @(); aks = @(); webapp = @() }
+$started = @{ vm = @(); vmss = @(); aks = @(); webapp = @(); fabric = @() }
+$skipped = @{ vm = @(); vmss = @(); aks = @(); webapp = @(); fabric = @() }
 
 # --- 1. Virtual Machines -------------------------------------------------------
 Write-Step "Virtual Machines"
@@ -112,10 +115,50 @@ foreach ($wa in $webapps) {
   }
 }
 
+# --- 5. Microsoft Fabric capacities -------------------------------------------
+Write-Step "Microsoft Fabric"
+$fabricCapacities = az resource list `
+  --subscription $active.id `
+  --resource-group $ResourceGroup `
+  --resource-type Microsoft.Fabric/capacities `
+  --query "[].{id:id,name:name,sku:sku.name}" `
+  -o json | ConvertFrom-Json
+if (-not $fabricCapacities) { Write-Info "no Fabric capacities in $ResourceGroup" }
+foreach ($fabric in @($fabricCapacities)) {
+  if ($fabric.sku -ne 'F2') {
+    Write-Info "$($fabric.name) skipped because SKU '$($fabric.sku)' is not the lab F2 SKU"
+    $skipped.fabric += $fabric.name
+    continue
+  }
+
+  $state = az resource show `
+    --subscription $active.id `
+    --ids $fabric.id `
+    --api-version 2023-11-01 `
+    --query properties.state `
+    -o tsv
+  if ($state -eq 'Active') {
+    Write-Info "$($fabric.name) already Active"
+    $skipped.fabric += $fabric.name
+  } elseif ($state -in @('Paused', 'Suspended')) {
+    Write-Ok "resuming $($fabric.name) (was: $state)"
+    Write-Host "    Cost warning: F2 billing resumes while this capacity is Active." -ForegroundColor Yellow
+    az rest `
+      --method post `
+      --url "https://management.azure.com$($fabric.id)/resume?api-version=2023-11-01" `
+      --subscription $active.id `
+      --output none
+    if ($LASTEXITCODE -ne 0) { throw "Failed to resume Fabric capacity '$($fabric.name)'." }
+    $started.fabric += $fabric.name
+  } else {
+    throw "Fabric capacity '$($fabric.name)' is in unexpected state '$state'. Refusing to issue resume."
+  }
+}
+
 # --- Summary -------------------------------------------------------------------
 Write-Step "Summary"
-$total = ($started.vm + $started.vmss + $started.aks + $started.webapp).Count
-$noop  = ($skipped.vm + $skipped.vmss + $skipped.aks + $skipped.webapp).Count
+$total = ($started.vm + $started.vmss + $started.aks + $started.webapp + $started.fabric).Count
+$noop  = ($skipped.vm + $skipped.vmss + $skipped.aks + $skipped.webapp + $skipped.fabric).Count
 Write-Host "  Started: $total  ·  Already running: $noop" -ForegroundColor Yellow
 
 if ($total -eq 0) {
@@ -150,6 +193,16 @@ while ((Get-Date) -lt $deadline) {
   foreach ($n in $started.webapp) {
     $p = az webapp show -g $ResourceGroup -n $n --query "state" -o tsv
     if ($p -ne 'Running') { $pending += "webapp/$n=$p" }
+  }
+  foreach ($n in $started.fabric) {
+    $fabric = @($fabricCapacities | Where-Object { $_.name -eq $n }) | Select-Object -First 1
+    $state = az resource show `
+      --subscription $active.id `
+      --ids $fabric.id `
+      --api-version 2023-11-01 `
+      --query properties.state `
+      -o tsv
+    if ($state -ne 'Active') { $pending += "fabric/$n=$state" }
   }
 
   if ($pending.Count -eq 0) {

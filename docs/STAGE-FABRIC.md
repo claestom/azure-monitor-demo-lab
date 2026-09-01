@@ -177,6 +177,8 @@ In Azure Monitor, open the lab Health Dashboard workbook and confirm the Fabric 
 
 Use the suspend command below. Resume F2 before the next Fabric session.
 
+`start-the-lab.ps1 -Wait` also detects and resumes the optional F2 capacity together with the lab's VMs, VMSS, AKS, and App Service resources.
+
 ## Suspend and resume
 
 ```powershell

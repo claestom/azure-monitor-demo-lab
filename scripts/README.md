@@ -26,7 +26,7 @@ For a fresh deployment, use `deploy.ps1` rather than calling `post-deploy.ps1` d
 
 | Script | Purpose | Typical command |
 |---|---|---|
-| `start-the-lab.ps1` | Starts stopped or deallocated VMs, VMSS, AKS, and App Service resources. Add `-Wait` to poll until running. | `./scripts/start-the-lab.ps1 -ResourceGroup <rg> -Wait` |
+| `start-the-lab.ps1` | Starts stopped or deallocated VMs, VMSS, AKS, App Service, and the optional paused Fabric F2 capacity. Add `-Wait` to poll until running or Active. | `./scripts/start-the-lab.ps1 -ResourceGroup <rg> -Wait` |
 | `break-the-lab.ps1` | Intentionally degrades the lab: stops VMs, crashloops the AKS frontend, and increases load-generator failures. | `./scripts/break-the-lab.ps1 -ResourceGroup <rg>` |
 | `restore-the-lab.ps1` | Reverses the break scenario by starting VMs, restoring the AKS image, and applying a healthy load generator. | `./scripts/restore-the-lab.ps1 -ResourceGroup <rg>` |
 | `start-ramp.ps1` | Starts a 60-minute AKS load test against the App Service for Smart Detection and autoscale demonstrations. | `./scripts/start-ramp.ps1 -ResourceGroup <rg>` |
