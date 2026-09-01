@@ -395,6 +395,9 @@ $capacityDetails = az resource show `
 $capacityAdministrators = @($capacityDetails.administrators)
 Write-Info "Capacity state: $($capacityDetails.state)"
 Write-Info "Capacity administrators: $($capacityAdministrators -join ', ')"
+if ($capacityDetails.state -ne 'Active') {
+  throw "Fabric capacity '$($armCapacity.name)' is '$($capacityDetails.state)'. Resume it before setup: ./scripts/resume-fabric.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup"
+}
 if ($active.userType -ne 'user') {
   throw "Fabric setup requires an interactive Microsoft Entra user. Azure CLI is signed in as '$($active.userType)'."
 }

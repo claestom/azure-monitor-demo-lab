@@ -136,7 +136,7 @@ var fabricCapacityHealthQuery = replace('''resources
 | extend Status = case(
   ProvisioningState !~ "Succeeded", "🔴",
   CapacityState =~ "Active", "🟢",
-  CapacityState =~ "Suspended", "🟠",
+  CapacityState in~ ("Paused", "Suspended"), "🟠",
   "⚪")
 | project Status,
       ResourceType = "Microsoft Fabric F2",
