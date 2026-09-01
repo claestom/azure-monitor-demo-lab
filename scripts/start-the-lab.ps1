@@ -31,6 +31,27 @@ function Write-Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
 function Write-Info($msg) { Write-Host "    $msg" -ForegroundColor DarkGray }
 function Write-Ok($msg)   { Write-Host "    $msg" -ForegroundColor Green }
 
+function Get-VmssInstancePowerStates {
+  param([Parameter(Mandatory)] [string] $Name)
+
+  $instanceJson = az vmss list-instances `
+    --resource-group $ResourceGroup `
+    --name $Name `
+    --expand instanceView `
+    --query "[].{instanceId:instanceId,power:instanceView.statuses[?starts_with(code, 'PowerState/')].displayStatus | [0]}" `
+    -o json
+  if ($LASTEXITCODE -ne 0) {
+    throw "Failed to retrieve instance view for VMSS '$Name'."
+  }
+
+  $instances = @($instanceJson | ConvertFrom-Json)
+  $missingPowerState = @($instances | Where-Object { [string]::IsNullOrWhiteSpace($_.power) })
+  if ($missingPowerState.Count -gt 0) {
+    throw "VMSS '$Name' returned $($missingPowerState.Count) instance(s) without a power state."
+  }
+  return $instances
+}
+
 # --- Subscription guardrail ----------------------------------------------------
 $targetFile = Join-Path $PSScriptRoot '..' '.azure-target.json'
 if (Test-Path $targetFile) {
@@ -73,8 +94,8 @@ $vmsses = az vmss list -g $ResourceGroup --query "[].name" -o tsv
 if (-not $vmsses) { Write-Info "no VMSS in $ResourceGroup" }
 foreach ($name in $vmsses) {
   # A VMSS has no single power state — count deallocated instances.
-  $instances = az vmss list-instances -g $ResourceGroup -n $name -d --query "[].powerState" -o json | ConvertFrom-Json
-  $stoppedCount = ($instances | Where-Object { $_ -ne 'VM running' }).Count
+  $instances = @(Get-VmssInstancePowerStates -Name $name)
+  $stoppedCount = @($instances | Where-Object { $_.power -ne 'VM running' }).Count
   if ($stoppedCount -eq 0) {
     Write-Info "$name all instances running"
     $skipped.vmss += $name
@@ -182,8 +203,9 @@ while ((Get-Date) -lt $deadline) {
     if ($p -ne 'VM running') { $pending += "vm/$n=$p" }
   }
   foreach ($n in $started.vmss) {
-    $stoppedCount = (az vmss list-instances -g $ResourceGroup -n $n -d --query "[?powerState!='VM running'] | length(@)" -o tsv)
-    if ([int]$stoppedCount -gt 0) { $pending += "vmss/$n=$stoppedCount-stopped" }
+    $instances = @(Get-VmssInstancePowerStates -Name $n)
+    $stoppedCount = @($instances | Where-Object { $_.power -ne 'VM running' }).Count
+    if ($stoppedCount -gt 0) { $pending += "vmss/$n=$stoppedCount-stopped" }
   }
   foreach ($n in $started.aks) {
     $p = az aks show -g $ResourceGroup -n $n --query "powerState.code" -o tsv
