@@ -128,33 +128,54 @@ Use `-SkipEventstreamConnection` to keep all connection and topology configurati
 
 ## After deploy.ps1 checklist
 
-1. **Read the Fabric setup result in the terminal.** If it says `Eventstream source and Eventhouse destination configured`, continue to step 3.
-2. **If connection creation was rejected, create only the connection once.** Follow the connection-only steps above, cancel before adding or publishing topology, then rerun:
+### 1. Read the setup result
 
-        ```powershell
-        ./scripts/setup-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
-        ```
+If the terminal says `Eventstream source and Eventhouse destination configured`, continue to step 3.
 
-3. **Verify the stream.** Open `AzureMonitorEvents` in **Live** view and confirm events arrive from the `diagnostics` Event Hub.
-4. **Verify ingestion.** Open `MonitoringTelemetry` and run:
+### 2. Complete the one-time connection fallback
 
-        ```kusto
-        AzureDiagnosticsRaw
-        | take 10
-        ```
+If connection creation was rejected, follow the connection-only steps above. Cancel before adding or publishing topology, then rerun:
 
-5. **Create the Real-Time Dashboard.** In the Fabric workspace, select **+ New item** > **Real-Time Dashboard**, name it `Azure Monitor Demo Live Health`, then select **Add data source** > **KQL Database** and connect `MonitoringTelemetry`.
-6. **Add a live tile.** Switch to **Editing**, select **New visual**, and use:
+```powershell
+./scripts/setup-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
+```
 
-        ```kusto
-        AzureDiagnosticsRaw
-        | summarize Events = count() by bin(ingestion_time(), 5m)
-        | render timechart
-        ```
+### 3. Verify the stream
 
-        Select **Done**, then **Save**. Optionally enable **Manage** > **Refresh settings** > **Live refresh**.
-7. **Check Azure health views.** In Azure Monitor, open the lab Health Dashboard workbook and confirm the Fabric F2 capacity row. Open `hm-amlab-workload` and confirm the optional **Real-Time Intelligence** tier.
-8. **Suspend F2 when finished.** Use the suspend command below. Resume it before the next Fabric session.
+Open `AzureMonitorEvents` in **Live** view and confirm events arrive from the `diagnostics` Event Hub.
+
+### 4. Verify ingestion
+
+Open `MonitoringTelemetry` and run:
+
+```kusto
+AzureDiagnosticsRaw
+| take 10
+```
+
+### 5. Create the Real-Time Dashboard
+
+In the Fabric workspace, select **+ New item** > **Real-Time Dashboard**, name it `Azure Monitor Demo Live Health`, then select **Add data source** > **KQL Database** and connect `MonitoringTelemetry`.
+
+### 6. Add a live tile
+
+Switch to **Editing**, select **New visual**, and use:
+
+```kusto
+AzureDiagnosticsRaw
+| summarize Events = count() by bin(ingestion_time(), 5m)
+| render timechart
+```
+
+Select **Done**, then **Save**. Optionally enable **Manage** > **Refresh settings** > **Live refresh**.
+
+### 7. Check Azure health views
+
+In Azure Monitor, open the lab Health Dashboard workbook and confirm the Fabric F2 capacity row. Open `hm-amlab-workload` and confirm the optional **Real-Time Intelligence** tier.
+
+### 8. Suspend F2 when finished
+
+Use the suspend command below. Resume F2 before the next Fabric session.
 
 ## Suspend and resume
 
