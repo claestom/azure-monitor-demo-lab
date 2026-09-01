@@ -49,6 +49,8 @@ An optional Microsoft Fabric stage (off by default) adds an F2 capacity in `swed
 
 ### Option 1: Deploy to Azure (portal, no local setup)
 
+> The public button below intentionally targets `master`, which does not include the in-progress Fabric stage. To test Fabric before merge, deploy from `feature/fabric-stage` with `scripts/deploy.ps1`, or open a Custom deployment using that branch's `infra/main.json` and `infra/createUiDefinition.json` raw URLs.
+
 <div align="center">
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-demo-lab%2Fmaster%2Finfra%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-demo-lab%2Fmaster%2Finfra%2FcreateUiDefinition.json)

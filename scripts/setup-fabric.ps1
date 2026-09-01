@@ -4,8 +4,10 @@
 
 .DESCRIPTION
   Pins and verifies the Azure subscription, finds the deployed Fabric F2 capacity,
-  then creates or reuses a workspace, Eventhouse, KQL database, and empty Eventstream.
-  The Event Hub connection remains a guided portal step so no shared keys are handled.
+  then creates or reuses a workspace, Eventhouse, KQL database, and Eventstream.
+  It attempts to create the Event Hubs connection and publish the source-to-Eventhouse
+  topology. If the tenant rejects public API connection creation, the user creates
+  that connection once in Fabric and reruns this script to publish the topology.
 
 .EXAMPLE
   ./scripts/setup-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup rg-azure-monitor-lab
