@@ -179,7 +179,7 @@ az deployment group create -g $rg --name stage-fabric-capacity --template-file i
 ./scripts/setup-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup $rg
 ```
 
-The Bicep stage creates the ARM capacity. The setup script creates the Fabric workspace, Eventhouse, KQL database, and Eventstream shell. Complete the Event Hub connection interactively, then suspend F2 when the demo is idle:
+The Bicep stage creates the ARM capacity. The setup script creates the Fabric workspace, Eventhouse, KQL database, and Eventstream, then attempts to create the Event Hubs connection and publish the source-to-Eventhouse topology. If the tenant rejects public API connection creation, create only the connection once in Fabric and rerun the setup script. Follow the [Fabric post-deploy checklist](STAGE-FABRIC.md#after-deployps1-checklist), then suspend F2 when the demo is idle:
 
 ```powershell
 ./scripts/suspend-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup $rg

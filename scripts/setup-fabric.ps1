@@ -491,7 +491,7 @@ $eventstream = Ensure-FabricItem `
   -DisplayName $EventstreamName `
   -CreateBody @{
     displayName = $EventstreamName
-    description = 'Eventstream shell for the Azure Event Hubs diagnostics source.'
+    description = 'Eventstream for the Azure Event Hubs diagnostics source and Eventhouse destination.'
   }
 
 Write-Step 'Resolving the Azure Event Hub source'
@@ -546,4 +546,6 @@ if (-not $eventstreamAutomated) {
   Write-Host "6. Confirm events arrive in '$DestinationTableName', then create the Real-Time Dashboard from '$KqlDatabaseName'."
   Write-Host "The connection key is entered only in Fabric; do not paste it into this script or source control."
 }
+Write-Host "`nNext steps: docs/STAGE-FABRIC.md#after-deployps1-checklist" -ForegroundColor Cyan
+Write-Host "Verify '$DestinationTableName', create the Real-Time Dashboard, check the Azure health views, and suspend F2 when finished."
 Write-Host "`nSuspend F2 when idle: ./scripts/suspend-fabric.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup" -ForegroundColor Yellow

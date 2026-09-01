@@ -136,7 +136,7 @@ The pre-flight checks *availability and quota*, not *live service capacity*. Tra
 
 > Optional AI stage. An extra stage (off by default) adds a Microsoft Foundry GenAI workload (pinned to `swedencentral`) that emits token, trace, and cost telemetry, plus token-spike alerts and an AI FinOps query pack and workbook. Turn it on with `stageToggles.enableStageAI` (Bicep one-shot) or Terraform's `enable_stage_ai`, then run `./scripts/setup-ai.ps1` to create the demo agents and simulate traffic. Check the Model Router version for your region first (`az cognitiveservices account list-models`).
 
-> Optional Fabric stage. Set `stageToggles.enableStageFabric` for one-shot Bicep or `enable_stage_fabric` for Terraform. It deploys an F2 capacity pinned to `swedencentral`; then `setup-fabric.ps1` creates the Fabric SaaS items. Indicative PAYG retail cost while active is about $0.36/hour, $8.64/day, or $262.80/month, plus possible storage and usage charges. See [STAGE-FABRIC.md](docs/STAGE-FABRIC.md).
+> Optional Fabric stage. Set `stageToggles.enableStageFabric` for one-shot Bicep or `enable_stage_fabric` for Terraform. It deploys an F2 capacity pinned to `swedencentral`; then `setup-fabric.ps1` creates the Fabric SaaS items and attempts to publish the Eventstream topology. After deployment, follow the [Fabric post-deploy checklist](docs/STAGE-FABRIC.md#after-deployps1-checklist) to handle any one-time connection fallback, verify ingestion, create the Real-Time Dashboard, and suspend F2. Indicative PAYG retail cost while active is about $0.36/hour, $8.64/day, or $262.80/month, plus possible storage and usage charges.
 
 ### Option 3: Staged workshop (progressive deployment)
 

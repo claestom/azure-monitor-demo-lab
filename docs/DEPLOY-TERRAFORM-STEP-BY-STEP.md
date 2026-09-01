@@ -240,7 +240,7 @@ terraform apply -var-file stages.tfvars
 ./scripts/setup-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup $rg
 ```
 
-Complete the Event Hub connection interactively and suspend F2 when the demo is idle:
+The setup script attempts to create the Event Hubs connection and publish the complete topology. If the tenant rejects public API connection creation, create only the connection once in Fabric and rerun the setup script. Follow the [Fabric post-deploy checklist](STAGE-FABRIC.md#after-deployps1-checklist), then suspend F2 when the demo is idle:
 
 ```powershell
 ./scripts/suspend-fabric.ps1 -SubscriptionId <subscription-id> -ResourceGroup $rg
