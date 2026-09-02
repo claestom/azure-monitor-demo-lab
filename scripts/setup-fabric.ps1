@@ -178,8 +178,7 @@ function Ensure-EventHubConnection {
     -NamespaceName $NamespaceName `
     -EventHubName $EventHubName
   if ($connection) {
-    Write-Info "Reusing Fabric connection '$connectionName' ($($connection.id))"
-    return $connection
+    Write-Info "Refreshing Fabric connection '$connectionName' ($($connection.id))"
   }
 
   $listenKey = $null
@@ -196,6 +195,32 @@ function Ensure-EventHubConnection {
       throw "Could not retrieve the Listen-only 'diagnostics-listen' key. Redeploy the latest template or use -SkipEventstreamConnection."
     }
 
+    $credentialDetails = @{
+      singleSignOnType = 'None'
+      connectionEncryption = 'NotEncrypted'
+      skipTestConnection = $false
+      credentials = @{
+        credentialType = 'Basic'
+        username = 'diagnostics-listen'
+        password = $listenKey
+      }
+    }
+    if ($connection) {
+      $updateBody = @{
+        connectivityType = 'ShareableCloud'
+        displayName = $connectionName
+        privacyLevel = 'Organizational'
+        credentialDetails = $credentialDetails
+      }
+      $connection = Invoke-RestMethod `
+        -Method Patch `
+        -Uri "$fabricApi/connections/$($connection.id)" `
+        -Headers $script:fabricHeaders `
+        -ContentType 'application/json' `
+        -Body ($updateBody | ConvertTo-Json -Depth 12)
+      return $connection
+    }
+
     $connectionBody = @{
       connectivityType = 'ShareableCloud'
       displayName = $connectionName
@@ -208,16 +233,7 @@ function Ensure-EventHubConnection {
         )
       }
       privacyLevel = 'Organizational'
-      credentialDetails = @{
-        singleSignOnType = 'None'
-        connectionEncryption = 'NotEncrypted'
-        skipTestConnection = $false
-        credentials = @{
-          credentialType = 'Basic'
-          username = 'diagnostics-listen'
-          password = $listenKey
-        }
-      }
+      credentialDetails = $credentialDetails
     }
 
     Write-Info "Creating Fabric Event Hub connection '$connectionName'"
@@ -244,6 +260,8 @@ function Ensure-EventHubConnection {
     return $connection
   } finally {
     $listenKey = $null
+    $credentialDetails = $null
+    $updateBody = $null
     $connectionBody = $null
   }
 }
@@ -253,7 +271,7 @@ function Set-EventstreamTopology {
     [Parameter(Mandatory)] [string] $WorkspaceId,
     [Parameter(Mandatory)] [string] $EventstreamId,
     [Parameter(Mandatory)] [string] $ConnectionId,
-    [Parameter(Mandatory)] [string] $EventhouseId,
+    [Parameter(Mandatory)] [string] $KqlDatabaseId,
     [Parameter(Mandatory)] [string] $DatabaseName,
     [Parameter(Mandatory)] [string] $TableName
   )
@@ -280,7 +298,19 @@ function Set-EventstreamTopology {
   $existingSource = @($existingTopology.sources | Where-Object { $_.name -eq $sourceName }) | Select-Object -First 1
   $existingStream = @($existingTopology.streams | Where-Object { $_.name -eq $streamName }) | Select-Object -First 1
   $existingDestination = @($existingTopology.destinations | Where-Object { $_.name -eq $destinationName }) | Select-Object -First 1
-  $sourceId = if ($existingSource.id) { $existingSource.id } else { [guid]::NewGuid().ToString() }
+  $runtimeTopology = Invoke-RestMethod `
+    -Method Get `
+    -Uri "$fabricApi/workspaces/$WorkspaceId/eventstreams/$EventstreamId/topology" `
+    -Headers $script:fabricHeaders
+  $runtimeSource = @($runtimeTopology.sources | Where-Object { $_.name -eq $sourceName }) | Select-Object -First 1
+  $sourceId = if ($existingSource.id -and $runtimeSource.status -ne 'Failed') {
+    $existingSource.id
+  } else {
+    if ($runtimeSource.status -eq 'Failed') {
+      Write-Info "Recreating failed Eventstream source '$sourceName'"
+    }
+    [guid]::NewGuid().ToString()
+  }
   $streamId = if ($existingStream.id) { $existingStream.id } else { [guid]::NewGuid().ToString() }
   $destinationId = if ($existingDestination.id) { $existingDestination.id } else { [guid]::NewGuid().ToString() }
 
@@ -305,7 +335,7 @@ function Set-EventstreamTopology {
         properties = [ordered]@{
           dataIngestionMode = 'ProcessedIngestion'
           workspaceId = $WorkspaceId
-          itemId = $EventhouseId
+          itemId = $KqlDatabaseId
           databaseName = $DatabaseName
           tableName = $TableName
           inputSerialization = @{ type = 'Json'; properties = @{ encoding = 'UTF8' } }
@@ -348,13 +378,26 @@ function Set-EventstreamTopology {
   }
 
   $responseHeaders = $null
-  Invoke-RestMethod `
-    -Method Post `
-    -Uri "$fabricApi/workspaces/$WorkspaceId/eventstreams/$EventstreamId/updateDefinition" `
-    -Headers $script:fabricHeaders `
-    -ContentType 'application/json' `
-    -Body ($requestBody | ConvertTo-Json -Depth 25) `
-    -ResponseHeadersVariable responseHeaders | Out-Null
+  try {
+    Invoke-RestMethod `
+      -Method Post `
+      -Uri "$fabricApi/workspaces/$WorkspaceId/eventstreams/$EventstreamId/updateDefinition" `
+      -Headers $script:fabricHeaders `
+      -ContentType 'application/json' `
+      -Body ($requestBody | ConvertTo-Json -Depth 25) `
+      -ResponseHeadersVariable responseHeaders | Out-Null
+  } catch {
+    $fabricError = $_.ErrorDetails.Message
+    if ($fabricError) {
+      try {
+        $parsedError = $fabricError | ConvertFrom-Json
+        throw "Eventstream definition was rejected: $($parsedError.errorCode): $($parsedError.message)"
+      } catch {
+        if ($_.Exception.Message -like 'Eventstream definition was rejected:*') { throw }
+      }
+    }
+    throw "Eventstream definition was rejected: $($_.Exception.Message)"
+  }
   $operationUrl = $responseHeaders.Location | Select-Object -First 1
   if ($operationUrl) {
     Wait-FabricOperation `
@@ -520,7 +563,7 @@ if (-not $SkipEventstreamConnection -and -not [string]::IsNullOrWhiteSpace($even
       -WorkspaceId $workspace.id `
       -EventstreamId $eventstream.id `
       -ConnectionId $eventHubConnection.id `
-      -EventhouseId $eventhouse.id `
+      -KqlDatabaseId $kqlDatabase.id `
       -DatabaseName $KqlDatabaseName `
       -TableName $DestinationTableName
     $eventstreamAutomated = $true
