@@ -25,6 +25,7 @@ Pick a workload (or theme) and run only those scenarios. Each row links to the n
 | **Security** | <ul><li>[27](#s27) Granular RBAC</li><li>[43](#s43) Sentinel</li><li>[44](#s44) Search jobs + Restore</li><li>[47](#s47) Control-plane drift watch</li><li>[48](#s48) Privilege escalation watch</li><li>[49](#s49) Exfil early warning</li></ul> |
 | **AI / ML in Azure Monitor** | <ul><li>[16](#s16) Copilot</li><li>[13](#s13) Smart Detection</li><li>[17](#s17) Dynamic Thresholds</li><li>[18](#s18) Code Optimizations</li><li>[19](#s19) Predictive autoscale</li></ul> |
 | **GenAI observability (optional AI stage)** | <ul><li>[53](#s53) AI FinOps — token / trace / cost</li></ul> |
+| **Microsoft Fabric (optional Stage Fabric)** | <ul><li>[54](#s54) Event Hubs to Real-Time Intelligence</li><li>[55](#s55) Eventhouse telemetry</li><li>[56](#s56) Real-Time Dashboard</li><li>[57](#s57) Business-event correlation</li><li>[58](#s58) Capacity monitoring</li><li>[59](#s59) Suspend and resume</li><li>[60](#s60) Mirror Azure Monitor data (preview)</li></ul> |
 | **Platform foundations** | <ul><li>[5](#s5) Policy auto-onboard</li><li>[6](#s6) Cross-workspace KQL</li><li>[24](#s24) Custom Logs Ingestion API</li><li>[26](#s26) KQL Functions</li><li>[51](#s51) Platform logs at scale (DCR)</li></ul> |
 
 > **Suggested 25-min "by-workload" demos:** App Service → 3, 22, 28, 29, 33 · AKS → 4, 14, 30, 31 · Cost → 9, 11, 20, 39, 42 · Security → 27, 47, 48 · Workload health → 1 + 45 + 46.
@@ -2448,6 +2449,7 @@ Every other scenario watches infra/platform telemetry. This one points the **exa
 
 ---
 
+<a id="s54"></a>
 ## 54 · Azure Event Hubs to Fabric Real-Time Intelligence
 
 **Audience:** Data platform teams, SRE, architects.
@@ -2470,6 +2472,7 @@ The lab already sends platform events to Azure Event Hubs. Fabric Eventstream tu
 
 ---
 
+<a id="s55"></a>
 ## 55 · Eventhouse operational telemetry
 
 **Audience:** Operations analysts, data engineers, KQL users.
@@ -2490,6 +2493,7 @@ Eventhouse provides a high-volume KQL surface for streamed operational data. Tea
 
 ---
 
+<a id="s56"></a>
 ## 56 · Real-Time Dashboard for application health
 
 **Audience:** NOC teams, service owners, executives.
@@ -2510,6 +2514,7 @@ A Fabric Real-Time Dashboard presents live health and throughput alongside busin
 
 ---
 
+<a id="s57"></a>
 ## 57 · Correlate monitoring data with business events
 
 **Audience:** Product owners, FinOps, business operations.
@@ -2530,6 +2535,7 @@ Infrastructure health matters because it affects an outcome. Fabric can join ope
 
 ---
 
+<a id="s58"></a>
 ## 58 · Fabric capacity monitoring and throttling
 
 **Audience:** Fabric administrators, FinOps, platform engineering.
@@ -2550,6 +2556,7 @@ F2 is intentionally small and can throttle under sustained demand. Capacity Metr
 
 ---
 
+<a id="s59"></a>
 ## 59 · Fabric suspend and resume cost control
 
 **Audience:** FinOps, lab owners, platform administrators.
@@ -2576,6 +2583,39 @@ Fabric F2 bills while active. The lab makes lifecycle control part of the demo, 
 > *"The cheapest idle capacity is a suspended capacity, so shutdown is part of the runbook rather than an afterthought."*
 
 **Reference:** [docs/STAGE-FABRIC.md](STAGE-FABRIC.md)
+
+---
+
+<a id="s60"></a>
+## 60 · Mirror Azure Monitor data in Microsoft Fabric (preview)
+
+**Audience:** Data platform teams, observability architects, analytics teams.
+**Time:** 5 min.
+
+> **Requires Stage Fabric and Preview onboarding.** A tenant admin must enable the **Mirrored Azure Monitor** catalog item. Creating its connection requires role-assignment write plus Log Analytics workspace read/query permissions, or an equivalent privileged built-in role. The mirrored item is a guided Fabric portal step and is not created by this lab's deployment scripts. Fabric compute charges apply when Fabric workloads query the data, while Azure Monitor ingestion and retention charges continue normally.
+
+### Story
+Mirror Azure Monitor exposes selected Log Analytics tables to Fabric without an export pipeline or duplicate storage. The data remains in Azure Monitor's Delta Lake storage and appears through read-only OneLake shortcuts, so teams can analyze operational telemetry beside business data in Eventhouse, Real-Time Dashboards, Power BI, Spark, and agentic workloads.
+
+### Click-path
+
+1. In the Fabric workspace, create a **Mirrored Azure Monitor** item and connect the lab's central Log Analytics workspace.
+2. For a same-tenant production setup, choose **Workspace identity**. Use an organizational account only for an interactive demo, and explain that Azure RBAC and Fabric workspace permissions are independent security boundaries.
+3. Select useful tables such as `AzureActivity`, `ContainerLogV2`, `AppServiceHTTPLogs`, and `Perf`, then create the mirrored item.
+4. Allow about 15 minutes for new data to appear. Preview does not backfill historical rows, and the mirrored tables are read-only in Fabric.
+5. Open the generated Eventhouse endpoint or create an Eventhouse shortcut. Query a mirrored table and join it with business data already in OneLake.
+6. Contrast this with [scenario 54](#s54): Eventstream consumes a live Event Hub feed into `AzureDiagnosticsRaw`; mirroring exposes Log Analytics tables without copying them.
+
+### Watch-outs
+
+- During preview, Log Analytics table-level, row-level, and column-level protections do not carry into Fabric. Review Fabric workspace access before sharing the mirrored item.
+- The `_ResourceId`, `_SubscriptionId`, and `Type` system columns are not available in mirrored tables during preview.
+- Purging onboarded data requires separate Azure Monitor and OneLake purge operations.
+
+### Killer line
+> *"Mirroring puts operational and business data in one analytics plane without building an export pipeline or paying to store a second copy."*
+
+**References:** [Mirror Azure Monitor Data in Microsoft Fabric (Preview)](https://learn.microsoft.com/en-us/fabric/mirroring/catalog-mirroring/azure-monitor) and [configuration tutorial](https://learn.microsoft.com/en-us/fabric/mirroring/catalog-mirroring/azure-monitor-tutorial).
 
 ---
 
@@ -2619,7 +2659,7 @@ Fabric F2 bills while active. The lab makes lifecycle control part of the demo, 
 | **FinOps** | 9 → 11 → 20 → 21 → 39 → 42 → 51 → 52 |
 | **SecOps** | 27 → 47 → 48 → 49 → 44 |
 | **AI/ML curious** | 16 → 13 → 17 → 18 → 19 → 53 |
-| **Real-Time Intelligence** | 54 → 55 → 56 → 57 → 58 → 59 |
+| **Microsoft Fabric / Real-Time Intelligence** | 54 → 55 → 56 → 57 → 60 → 58 → 59 |
 | **Workload owners / SRE leads** | 1 → 45 → 12 → 7 → 8 (Root entity flips Unhealthy) |
 
 ## Reset between demos

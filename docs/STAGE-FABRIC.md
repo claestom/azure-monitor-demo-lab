@@ -206,6 +206,6 @@ For this sponsored lab tenant, the known working administrator format is `admin@
 
 ## Demo scenarios
 
-See scenarios 54 through 59 in [DEMO-SCENARIOS.md](DEMO-SCENARIOS.md).
+See scenarios 54 through 60 in [DEMO-SCENARIOS.md](DEMO-SCENARIOS.md), including the guided [Mirror Azure Monitor data](DEMO-SCENARIOS.md#s60) preview scenario.
 
 For staged Bicep deployment, deploy Stage Fabric before Stage E, or rerun `40-optional-advanced.bicep` with `enableFabric=true` afterward so the Real-Time Intelligence tier is added to the Health Model. Terraform enforces this dependency automatically.
