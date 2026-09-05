@@ -25,7 +25,7 @@ There's also an optional GenAI workload (off by default) that plugs into the sam
 
 > 📦 For a full, resource-by-resource list of what gets created, see [REFERENCE.md → What gets deployed](docs/REFERENCE.md#what-gets-deployed).
 
-[![Azure Monitor Demo Lab architecture - Azure-icon overview](docs/architecture-overview.svg)](docs/architecture.drawio)
+[![Azure Monitor Demo Lab architecture - Azure-icon overview](docs/architecture-overview.svg?v=2)](docs/architecture.drawio)
 
 > 🎨 Full Azure-icon diagram (editable): [docs/architecture.drawio](docs/architecture.drawio). Open it with [diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension. It has a per-tier overview plus a detail page for each pillar, including a dedicated AI / GenAI page.
 
