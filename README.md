@@ -100,8 +100,9 @@ Copy-Item lab.config.json.example lab.config.json
 notepad lab.config.json
 #    → edit the values, then save the file (Ctrl+S) and close Notepad before continuing
 #    → stageToggles.enableStageA-E are only used by the staged/Terraform paths; the
-#      one-shot deploy always deploys everything and can leave them untouched. Only
-#      stageToggles.enableStageAI matters here (it maps to main.bicep's enableAi param).
+#      one-shot deploy always deploys everything and can leave them untouched.
+#      enableStageAI deploys the optional Foundry resources, while
+#      enableStageSreAgent runs the post-deployment SRE Agent readiness handoff.
 
 # 3. Deploy (deploy.ps1 calls sync-config.ps1 for you)
 ./scripts/deploy.ps1
@@ -123,7 +124,7 @@ The pre-flight checks *availability and quota*, not *live service capacity*. Tra
 
 > Optional AI stage. An extra stage (off by default) adds a Microsoft Foundry GenAI workload (pinned to `swedencentral`) that emits token, trace, and cost telemetry, plus token-spike alerts and an AI FinOps query pack and workbook. Turn it on with `stageToggles.enableStageAI` (Bicep one-shot) or Terraform's `enable_stage_ai`, then run `./scripts/setup-ai.ps1` to create the demo agents and simulate traffic. Check the Model Router version for your region first (`az cognitiveservices account list-models`).
 
-> Optional SRE Agent evaluation. New eligible customers can use a 30-day waiver of the fixed always-on charge while active Azure Agent Unit usage remains billable. The lab hard pins the SRE Agent to `swedencentral`. Follow [Stage SRE Agent](docs/STAGE-SRE-AGENT.md) to create one trial agent, connect Azure Monitor, validate least-privilege access, and run scenarios 54 through 58.
+> Optional SRE Agent evaluation. Set `stageToggles.enableStageSreAgent` to `true` to run the post-deployment readiness handoff. New eligible customers can use a 30-day waiver of the fixed always-on charge while active Azure Agent Unit usage remains billable. The lab hard pins the SRE Agent to `swedencentral`. Follow [Stage SRE Agent](docs/STAGE-SRE-AGENT.md) to create one trial agent, connect Azure Monitor, validate least-privilege access, and run scenarios 54 through 58.
 
 ### Option 3: Staged workshop (progressive deployment)
 

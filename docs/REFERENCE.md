@@ -28,6 +28,7 @@ A self-contained, reproducible demo of the **Azure Monitor + Microsoft Sentinel*
 | **Granular RBAC** | 3 service principals scoped at workspace / table / row level (`setup-rbac-demo.ps1` + `demo-granular-rbac.ps1`). | [docs](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/manage-access) |
 | **Service Groups + Health Models (preview)** | `setup-health-model.ps1` provisions an Azure **Service Group** and links the RG. SLI/SLO scaffolding in `setup-slis.ps1`. | [docs](https://learn.microsoft.com/en-us/azure/azure-monitor/health-model) |
 | **GenAI observability (optional AI stage)** | Off-by-default Microsoft **Foundry** workload (account + project pinned to swedencentral) with chat / embedding / optimization / **model-router** deployments; OpenTelemetry `gen_ai.*` tracing into App Insights; **token anomaly + spike** alerts; an **AI FinOps** query pack + workbook; an AI tier folded into the workload health model; demo agents + traffic via `setup-ai.ps1`. | [docs](https://learn.microsoft.com/en-us/azure/ai-foundry/concepts/trace) · [stage](STAGE-AI.md) |
+| **Azure SRE Agent (optional trial)** | Off-by-default guided SRE Agent evaluation pinned to `swedencentral`; connects Azure Monitor alerts to specialized Review-mode investigators and validates managed identity RBAC with `setup-sre-agent.ps1`. | [docs](https://learn.microsoft.com/en-us/azure/sre-agent/azure-monitor-alerts) · [stage](STAGE-SRE-AGENT.md) |
 | **"Break the lab" + "Start the lab"** | Scripted incident injection (`break-the-lab.ps1`, `start-the-lab.ps1`, `start-ramp.ps1`) + one-shot restore (`restore-the-lab.ps1`). | — |
 
 ---
@@ -164,6 +165,7 @@ Same lab, broken into 5 progressive stages so you can pause for discussion after
 | **D — Security posture** | Monitor-native detections | Granular RBAC roles · control-plane drift / privilege escalation / exfil scheduled-query alerts | 27, 47, 48, 49 | 5–12 min | €0–15 |
 | **E — Optional advanced** | SOC + reliability previews | Microsoft Sentinel onboarding · search jobs + restore · Service Group + Health Model (preview) · SLIs/SLOs · data export · Prometheus rule group | 43, 44, 45, 46 | 10–20 min | €0–40 |
 | **AI — GenAI observability** *(optional, off)* | AI FinOps on Foundry | Microsoft Foundry account + project (swedencentral) · chat/embedding/optimization/model-router deployments · App Insights tracing · token anomaly + spike alerts · AI FinOps query pack + workbook · AI health tier · agents + traffic (`setup-ai.ps1`) | 53 | 10–15 min | billable models |
+| **SRE Agent (optional, off)** | AI-assisted incident response | Portal-created trial agent (swedencentral) · Azure Monitor incident platform · two Review-mode investigators · RBAC and readiness validation (`setup-sre-agent.ps1`) | 54-58 | 15-20 min | active AAUs; fixed charge waived during eligible trial |
 
 Walk-through docs:
 
@@ -172,7 +174,7 @@ Walk-through docs:
 - Per-stage speaker notes → [STAGE-A](STAGE-A-FOUNDATION.md) · [STAGE-B](STAGE-B-WORKLOADS.md) · [STAGE-C](STAGE-C-ALERTING.md) · [STAGE-D](STAGE-D-SECURITY-POSTURE.md) · [STAGE-E](STAGE-E-OPTIONAL-ADVANCED.md)
 - Customer handout (time + cost cheat sheet) → [CUSTOMER-STAGE-HANDOUT.md](CUSTOMER-STAGE-HANDOUT.md)
 
-> Stage A is mandatory; B/C/D/E layer on top, and **AI** is a fully optional, off-by-default add-on (depends only on Stage A). Both IaC paths (Bicep and Terraform) keep identical stage boundaries.
+> Stage A is mandatory; B/C/D/E layer on top, and **AI** is a fully optional, off-by-default add-on (depends only on Stage A). **SRE Agent** is also off by default and uses `enableStageSreAgent` only as a post-deployment readiness handoff because agent creation and trial activation occur in `sre.azure.com`. Both IaC paths keep identical infrastructure stage boundaries.
 
 ---
 

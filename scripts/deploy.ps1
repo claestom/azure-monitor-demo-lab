@@ -336,4 +336,16 @@ if ($aiEnabled) {
   }
 }
 
+# 7. Optional SRE Agent stage. Agent creation and trial activation are portal-only;
+#    this runs the guarded readiness check and prints the swedencentral handoff.
+$sreAgentEnabled = $false
+if ($null -ne $labCfg -and $null -ne $labCfg.stageToggles -and $null -ne $labCfg.stageToggles.enableStageSreAgent) {
+  $sreAgentEnabled = [bool]$labCfg.stageToggles.enableStageSreAgent
+}
+if ($sreAgentEnabled) {
+  Write-Step "SRE Agent stage enabled - validating readiness and printing the trial setup handoff"
+  $setupSreAgent = Join-Path $PSScriptRoot 'setup-sre-agent.ps1'
+  & $setupSreAgent -SubscriptionId $labCfg.subscriptionId -ResourceGroup $ResourceGroup
+}
+
 Write-Host "`n✅ Lab is up. See README.md for the demo flow." -ForegroundColor Green

@@ -31,7 +31,17 @@ References:
 
 ## 1. Validate the lab
 
-Run the read-only readiness check before creating the agent:
+Enable the stage in `lab.config.json`:
+
+```json
+"stageToggles": {
+  "enableStageSreAgent": true
+}
+```
+
+For a one-shot deployment, `deploy.ps1` runs the read-only SRE Agent readiness check after the lab and its telemetry are available. For staged Bicep or Terraform deployments, `post-staged-deploy.ps1` runs the same handoff. This toggle does not create a billable agent because creation and trial activation remain portal operations.
+
+You can also run the readiness check directly before creating the agent:
 
 ```powershell
 ./scripts/setup-sre-agent.ps1 `

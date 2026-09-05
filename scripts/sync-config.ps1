@@ -85,9 +85,11 @@ if ($enableLawReplication -and [string]::IsNullOrWhiteSpace($lawReplicationLocat
 }
 
 $stages = $cfg.stageToggles
-if ($null -eq $stages) { $stages = [pscustomobject]@{ enableStageA=$true; enableStageB=$true; enableStageC=$true; enableStageD=$true; enableStageE=$true; enableStageAI=$false } }
+if ($null -eq $stages) { $stages = [pscustomobject]@{ enableStageA=$true; enableStageB=$true; enableStageC=$true; enableStageD=$true; enableStageE=$true; enableStageAI=$false; enableStageSreAgent=$false } }
 # AI stage is optional and defaults off when absent from the config.
 $enableStageAI = if ($null -eq $stages.enableStageAI) { $false } else { [bool]$stages.enableStageAI }
+# SRE Agent is portal-created, so this orchestration toggle is not emitted as an IaC variable.
+$enableStageSreAgent = if ($null -eq $stages.enableStageSreAgent) { $false } else { [bool]$stages.enableStageSreAgent }
 
 # ---------------------------------------------------------------------------
 # Resolve target paths
@@ -180,3 +182,6 @@ Write-Host "✅ Config synced. Derived files (all gitignored):" -ForegroundColor
 Write-Host "   - $azureTargetPath" -ForegroundColor DarkGray
 Write-Host "   - $bicepParamsPath" -ForegroundColor DarkGray
 Write-Host "   - $tfVarsPath"      -ForegroundColor DarkGray
+if ($enableStageSreAgent) {
+  Write-Host "   - SRE Agent post-deployment handoff enabled (swedencentral)" -ForegroundColor DarkGray
+}

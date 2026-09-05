@@ -89,4 +89,19 @@ Write-Step "Provisioning demo SLI prerequisites"
 $setupSli = Join-Path $PSScriptRoot 'setup-slis.ps1'
 & $setupSli -ResourceGroup $ResourceGroup
 
+$labConfigPath = Join-Path $PSScriptRoot '..' 'lab.config.json'
+$sreAgentEnabled = $false
+if (Test-Path $labConfigPath) {
+  $labConfig = Get-Content -Raw $labConfigPath | ConvertFrom-Json
+  if ($null -ne $labConfig.stageToggles -and $null -ne $labConfig.stageToggles.enableStageSreAgent) {
+    $sreAgentEnabled = [bool]$labConfig.stageToggles.enableStageSreAgent
+  }
+}
+if ($sreAgentEnabled) {
+  Write-Step "SRE Agent stage enabled - validating readiness and printing the swedencentral trial setup handoff"
+  & (Join-Path $PSScriptRoot 'setup-sre-agent.ps1') `
+    -SubscriptionId $active.id `
+    -ResourceGroup $ResourceGroup
+}
+
 Write-Host "`nPost-staged deployment setup completed." -ForegroundColor Green

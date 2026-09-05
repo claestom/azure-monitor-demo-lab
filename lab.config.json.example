@@ -32,6 +32,7 @@
     "enableStageC": true,
     "enableStageD": true,
     "enableStageE": true,
-    "enableStageAI": false
+    "enableStageAI": false,
+    "enableStageSreAgent": false
   }
 }
