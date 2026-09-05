@@ -36,6 +36,7 @@ $iconPaths = @{
   foundry  = 'ai_machine_learning/AI_Foundry.svg'
   agents   = 'ai_machine_learning/Bot_Services.svg'
   router   = 'general/Gear.svg'
+  sre      = 'https://sre.azure.com/SreAgent.svg'
 }
 
 $repoRoot = Split-Path $PSScriptRoot -Parent
@@ -48,7 +49,8 @@ foreach ($k in $iconPaths.Keys) {
   $name = Split-Path $iconPaths[$k] -Leaf
   $dest = Join-Path $iconDir $name
   if (-not (Test-Path $dest)) {
-    Invoke-WebRequest "$base/$($iconPaths[$k])" -UseBasicParsing -OutFile $dest
+    $source = if ($iconPaths[$k] -match '^https://') { $iconPaths[$k] } else { "$base/$($iconPaths[$k])" }
+    Invoke-WebRequest $source -UseBasicParsing -OutFile $dest
   }
   $bytes = [IO.File]::ReadAllBytes($dest)
   $dataUri[$k] = 'data:image/svg+xml;base64,' + [Convert]::ToBase64String($bytes)
@@ -85,21 +87,22 @@ $nodes = [ordered]@{
   GRAF  = @{ col = 'USE';  i = 0; lines = @('Managed Grafana');                  icons = @('graf') }
   WB    = @{ col = 'USE';  i = 1; lines = @('Workbooks','Traffic Lights · Cost · AI FinOps'); icons = @('wb') }
   AG    = @{ col = 'USE';  i = 2; lines = @('Action Group','Alerts · AMBA · token spikes');     icons = @('ag') }
-  LOGIC = @{ col = 'USE';  i = 3; lines = @('Logic App','auto-mitigation');      icons = @('logic') }
-  SENT  = @{ col = 'USE';  i = 4; lines = @('Microsoft Sentinel');               icons = @('sent') }
-  HEALTH = @{ col = 'USE'; i = 5; lines = @('Health Models','workload health');  icons = @('health') }
+  SRE   = @{ col = 'USE';  i = 3; lines = @('Azure SRE Agent','incident response · optional'); icons = @('sre') }
+  LOGIC = @{ col = 'USE';  i = 4; lines = @('Logic App','auto-mitigation');      icons = @('logic') }
+  SENT  = @{ col = 'USE';  i = 5; lines = @('Microsoft Sentinel');               icons = @('sent') }
+  HEALTH = @{ col = 'USE'; i = 6; lines = @('Health Models','workload health');  icons = @('health') }
 }
 
 # --- edges (source -> target) ---------------------------------------------------------
 $edges = @(
   @('VM','AMA'), @('VMSS','AMA'), @('AKS','AMA'), @('AKS','AMW'), @('APP','AI'), @('NET','FLOW'), @('FDRY','AI'),
   @('AMA','LAW'), @('AMA','AMW'), @('FLOW','PLAT'), @('POL','LAW'), @('LAW','QUERY'), @('AI','LAWAI'), @('PLAT','LAW'),
-  @('LAW','WB'), @('LAWAI','WB'), @('AMW','GRAF'), @('LAW','AG'), @('AI','AG'), @('AG','LOGIC'), @('LAW','SENT'), @('LAW','HEALTH')
+  @('LAW','WB'), @('LAWAI','WB'), @('AMW','GRAF'), @('LAW','AG'), @('AI','AG'), @('AG','SRE'), @('AG','LOGIC'), @('LAW','SENT'), @('LAW','HEALTH')
 )
 
 # --- geometry -------------------------------------------------------------------------
-$W = 1320; $H = 680
-$grpY = 60; $grpH = 560
+$W = 1320; $H = 720
+$grpY = 60; $grpH = 644
 $cellH = 66; $cellStep = 84; $firstTop = 108
 function NodeTop($n) { $firstTop + ($n.i * $cellStep) }
 function ColOf($n)   { $cols[$n.col] }
