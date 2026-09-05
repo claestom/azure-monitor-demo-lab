@@ -25,6 +25,7 @@ Pick a workload (or theme) and run only those scenarios. Each row links to the n
 | **Security** | <ul><li>[27](#s27) Granular RBAC</li><li>[43](#s43) Sentinel</li><li>[44](#s44) Search jobs + Restore</li><li>[47](#s47) Control-plane drift watch</li><li>[48](#s48) Privilege escalation watch</li><li>[49](#s49) Exfil early warning</li></ul> |
 | **AI / ML in Azure Monitor** | <ul><li>[16](#s16) Copilot</li><li>[13](#s13) Smart Detection</li><li>[17](#s17) Dynamic Thresholds</li><li>[18](#s18) Code Optimizations</li><li>[19](#s19) Predictive autoscale</li></ul> |
 | **GenAI observability (optional AI stage)** | <ul><li>[53](#s53) AI FinOps — token / trace / cost</li></ul> |
+| **Azure SRE Agent (optional trial)** | <ul><li>[54](#s54) Trial readiness</li><li>[55](#s55) Alert-driven App Service investigation</li><li>[56](#s56) AKS crash-loop diagnosis</li><li>[57](#s57) Change correlation</li><li>[58](#s58) Alert merging and verified recovery</li></ul> |
 | **Platform foundations** | <ul><li>[5](#s5) Policy auto-onboard</li><li>[6](#s6) Cross-workspace KQL</li><li>[24](#s24) Custom Logs Ingestion API</li><li>[26](#s26) KQL Functions</li><li>[51](#s51) Platform logs at scale (DCR)</li></ul> |
 
 > **Suggested 25-min "by-workload" demos:** App Service → 3, 22, 28, 29, 33 · AKS → 4, 14, 30, 31 · Cost → 9, 11, 20, 39, 42 · Security → 27, 47, 48 · Workload health → 1 + 45 + 46.
@@ -2447,6 +2448,124 @@ Every other scenario watches infra/platform telemetry. This one points the **exa
 
 ---
 
+<a id="s54"></a>
+## 54 · Azure SRE Agent trial readiness
+
+**Audience:** SRE leads, operations teams, platform engineers.
+**Time:** 3 min.
+
+### Story
+Start with one known workload and a bounded cost envelope. The trial removes the fixed always-on charge for 30 days, but agent processing still consumes billable Azure Agent Units. The setup check proves that the agent can see the lab without granting broad write access.
+
+### Click-path / commands
+
+1. Run `./scripts/setup-sre-agent.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>`.
+2. In `sre.azure.com`, show the trial banner and its remaining days.
+3. Show that the agent location is **Sweden Central** (`swedencentral`), the lab's required SRE Agent region.
+4. Open **Settings > Agent consumption** and show the active-flow allocation and usage by thread.
+5. Run the setup script again with `-AgentPrincipalId <object-id>` and show the four role checks.
+6. Open **Builder > Incident platform** and show Azure Monitor connected to the lab subscription.
+
+### Killer line
+> *"The trial removes idle agent cost for 30 days, while this scope and consumption view keep every investigation deliberate, measurable, and attributable."*
+
+**Reference:** [Stage SRE Agent](STAGE-SRE-AGENT.md)
+
+---
+
+<a id="s55"></a>
+## 55 · Alert-driven App Service investigation
+
+**Audience:** application teams, incident commanders, SREs.
+**Time:** 5 min plus alert evaluation delay.
+
+### Story
+An Azure Monitor alert should begin an evidence-based investigation without an engineer opening several portal blades. The agent acknowledges the alert, opens a thread, and correlates App Service metrics with Application Insights telemetry.
+
+### Click-path / commands
+
+1. Confirm `amlab-app-alerts` is enabled in Review mode.
+2. Run `./scripts/break-the-lab.ps1 -ResourceGroup <resource-group>`.
+3. Wait for `alert-webapp-5xx` or `alert-appinsights-failed-requests` to fire.
+4. In the SRE Agent portal, open the new incident thread.
+5. Ask: `Which endpoint failed, when did impact begin, and what evidence supports the likely cause?`
+6. Point out evidence from App Service metrics plus Application Insights requests, exceptions, traces, or dependencies.
+
+### Killer line
+> *"The alert is no longer a notification. It is the start of a grounded investigation with the relevant telemetry already correlated."*
+
+---
+
+<a id="s56"></a>
+## 56 · AKS crash-loop diagnosis
+
+**Audience:** Kubernetes operators, platform teams, SREs.
+**Time:** 4 min.
+
+### Story
+The same break action gives the AKS frontend an invalid image and raises pod health signals. A specialized platform investigator follows the Kubernetes evidence instead of applying an App Service runbook to every incident.
+
+### Click-path / commands
+
+1. Keep the lab broken from scenario 55, or run `break-the-lab.ps1` again after restoring it.
+2. Wait for `alert-aks-pod-restart-spike` or `amba-aks-pods-not-ready` to fire.
+3. Open the SRE Agent investigation routed to `AMLab Platform Investigator`.
+4. Ask: `Identify the failing Kubernetes object and show the pod status, event, and log evidence.`
+5. Confirm that the agent inspects `KubePodInventory`, `ContainerLogV2`, Kubernetes events, and relevant metrics.
+6. Do not approve remediation yet.
+
+### Killer line
+> *"The response plan selects Kubernetes expertise automatically, while Review mode keeps resource changes under human control."*
+
+---
+
+<a id="s57"></a>
+## 57 · Correlate changes with the incident
+
+**Audience:** incident commanders, application owners, change managers.
+**Time:** 3 min.
+
+### Story
+Symptoms alone do not establish cause. The agent checks Activity Logs and release annotations around the first failure, then separates observed changes from its inference about causality.
+
+### Click-path / commands
+
+1. Continue in either investigation from scenarios 55 or 56.
+2. Ask: `What changed in the 15 minutes before this incident, and which change is most likely related? Separate evidence from inference.`
+3. Show the VM deallocation operations in Activity Logs.
+4. Show the `break-the-lab-*` incident annotation in Application Insights.
+5. Compare each timestamp with the first failed request and unhealthy pod signal.
+
+### Killer line
+> *"The agent does not merely find a nearby change. It builds a timestamped evidence chain and tells us how confident it is that the change caused the impact."*
+
+---
+
+<a id="s58"></a>
+## 58 · Repeated-alert merging and verified recovery
+
+**Audience:** operations leads, incident commanders, automation owners.
+**Time:** 5 min plus alert synchronization delay.
+
+### Story
+Repeated alert firings should enrich one active investigation instead of producing duplicate toil. Recovery is not complete until the original signals return to healthy.
+
+### Click-path / commands
+
+1. While the incident is active, generate another failure cycle by rerunning `break-the-lab.ps1`.
+2. Show that repeated firings from the same alert rule merge into the active thread.
+3. Run `./scripts/restore-the-lab.ps1 -ResourceGroup <resource-group>`.
+4. Ask: `Verify recovery using the original alert condition, application failure rate, and AKS pod health. Do not close the incident until all three are healthy.`
+5. Show the investigation timeline update and Azure Monitor alert state synchronization.
+6. Turn off both lab response plans after the demo to prevent expected alerts from consuming active-flow AAUs.
+
+### Killer line
+> *"One incident thread carries the signal from detection through diagnosis to measured recovery, without multiplying tickets every time the rule fires."*
+
+**Reference:** [Stage SRE Agent](STAGE-SRE-AGENT.md)
+
+---
+
 ## Updated demo flow (≈50 min)
 
 | Min | Scenario |
@@ -2488,6 +2607,7 @@ Every other scenario watches infra/platform telemetry. This one points the **exa
 | **SecOps** | 27 → 47 → 48 → 49 → 44 |
 | **AI/ML curious** | 16 → 13 → 17 → 18 → 19 → 53 |
 | **Workload owners / SRE leads** | 1 → 45 → 12 → 7 → 8 (Root entity flips Unhealthy) |
+| **SRE Agent evaluation** | 54 → 55 → 56 → 57 → 58 |
 
 ## Reset between demos
 

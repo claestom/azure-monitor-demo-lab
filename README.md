@@ -5,7 +5,7 @@ A self-contained demo of the Azure Monitor and Microsoft Sentinel stack. Everyth
 - One resource group: the whole lab lands in `rg-azure-monitor-lab`.
 - Two ways to deploy it: Bicep or Terraform.
 - Two ways to run it: one-shot for a quick internal demo, or a 5-stage workshop if you'd rather walk through it piece by piece.
-- 53 demo scenarios that cover Azure Monitor and Sentinel from end to end.
+- 58 demo scenarios that cover Azure Monitor, Sentinel, and Azure SRE Agent from end to end.
 
 It's built for demos, microhacks, and hackathons. Deploy it, poke around, break it, restore it, and tear it down.
 
@@ -123,6 +123,8 @@ The pre-flight checks *availability and quota*, not *live service capacity*. Tra
 
 > Optional AI stage. An extra stage (off by default) adds a Microsoft Foundry GenAI workload (pinned to `swedencentral`) that emits token, trace, and cost telemetry, plus token-spike alerts and an AI FinOps query pack and workbook. Turn it on with `stageToggles.enableStageAI` (Bicep one-shot) or Terraform's `enable_stage_ai`, then run `./scripts/setup-ai.ps1` to create the demo agents and simulate traffic. Check the Model Router version for your region first (`az cognitiveservices account list-models`).
 
+> Optional SRE Agent evaluation. New eligible customers can use a 30-day waiver of the fixed always-on charge while active Azure Agent Unit usage remains billable. The lab hard pins the SRE Agent to `swedencentral`. Follow [Stage SRE Agent](docs/STAGE-SRE-AGENT.md) to create one trial agent, connect Azure Monitor, validate least-privilege access, and run scenarios 54 through 58.
+
 ### Option 3: Staged workshop (progressive deployment)
 
 Use the staged approach when you want to pause between capabilities, walk through the lab with an audience, or deploy only the stages needed for a particular demo. Stages A to E can be toggled in `lab.config.json`, and the optional AI stage can be enabled separately after Stage A.
@@ -148,9 +150,9 @@ $rg = "rg-azure-monitor-lab"   # change this to the RG used for your deployment
 | Doc | What's in it |
 |---|---|
 | [REFERENCE.md](docs/REFERENCE.md) | Full capability matrix · every deployed resource · demo walkthrough · cost breakdown · folder layout · optional add-ons · troubleshooting |
-| [DEMO-SCENARIOS.md](docs/DEMO-SCENARIOS.md) | All 53 demo scenarios, each with a story, a click-path, and a "killer line", plus audience-pivoted shortlists |
+| [DEMO-SCENARIOS.md](docs/DEMO-SCENARIOS.md) | All 58 demo scenarios, each with a story, a click-path, and a "killer line", plus audience-pivoted shortlists |
 | [docs/DEPLOY-BICEP-STEP-BY-STEP.md](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md) | Staged deployment tutorials |
-| Stage notes: [A](docs/STAGE-A-FOUNDATION.md) · [B](docs/STAGE-B-WORKLOADS.md) · [C](docs/STAGE-C-ALERTING.md) · [D](docs/STAGE-D-SECURITY-POSTURE.md) · [E](docs/STAGE-E-OPTIONAL-ADVANCED.md) · [AI](docs/STAGE-AI.md) | Per-stage speaker notes (incl. the optional GenAI / AI FinOps stage) |
+| Stage notes: [A](docs/STAGE-A-FOUNDATION.md) · [B](docs/STAGE-B-WORKLOADS.md) · [C](docs/STAGE-C-ALERTING.md) · [D](docs/STAGE-D-SECURITY-POSTURE.md) · [E](docs/STAGE-E-OPTIONAL-ADVANCED.md) · [AI](docs/STAGE-AI.md) · [SRE Agent](docs/STAGE-SRE-AGENT.md) | Per-stage speaker notes, including optional AI FinOps and SRE Agent evaluation stages |
 | [docs/CUSTOMER-STAGE-HANDOUT.md](docs/CUSTOMER-STAGE-HANDOUT.md) | Per-stage time + cost cheat sheet |
 
 ## Contributing & license
