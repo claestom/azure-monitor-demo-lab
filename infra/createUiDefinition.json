@@ -315,7 +315,7 @@
             "type": "Microsoft.Common.TextBlock",
             "visible": "[equals(steps('advanced').enableSreAgent, true)]",
             "options": {
-              "text": "Azure SRE Agent uses a preview API, is pinned to swedencentral, and creates a subscription-scope Monitoring Contributor assignment for its connector identity. Delete the agent before the trial ends if you do not intend to continue with paid usage. Custom investigators and response plans are configured after deployment."
+              "text": "Azure SRE Agent uses a preview API, is pinned to swedencentral, and creates a subscription-scope Monitoring Contributor assignment for its connector identity. After deployment, run ./scripts/setup-sre-agent.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group> to validate the agent and print its portal URL. Delete the agent before the trial ends if you do not intend to continue with paid usage. Custom investigators and response plans are configured after deployment."
             }
           }
         ]

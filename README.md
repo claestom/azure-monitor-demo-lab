@@ -59,7 +59,7 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 | **Basics** | Resource group (recommended `rg-azure-monitor-lab`), Region (recommended `northeurope`), name prefix, alert email, VM admin username + password |
 | **Workloads** | Deploy Linux/Windows VMs, VM size, AKS node size + count |
 | **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
-| **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook, optional AI stage |
+| **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook, optional AI and SRE Agent stages |
 
 After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The Cloud Shell wrapper discovers the deployed resources, publishes the App Service sample, and installs the AKS, Health Model, and SLI demo components without requiring optional Azure CLI extensions:
 
@@ -82,6 +82,14 @@ The optional AI stage deploys Microsoft Foundry and four billable model deployme
 
 ```powershell
 ./scripts/setup-ai-cloud-shell.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
+```
+
+If you enabled the optional SRE Agent stage, run its setup script to validate the agent, connectors, managed identity, region, and RBAC, and to print the SRE Agent portal URL:
+
+```powershell
+./scripts/setup-sre-agent.ps1 `
+	-SubscriptionId <subscription-id> `
+	-ResourceGroup <resource-group>
 ```
 
 > Use Option 2 for a scripted one-shot deployment, or Option 3 for the staged workshop and progressive deployment.
