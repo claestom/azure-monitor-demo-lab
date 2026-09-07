@@ -2463,7 +2463,7 @@ Start with one known workload and a bounded cost envelope. The trial removes the
 2. In `sre.azure.com`, show the trial banner and its remaining days.
 3. Show that the agent location is **Sweden Central** (`swedencentral`), the lab's required SRE Agent region.
 4. Open **Settings > Agent consumption** and show the active-flow allocation and usage by thread.
-5. Run the setup script again with `-AgentPrincipalId <object-id>` and show the four role checks.
+5. Run the setup script again without `-AgentPrincipalId`; it discovers the agent's user-assigned identity automatically. Show the three action-UAMI checks and four connector-system-identity checks. To show the UAMI object ID manually, open **Settings > Azure settings > Go to Identity**, then copy **Object (principal) ID** from the identity Overview page.
 6. Open **Builder > Incident platform** and show Azure Monitor connected to the lab subscription.
 
 ### Killer line
