@@ -174,6 +174,7 @@ $tfLines = @(
   "enable_stage_d = $((($stages.enableStageD -as [bool]).ToString()).ToLower())"
   "enable_stage_e = $((($stages.enableStageE -as [bool]).ToString()).ToLower())"
   "enable_stage_ai = $($enableStageAI.ToString().ToLower())"
+  "enable_stage_sre_agent = $($enableStageSreAgent.ToString().ToLower())"
 )
 Set-Content -Path $tfVarsPath -Value ($tfLines -join "`r`n") -Encoding UTF8
 Write-Done "OK"

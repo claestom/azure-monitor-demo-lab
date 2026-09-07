@@ -38,6 +38,12 @@ enable_stage_ai      = false            # AI (Foundry + models + token alerts)
 ai_location          = "swedencentral"  # region for the Foundry account + models
 router_model_version = "2025-08-07"     # VERIFY: az cognitiveservices account list-models
 
+# Optional SRE Agent stage - preview Azure SRE Agent, connectors, identities, and RBAC.
+# Hard pinned to swedencentral by the Stage 60 Bicep module; depends on Stage A.
+# Off by default because active usage is billable and always-on billing can begin
+# after an eligible trial. The deploying identity needs subscription role-assignment permission.
+enable_stage_sre_agent = false
+
 # Optional preview/GA telemetry features (part of Stage E). Off by default because
 # the DCR and the central LAW must be in the same region and the platform-logs DCR
 # is still in public preview (region-limited). Flip to true once you've confirmed

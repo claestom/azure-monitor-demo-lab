@@ -76,6 +76,7 @@ Use this matrix in customer sessions so Terraform users see exactly what each ap
 4. Stage D: scenarios 47/48/49 query outputs are non-empty and alert rules evaluate.
 5. Stage E: optional Sentinel/health/SLI capabilities are reachable and testable.
 6. Stage AI: Foundry model deployments exist, App Insights receives AI telemetry, and the AI FinOps queries return data after `setup-ai.ps1` runs.
+7. Stage SRE Agent: the agent is in `swedencentral`, all three connectors are configured, and identity-specific RBAC validation passes.
 
 ## 5) Terraform scaffold (orchestrating staged ARM/Bicep)
 
@@ -89,6 +90,7 @@ This repo ships a working staged Terraform scaffold at `terraform/` and pre-comp
 | `enable_stage_d` | `infra/stages/30-security-posture.json` |
 | `enable_stage_e` | `infra/stages/40-optional-advanced.json` |
 | `enable_stage_ai` | `infra/stages/50-ai.json` |
+| `enable_stage_sre_agent` | `infra/stages/60-sre-agent.json` |
 
 Each toggle gates its own `azapi_resource "Microsoft.Resources/deployments@2022-09-01"` block, so flipping a flag truly adds or removes only that stage's deployment.
 
@@ -110,6 +112,7 @@ az bicep build --file infra/stages/20-alerting.bicep          --outfile infra/st
 az bicep build --file infra/stages/30-security-posture.bicep  --outfile infra/stages/30-security-posture.json
 az bicep build --file infra/stages/40-optional-advanced.bicep --outfile infra/stages/40-optional-advanced.json
 az bicep build --file infra/stages/50-ai.bicep               --outfile infra/stages/50-ai.json
+az bicep build --file infra/stages/60-sre-agent.bicep        --outfile infra/stages/60-sre-agent.json
 ```
 
 The legacy `infra/main.bicep` continues to work unchanged for the original Bicep-only deployment path.
@@ -121,8 +124,8 @@ The legacy `infra/main.bicep` continues to work unchanged for the original Bicep
 The shipped files already contain the staged wiring described above. Open them and confirm:
 
 - `terraform/providers.tf` declares `azurerm ~> 4.0` and `azapi ~> 2.0` and threads `subscription_id` through both providers.
-- `terraform/variables.tf` declares the five stage toggles plus shared inputs (`subscription_id`, `resource_group_name` (default `rg-azure-monitor-lab`), `location`, `alert_email`, `vm_admin_password`, etc.).
-- `terraform/main.tf` declares one `data "azurerm_resource_group"` (BYO RG, looked up by name) plus five `azapi_resource` deployments, each guarded by its own stage toggle.
+- `terraform/variables.tf` declares seven stage toggles plus shared inputs (`subscription_id`, `resource_group_name` (default `rg-azure-monitor-lab`), `location`, `alert_email`, `vm_admin_password`, etc.).
+- `terraform/main.tf` declares one `data "azurerm_resource_group"` (BYO RG, looked up by name) plus seven `azapi_resource` deployments, each guarded by its own stage toggle.
 
 ### Step 2 - Set inputs in `terraform/stages.tfvars`
 
@@ -134,7 +137,7 @@ notepad lab.config.json   # fill in subscriptionId, tenantId, alertEmail, vmAdmi
 ./scripts/sync-config.ps1 # regenerates terraform/stages.tfvars + .azure-target.json + infra/main.parameters.json
 ```
 
-`scripts/sync-config.ps1` writes `terraform/stages.tfvars` from your central config, including the five stage toggles. Re-run it any time you change `lab.config.json` (e.g. to flip the next stage).
+`scripts/sync-config.ps1` writes `terraform/stages.tfvars` from your central config, including all seven stage toggles. Re-run it any time you change `lab.config.json` (e.g. to flip the next stage).
 
 **Or hand-edit `terraform/stages.tfvars` directly** (skip `sync-config.ps1`; the file is gitignored):
 
@@ -224,9 +227,25 @@ The AI stage creates the Foundry account, project, four model deployments, App I
 
 ### Optional SRE Agent stage
 
-The repository's Terraform path does not define `Microsoft.App/agents`; the `enableStageSreAgent` toggle applies only to the one-shot Bicep path. Use `scripts/deploy.ps1` for native SRE Agent deployment, or create an equivalent agent in `swedencentral` manually after Terraform deployment.
+Terraform deploys the compiled Stage 60 Bicep template through AzAPI. The stage depends on Stage A, remains off by default, and hard pins the SRE Agent to `swedencentral`. Enable it in `stages.tfvars`:
 
-After manually creating the agent for a Terraform-based lab, run:
+```hcl
+enable_stage_sre_agent = true
+```
+
+The deploying identity needs Owner or User Access Administrator at subscription scope because Stage 60 grants the agent connector identity Monitoring Contributor. Review the plan, apply it, and validate the deployed agent:
+
+```powershell
+terraform plan -var-file stages.tfvars
+terraform apply -var-file stages.tfvars
+./scripts/setup-sre-agent.ps1 -SubscriptionId $sub -ResourceGroup $rg
+```
+
+The stage creates the preview `Microsoft.App/agents` resource, managed identities, Azure Monitor, Application Insights, and Log Analytics connectors, and required RBAC. Active usage is billable and always-on billing can begin after an eligible trial.
+
+> Setting `enable_stage_sre_agent = false` or running `terraform destroy` removes the ARM deployment record but does not delete resources created by that nested deployment. Run `./scripts/teardown.ps1 -ResourceGroup $rg` or delete the SRE Agent explicitly before the trial ends to stop billing.
+
+For a full staged lab where Stages A and B are already complete, the normal post-deployment command also runs SRE Agent validation when `enableStageSreAgent` is true in `lab.config.json`:
 
 ```powershell
 ./scripts/post-staged-deploy.ps1 -ResourceGroup $rg
@@ -278,7 +297,7 @@ For each stage:
 
 ## 10) Tearing down the lab
 
-The resource group is BYO (Terraform does not own it via data source), so `terraform destroy` alone will not cascade-delete the LAWs, VMs, AKS, alerts, etc. — it only removes the five staged deployment records. Use Option A.
+The resource group is BYO (Terraform does not own it via data source), so `terraform destroy` alone will not cascade-delete the LAWs, VMs, AKS, alerts, etc. - it only removes the seven staged deployment records. Use Option A.
 
 ### Option A - run the teardown wrapper (recommended)
 
