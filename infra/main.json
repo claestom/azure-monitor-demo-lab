@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "6028420974919139294"
+      "templateHash": "10241531938807643131"
     }
   },
   "parameters": {
@@ -149,6 +149,13 @@
         "description": "Enable the optional AI stage — Microsoft Foundry workload (account, project, chat/embed/optimize/model-router deployments) + App Insights connection + token alerts + query pack/workbook/health model. Off by default (billable models, region-limited)."
       }
     },
+    "enableSreAgent": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Deploy Azure SRE Agent in Sweden Central with Azure Monitor, Application Insights, and Log Analytics connectors. Off by default (billable usage)."
+      }
+    },
     "routerModelVersion": {
       "type": "string",
       "defaultValue": "2025-08-07",
@@ -186,6 +193,7 @@
     "sliUamiName": "[format('id-sli-{0}', parameters('namePrefix'))]",
     "platformLogsDcrName": "[format('dcr-{0}-platformlogs', parameters('namePrefix'))]",
     "metricsExportDcrName": "[format('dcr-{0}-metricsexport', parameters('namePrefix'))]",
+    "sreAgentName": "[format('sre-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
     "aiLocation": "swedencentral",
     "appServiceLocation": "westeurope",
     "commonTags": {
@@ -646,7 +654,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "8128719559614570963"
+              "templateHash": "4105218306251594533"
             }
           },
           "parameters": {
@@ -702,6 +710,10 @@
               "type": "string",
               "value": "[parameters('name')]"
             },
+            "appId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').AppId]"
+            },
             "instrumentationKey": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Insights/components', parameters('name')), '2020-02-02').InstrumentationKey]"
@@ -715,6 +727,410 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Resources/deployments', 'law-appinsights')]"
+      ]
+    },
+    {
+      "condition": "[parameters('enableSreAgent')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "sre-agent",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "name": {
+            "value": "[variables('sreAgentName')]"
+          },
+          "appInsightsId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.id.value]"
+          },
+          "appInsightsAppId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.appId.value]"
+          },
+          "appInsightsConnectionString": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'appi'), '2022-09-01').outputs.connectionString.value]"
+          },
+          "logAnalyticsId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'law-central'), '2022-09-01').outputs.id.value]"
+          },
+          "managedResourceGroupId": {
+            "value": "[resourceGroup().id]"
+          },
+          "tags": {
+            "value": "[variables('commonTags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "677787519081786153"
+            }
+          },
+          "parameters": {
+            "name": {
+              "type": "string",
+              "metadata": {
+                "description": "SRE Agent resource name."
+              }
+            },
+            "appInsightsId": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights resource ID used by the agent connector and telemetry."
+              }
+            },
+            "appInsightsAppId": {
+              "type": "string",
+              "metadata": {
+                "description": "Application Insights application ID."
+              }
+            },
+            "appInsightsConnectionString": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Application Insights connection string."
+              }
+            },
+            "logAnalyticsId": {
+              "type": "string",
+              "metadata": {
+                "description": "Log Analytics workspace resource ID used by the agent connector."
+              }
+            },
+            "managedResourceGroupId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource group ID the agent can investigate."
+              }
+            },
+            "tags": {
+              "type": "object",
+              "defaultValue": {},
+              "metadata": {
+                "description": "Resource tags."
+              }
+            }
+          },
+          "variables": {
+            "location": "swedencentral"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2024-11-30",
+              "name": "[format('id-{0}', parameters('name'))]",
+              "location": "[variables('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "isolationScope": "Regional"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('managedResourceGroupId'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), '2024-11-30').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('managedResourceGroupId'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), '2024-11-30').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('managedResourceGroupId'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), '73c42c96-874c-492b-b04d-ab87d138a893')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '73c42c96-874c-492b-b04d-ab87d138a893')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), '2024-11-30').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/agents",
+              "apiVersion": "2025-05-01-preview",
+              "name": "[parameters('name')]",
+              "location": "[variables('location')]",
+              "tags": "[union(parameters('tags'), createObject('hidden-link: /app-insights-resource-id', parameters('appInsightsId')))]",
+              "identity": {
+                "type": "SystemAssigned, UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))))]": {}
+                }
+              },
+              "properties": {
+                "knowledgeGraphConfiguration": {
+                  "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name')))]",
+                  "managedResources": [
+                    "[parameters('managedResourceGroupId')]"
+                  ]
+                },
+                "actionConfiguration": {
+                  "accessLevel": "Low",
+                  "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name')))]",
+                  "mode": "Review"
+                },
+                "logConfiguration": {
+                  "applicationInsightsConfiguration": {
+                    "appId": "[parameters('appInsightsAppId')]",
+                    "connectionString": "[parameters('appInsightsConnectionString')]"
+                  }
+                },
+                "upgradeChannel": "Preview",
+                "monthlyAgentUnitLimit": 1000,
+                "defaultModel": {
+                  "provider": "MicrosoftFoundry",
+                  "name": "Automatic"
+                },
+                "experimentalSettings": {
+                  "EnableWorkspaceTools": true
+                },
+                "incidentManagementConfiguration": {
+                  "type": "AzMonitor",
+                  "connectionName": "azmonitor"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name')))]",
+                "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('managedResourceGroupId'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), '73c42c96-874c-492b-b04d-ab87d138a893'))]",
+                "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('managedResourceGroupId'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), '43d0d8ad-25c7-4714-9337-8ba259a9fe05'))]",
+                "[resourceId('Microsoft.Authorization/roleAssignments', guid(parameters('managedResourceGroupId'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), 'acdd72a7-3385-48ef-bd42-f606fba81ae7'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('managedResourceGroupId'), resourceId('Microsoft.App/agents', parameters('name')), 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+                "principalId": "[reference(resourceId('Microsoft.App/agents', parameters('name')), '2025-05-01-preview', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/agents', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('managedResourceGroupId'), resourceId('Microsoft.App/agents', parameters('name')), '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
+                "principalId": "[reference(resourceId('Microsoft.App/agents', parameters('name')), '2025-05-01-preview', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/agents', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(parameters('managedResourceGroupId'), resourceId('Microsoft.App/agents', parameters('name')), '73c42c96-874c-492b-b04d-ab87d138a893')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '73c42c96-874c-492b-b04d-ab87d138a893')]",
+                "principalId": "[reference(resourceId('Microsoft.App/agents', parameters('name')), '2025-05-01-preview', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/agents', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.App/agents/{0}', parameters('name'))]",
+              "name": "[guid(resourceId('Microsoft.App/agents', parameters('name')), deployer().objectId, 'e79298df-d852-4c6d-84f9-5d13249d1e55')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'e79298df-d852-4c6d-84f9-5d13249d1e55')]",
+                "principalId": "[deployer().objectId]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/agents', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.App/agents/{0}', parameters('name'))]",
+              "name": "[guid(resourceId('Microsoft.App/agents', parameters('name')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), 'e79298df-d852-4c6d-84f9-5d13249d1e55')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'e79298df-d852-4c6d-84f9-5d13249d1e55')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), '2024-11-30').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/agents', parameters('name'))]",
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/agents/connectors",
+              "apiVersion": "2025-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'app-insights')]",
+              "properties": {
+                "dataConnectorType": "AppInsights",
+                "dataSource": "[parameters('appInsightsId')]",
+                "extendedProperties": {
+                  "armResourceId": "[parameters('appInsightsId')]",
+                  "resource": {
+                    "name": "[last(split(parameters('appInsightsId'), '/'))]"
+                  },
+                  "appId": "[parameters('appInsightsAppId')]"
+                },
+                "identity": "system"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/agents', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/agents/connectors",
+              "apiVersion": "2025-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'log-analytics')]",
+              "properties": {
+                "dataConnectorType": "LogAnalytics",
+                "dataSource": "[parameters('logAnalyticsId')]",
+                "extendedProperties": {
+                  "armResourceId": "[parameters('logAnalyticsId')]",
+                  "resource": {
+                    "name": "[last(split(parameters('logAnalyticsId'), '/'))]"
+                  }
+                },
+                "identity": "system"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/agents', parameters('name'))]",
+                "[resourceId('Microsoft.App/agents/connectors', parameters('name'), 'app-insights')]"
+              ]
+            },
+            {
+              "type": "Microsoft.App/agents/connectors",
+              "apiVersion": "2025-05-01-preview",
+              "name": "[format('{0}/{1}', parameters('name'), 'azure-monitor')]",
+              "properties": {
+                "dataConnectorType": "AzureMonitor",
+                "dataSource": "[subscription().id]",
+                "extendedProperties": {
+                  "armResourceId": "[subscription().id]",
+                  "lookbackDays": 7
+                },
+                "identity": "system"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.App/agents', parameters('name'))]",
+                "[resourceId('Microsoft.App/agents/connectors', parameters('name'), 'log-analytics')]"
+              ]
+            }
+          ],
+          "outputs": {
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.App/agents', parameters('name'))]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('id-{0}', parameters('name'))), '2024-11-30').principalId]"
+            },
+            "systemPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/agents', parameters('name')), '2025-05-01-preview', 'full').identity.principalId]"
+            },
+            "endpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/agents', parameters('name')), '2025-05-01-preview').agentEndpoint]"
+            },
+            "portalUrl": {
+              "type": "string",
+              "value": "[format('https://sre.azure.com/#/agent/{0}/{1}/{2}', subscription().subscriptionId, resourceGroup().name, parameters('name'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'appi')]",
+        "[resourceId('Microsoft.Resources/deployments', 'law-central')]"
+      ]
+    },
+    {
+      "condition": "[parameters('enableSreAgent')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "sre-agent-subscription-rbac",
+      "subscriptionId": "[subscription().subscriptionId]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "principalId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sre-agent'), '2022-09-01').outputs.systemPrincipalId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.37.4.10188",
+              "templateHash": "3894281302565352484"
+            }
+          },
+          "parameters": {
+            "principalId": {
+              "type": "string",
+              "metadata": {
+                "description": "System-assigned principal ID of the Azure SRE Agent connector identity."
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(subscription().id, parameters('principalId'), '43bfe7e3-6883-4a1e-b686-33a7fe5db0c7')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43bfe7e3-6883-4a1e-b686-33a7fe5db0c7')]",
+                "principalId": "[parameters('principalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'sre-agent')]"
       ]
     },
     {
@@ -4675,7 +5091,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "1558985903203888194"
+              "templateHash": "12797549386778543231"
             }
           },
           "parameters": {
@@ -4713,18 +5129,18 @@
             }
           },
           "variables": {
-            "trafficLightsQuery": "let lookback = 15m;\r\nlet nowT = now();\r\nlet vm = Heartbeat\r\n  | where TimeGenerated > ago(1h)\r\n  | summarize LastBeat = max(TimeGenerated) by Computer, OSType\r\n  | extend SecondsSince = datetime_diff(\"second\", nowT, LastBeat)\r\n  | extend Status = case(SecondsSince <= 300, \"🟢\", SecondsSince <= 900, \"🟠\", \"🔴\")\r\n  | project ResourceType = strcat(\"VM (\", OSType, \")\"), Resource = Computer, Status,\r\n            Detail = strcat(\"Last heartbeat \", SecondsSince, \"s ago\");\r\nlet aksNodes = Perf\r\n  | where TimeGenerated > ago(15m)\r\n  | where ObjectName == \"K8SNode\" and CounterName == \"cpuUsageNanoCores\"\r\n  | summarize LastSample = max(TimeGenerated) by Computer\r\n  | summarize Total = count();\r\nlet aksRestarts = toscalar(KubePodInventory\r\n  | where TimeGenerated > ago(15m)\r\n  | summarize MaxRestarts = max(toint(ContainerRestartCount)) by Namespace, Name\r\n  | summarize Restarts = sum(MaxRestarts)\r\n  | project Restarts);\r\nlet aks = aksNodes\r\n  | extend Restarts = aksRestarts\r\n  | extend Status = case(Total == 0, \"🔴\", Restarts > 5, \"🟠\", \"🟢\")\r\n  | extend Detail = strcat(Total, \" nodes reporting · \", Restarts, \" restarts (15m)\")\r\n  | project ResourceType = \"AKS Cluster\", Resource = \"aks\", Status, Detail;\r\nlet app = AppServiceHTTPLogs\r\n  | where TimeGenerated > ago(15m)\r\n  | summarize FiveXX = countif(ScStatus >= 500), Total = count() by _ResourceId\r\n  | extend Status = case(FiveXX >= 5, \"🔴\", FiveXX > 0, \"🟠\", \"🟢\")\r\n  | extend ResourceType = \"App Service\", Resource = tostring(split(_ResourceId, \"/\")[8])\r\n  | project ResourceType, Resource, Status, Detail = strcat(Total, \" req · \", FiveXX, \" 5xx (15m)\");\r\nlet appi = workspace(\"__APPI_LAW__\").AppRequests\r\n  | where TimeGenerated > ago(15m)\r\n  | summarize Total = count(), Failed = countif(Success == false)\r\n  | extend Status = case(Failed >= 10, \"🔴\", Failed > 0, \"🟠\", \"🟢\")\r\n  | project ResourceType = \"App Insights\", Resource = \"appi\", Status,\r\n            Detail = strcat(Total, \" requests · \", Failed, \" failed (15m)\");\r\nunion isfuzzy=true vm, aks, app, appi\r\n| extend SortKey = case(Status == \"🔴\", 0, Status == \"🟠\", 1, 2)\r\n| order by SortKey asc, ResourceType asc\r\n| project-away SortKey\r\n",
+            "trafficLightsQuery": "let lookback = 15m;\nlet nowT = now();\nlet vm = Heartbeat\n  | where TimeGenerated > ago(1h)\n  | summarize LastBeat = max(TimeGenerated) by Computer, OSType\n  | extend SecondsSince = datetime_diff(\"second\", nowT, LastBeat)\n  | extend Status = case(SecondsSince <= 300, \"🟢\", SecondsSince <= 900, \"🟠\", \"🔴\")\n  | project ResourceType = strcat(\"VM (\", OSType, \")\"), Resource = Computer, Status,\n            Detail = strcat(\"Last heartbeat \", SecondsSince, \"s ago\");\nlet aksNodes = Perf\n  | where TimeGenerated > ago(15m)\n  | where ObjectName == \"K8SNode\" and CounterName == \"cpuUsageNanoCores\"\n  | summarize LastSample = max(TimeGenerated) by Computer\n  | summarize Total = count();\nlet aksRestarts = toscalar(KubePodInventory\n  | where TimeGenerated > ago(15m)\n  | summarize MaxRestarts = max(toint(ContainerRestartCount)) by Namespace, Name\n  | summarize Restarts = sum(MaxRestarts)\n  | project Restarts);\nlet aks = aksNodes\n  | extend Restarts = aksRestarts\n  | extend Status = case(Total == 0, \"🔴\", Restarts > 5, \"🟠\", \"🟢\")\n  | extend Detail = strcat(Total, \" nodes reporting · \", Restarts, \" restarts (15m)\")\n  | project ResourceType = \"AKS Cluster\", Resource = \"aks\", Status, Detail;\nlet app = AppServiceHTTPLogs\n  | where TimeGenerated > ago(15m)\n  | summarize FiveXX = countif(ScStatus >= 500), Total = count() by _ResourceId\n  | extend Status = case(FiveXX >= 5, \"🔴\", FiveXX > 0, \"🟠\", \"🟢\")\n  | extend ResourceType = \"App Service\", Resource = tostring(split(_ResourceId, \"/\")[8])\n  | project ResourceType, Resource, Status, Detail = strcat(Total, \" req · \", FiveXX, \" 5xx (15m)\");\nlet appi = workspace(\"__APPI_LAW__\").AppRequests\n  | where TimeGenerated > ago(15m)\n  | summarize Total = count(), Failed = countif(Success == false)\n  | extend Status = case(Failed >= 10, \"🔴\", Failed > 0, \"🟠\", \"🟢\")\n  | project ResourceType = \"App Insights\", Resource = \"appi\", Status,\n            Detail = strcat(Total, \" requests · \", Failed, \" failed (15m)\");\nunion isfuzzy=true vm, aks, app, appi\n| extend SortKey = case(Status == \"🔴\", 0, Status == \"🟠\", 1, 2)\n| order by SortKey asc, ResourceType asc\n| project-away SortKey\n",
             "queryFinal": "[replace(variables('trafficLightsQuery'), '__APPI_LAW__', parameters('appInsightsLawName'))]",
-            "summaryTilesQuery": "[replace('let vmsOnline = toscalar(Heartbeat | where TimeGenerated > ago(5m) | summarize dcount(Computer));\r\nlet aksReady = toscalar(Perf | where TimeGenerated > ago(15m) | where ObjectName == \"K8SNode\" and CounterName == \"cpuUsageNanoCores\" | summarize dcount(Computer));\r\nlet totalReqs = toscalar(workspace(\"__APPI_LAW__\").AppRequests | where TimeGenerated > ago(1h) | summarize count());\r\nlet failedReqs = toscalar(workspace(\"__APPI_LAW__\").AppRequests | where TimeGenerated > ago(1h) | where Success == false | summarize count());\r\nlet avgLatency = toscalar(workspace(\"__APPI_LAW__\").AppRequests | where TimeGenerated > ago(1h) | summarize round(avg(DurationMs), 0));\r\nlet ingestMB = toscalar(Usage | where TimeGenerated > startofday(now()) | summarize round(sum(Quantity), 1));\r\nprint a=1\r\n| project Metric  = pack_array(\"💻 VMs Online\", \"☸️ AKS Nodes\", \"🌐 Requests (1h)\", \"❌ Failed (1h)\", \"⏱️ Avg Latency\", \"📦 Ingest Today\"),\r\n          Value   = pack_array(toreal(vmsOnline), toreal(aksReady), toreal(totalReqs), toreal(failedReqs), toreal(avgLatency), toreal(ingestMB)),\r\n          Suffix  = pack_array(\"\", \"\", \"\", \"\", \"ms\", \"MB\")\r\n| mv-expand Metric to typeof(string), Value to typeof(real), Suffix to typeof(string)\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
-            "vmCpuQuery": "InsightsMetrics\r\n| where Namespace == \"Processor\" and Name == \"UtilizationPercentage\"\r\n| summarize AvgCPU = round(avg(Val), 1) by bin(TimeGenerated, 5m), Computer\r\n| render timechart\r\n",
-            "vmMemoryQuery": "InsightsMetrics\r\n| where Namespace == \"Memory\" and Name == \"AvailableMB\"\r\n| summarize AvailMB = round(avg(Val), 0) by bin(TimeGenerated, 5m), Computer\r\n| render timechart\r\n",
-            "aksNodeCpuQuery": "Perf\r\n| where ObjectName == \"K8SNode\" and CounterName == \"cpuUsageNanoCores\"\r\n| summarize CPU_millicores = round(avg(CounterValue / 1000000.0), 0) by bin(TimeGenerated, 5m), Computer\r\n| render timechart\r\n",
-            "aksPodRestartsQuery": "KubePodInventory\r\n| summarize MaxRestarts = max(toint(ContainerRestartCount)) by Name, bin(TimeGenerated, 5m)\r\n| summarize TotalRestarts = sum(MaxRestarts) by bin(TimeGenerated, 5m)\r\n| render areachart\r\n",
-            "responseTimeQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\r\n| summarize P50 = percentile(DurationMs, 50), P95 = percentile(DurationMs, 95), P99 = percentile(DurationMs, 99) by bin(TimeGenerated, 5m)\r\n| render timechart\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
-            "slowestOpsQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\r\n| summarize AvgDuration = round(avg(DurationMs), 1), Requests = count() by OperationName\r\n| top 10 by AvgDuration desc\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
-            "appiDetailQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\r\n| summarize Failed = countif(Success == false), OK = countif(Success == true) by bin(TimeGenerated, 5m)\r\n| render timechart\r\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
-            "alertActivityQuery": "AzureActivity\r\n| where CategoryValue == \"Alert\"\r\n| project TimeGenerated, Operation = OperationNameValue, Status = ActivityStatusValue, Caller\r\n| order by TimeGenerated desc\r\n| take 25\r\n",
-            "dataIngestionQuery": "Usage\r\n| summarize IngestedMB = round(sum(Quantity), 2) by DataType\r\n| where IngestedMB > 0.01\r\n| top 15 by IngestedMB desc\r\n| render barchart\r\n",
+            "summaryTilesQuery": "[replace('let vmsOnline = toscalar(Heartbeat | where TimeGenerated > ago(5m) | summarize dcount(Computer));\nlet aksReady = toscalar(Perf | where TimeGenerated > ago(15m) | where ObjectName == \"K8SNode\" and CounterName == \"cpuUsageNanoCores\" | summarize dcount(Computer));\nlet totalReqs = toscalar(workspace(\"__APPI_LAW__\").AppRequests | where TimeGenerated > ago(1h) | summarize count());\nlet failedReqs = toscalar(workspace(\"__APPI_LAW__\").AppRequests | where TimeGenerated > ago(1h) | where Success == false | summarize count());\nlet avgLatency = toscalar(workspace(\"__APPI_LAW__\").AppRequests | where TimeGenerated > ago(1h) | summarize round(avg(DurationMs), 0));\nlet ingestMB = toscalar(Usage | where TimeGenerated > startofday(now()) | summarize round(sum(Quantity), 1));\nprint a=1\n| project Metric  = pack_array(\"💻 VMs Online\", \"☸️ AKS Nodes\", \"🌐 Requests (1h)\", \"❌ Failed (1h)\", \"⏱️ Avg Latency\", \"📦 Ingest Today\"),\n          Value   = pack_array(toreal(vmsOnline), toreal(aksReady), toreal(totalReqs), toreal(failedReqs), toreal(avgLatency), toreal(ingestMB)),\n          Suffix  = pack_array(\"\", \"\", \"\", \"\", \"ms\", \"MB\")\n| mv-expand Metric to typeof(string), Value to typeof(real), Suffix to typeof(string)\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
+            "vmCpuQuery": "InsightsMetrics\n| where Namespace == \"Processor\" and Name == \"UtilizationPercentage\"\n| summarize AvgCPU = round(avg(Val), 1) by bin(TimeGenerated, 5m), Computer\n| render timechart\n",
+            "vmMemoryQuery": "InsightsMetrics\n| where Namespace == \"Memory\" and Name == \"AvailableMB\"\n| summarize AvailMB = round(avg(Val), 0) by bin(TimeGenerated, 5m), Computer\n| render timechart\n",
+            "aksNodeCpuQuery": "Perf\n| where ObjectName == \"K8SNode\" and CounterName == \"cpuUsageNanoCores\"\n| summarize CPU_millicores = round(avg(CounterValue / 1000000.0), 0) by bin(TimeGenerated, 5m), Computer\n| render timechart\n",
+            "aksPodRestartsQuery": "KubePodInventory\n| summarize MaxRestarts = max(toint(ContainerRestartCount)) by Name, bin(TimeGenerated, 5m)\n| summarize TotalRestarts = sum(MaxRestarts) by bin(TimeGenerated, 5m)\n| render areachart\n",
+            "responseTimeQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\n| summarize P50 = percentile(DurationMs, 50), P95 = percentile(DurationMs, 95), P99 = percentile(DurationMs, 99) by bin(TimeGenerated, 5m)\n| render timechart\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
+            "slowestOpsQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\n| summarize AvgDuration = round(avg(DurationMs), 1), Requests = count() by OperationName\n| top 10 by AvgDuration desc\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
+            "appiDetailQuery": "[replace('workspace(\"__APPI_LAW__\").AppRequests\n| summarize Failed = countif(Success == false), OK = countif(Success == true) by bin(TimeGenerated, 5m)\n| render timechart\n', '__APPI_LAW__', parameters('appInsightsLawName'))]",
+            "alertActivityQuery": "AzureActivity\n| where CategoryValue == \"Alert\"\n| project TimeGenerated, Operation = OperationNameValue, Status = ActivityStatusValue, Caller\n| order by TimeGenerated desc\n| take 25\n",
+            "dataIngestionQuery": "Usage\n| summarize IngestedMB = round(sum(Quantity), 2) by DataType\n| where IngestedMB > 0.01\n| top 15 by IngestedMB desc\n| render barchart\n",
             "workbookContent": {
               "version": "Notebook/1.0",
               "items": [
@@ -9968,6 +10384,22 @@
     "aiRouterDeployment": {
       "type": "string",
       "value": "[if(parameters('enableAi'), reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2022-09-01').outputs.routerDeployment.value, '')]"
+    },
+    "sreAgentEnabled": {
+      "type": "bool",
+      "value": "[parameters('enableSreAgent')]"
+    },
+    "sreAgentName": {
+      "type": "string",
+      "value": "[if(parameters('enableSreAgent'), reference(resourceId('Microsoft.Resources/deployments', 'sre-agent'), '2022-09-01').outputs.name.value, '')]"
+    },
+    "sreAgentEndpoint": {
+      "type": "string",
+      "value": "[if(parameters('enableSreAgent'), reference(resourceId('Microsoft.Resources/deployments', 'sre-agent'), '2022-09-01').outputs.endpoint.value, '')]"
+    },
+    "sreAgentPortalUrl": {
+      "type": "string",
+      "value": "[if(parameters('enableSreAgent'), reference(resourceId('Microsoft.Resources/deployments', 'sre-agent'), '2022-09-01').outputs.portalUrl.value, '')]"
     },
     "nightlyMaintenanceRuleName": {
       "type": "string",

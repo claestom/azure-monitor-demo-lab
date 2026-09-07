@@ -92,6 +92,8 @@ try {
 $loadJobName = "loadgen-break-$(Get-Date -Format yyyyMMddHHmmss)"
 kubectl -n demo create job --from=cronjob/loadgen $loadJobName | Out-Null
 Assert-NativeCommandSucceeded "Starting immediate load-generator job '$loadJobName'"
+kubectl -n demo patch job $loadJobName --type merge -p '{"spec":{"ttlSecondsAfterFinished":600}}' | Out-Null
+Assert-NativeCommandSucceeded "Setting automatic cleanup for load-generator job '$loadJobName'"
 
 Write-Host "`n💥 Lab is now broken on purpose. Azure Monitor alerts can take 5-10 minutes to fire." -ForegroundColor Magenta
 Write-Host "Run scripts/restore-the-lab.ps1 to bring everything back." -ForegroundColor Yellow

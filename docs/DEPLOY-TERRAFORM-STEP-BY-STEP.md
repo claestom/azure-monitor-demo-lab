@@ -224,13 +224,15 @@ The AI stage creates the Foundry account, project, four model deployments, App I
 
 ### Optional SRE Agent stage
 
-Set `stageToggles.enableStageSreAgent` to `true` in `lab.config.json`. After `terraform apply`, run:
+The repository's Terraform path does not define `Microsoft.App/agents`; the `enableStageSreAgent` toggle applies only to the one-shot Bicep path. Use `scripts/deploy.ps1` for native SRE Agent deployment, or create an equivalent agent in `swedencentral` manually after Terraform deployment.
+
+After manually creating the agent for a Terraform-based lab, run:
 
 ```powershell
 ./scripts/post-staged-deploy.ps1 -ResourceGroup $rg
 ```
 
-The repository's Terraform path does not yet define `Microsoft.App/agents`, so this toggle cannot provision the agent. Use the one-shot Bicep path for native deployment, or create an equivalent agent in `swedencentral` before running the post-deployment validation. Follow [STAGE-SRE-AGENT.md](STAGE-SRE-AGENT.md) for the required identity, connectors, and Review-mode configuration.
+Follow [STAGE-SRE-AGENT.md](STAGE-SRE-AGENT.md) for the required identity, connectors, RBAC, and Review-mode configuration.
 
 ### Step 8 - Security stage validation
 

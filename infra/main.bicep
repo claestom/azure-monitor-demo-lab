@@ -180,6 +180,14 @@ module sreAgent 'modules/sre-agent.bicep' = if (enableSreAgent) {
   }
 }
 
+module sreAgentSubscriptionRbac 'modules/sre-agent-subscription-rbac.bicep' = if (enableSreAgent) {
+  name: 'sre-agent-subscription-rbac'
+  scope: subscription()
+  params: {
+    principalId: sreAgent!.outputs.systemPrincipalId
+  }
+}
+
 // ---------------------------------------------------------------------------------
 // Azure Monitor Workspace (Managed Prometheus) + Data Collection Endpoint
 // ---------------------------------------------------------------------------------

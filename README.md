@@ -126,6 +126,8 @@ The pre-flight checks *availability and quota*, not *live service capacity*. Tra
 
 > Optional SRE Agent evaluation. Set `stageToggles.enableStageSreAgent` to `true` before running `deploy.ps1`. Bicep deploys one Azure SRE Agent in `swedencentral`, its managed identity and RBAC, and Azure Monitor, Application Insights, and Log Analytics connectors. New eligible customers can use a 30-day waiver of the fixed always-on charge while active Azure Agent Unit usage remains billable. Follow [Stage SRE Agent](docs/STAGE-SRE-AGENT.md) to add the Review-mode response plans and run scenarios 54 through 58.
 
+> SRE Agent is disabled by default and creates no SRE resources or SRE-related role assignments when disabled. Native provisioning is available only through the Bicep path; the Terraform path requires manual agent creation.
+
 ### Option 3: Staged workshop (progressive deployment)
 
 Use the staged approach when you want to pause between capabilities, walk through the lab with an audience, or deploy only the stages needed for a particular demo. Stages A to E can be toggled in `lab.config.json`, and the optional AI stage can be enabled separately after Stage A.

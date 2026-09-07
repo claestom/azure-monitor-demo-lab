@@ -5,6 +5,8 @@
 > **Deployment model:** the one-shot Bicep path deploys `Microsoft.App/agents`, a dedicated managed identity, least-privilege RBAC, and Azure Monitor connectors. `scripts/setup-sre-agent.ps1` validates the deployed agent and prints its portal URL.
 >
 > **Region:** the SRE Agent is hard pinned to **Sweden Central** (`swedencentral`). Do not select another region for this lab.
+>
+> **Preview API:** deployment currently uses `Microsoft.App/agents@2025-05-01-preview`. Preview schemas can change or be retired. `setup-sre-agent.ps1` reports a targeted upgrade error if this API is no longer available.
 
 ## Trial cost facts
 
@@ -31,6 +33,8 @@ References:
 
 ## 1. Deploy the agent
 
+The deploying identity needs Owner or User Access Administrator at subscription scope. Bicep uses that permission to grant the agent connector identity Monitoring Contributor so it can acknowledge and close Azure Monitor alerts.
+
 Enable the stage in `lab.config.json`:
 
 ```json
@@ -44,10 +48,13 @@ For a one-shot deployment, `deploy.ps1` maps this toggle to the Bicep `enableSre
 - `Microsoft.App/agents` in `swedencentral`
 - A regional user-assigned managed identity
 - Reader, Monitoring Reader, and Log Analytics Reader access to the lab resource group
+- Monitoring Contributor access for the connector system identity at subscription scope
 - SRE Agent Administrator access for the deploying user and agent identity
 - Azure Monitor, Application Insights, and Log Analytics connectors
 
 The agent uses Review mode, Low access, the Microsoft Foundry automatic model, and a 1,000 monthly Agent Unit limit. Creating the resource can start billing. Eligible new customers receive the 30-day always-on charge waiver automatically; confirm the evaluation status in **Settings > Agent consumption** after deployment.
+
+The agent remains in `swedencentral` even when the lab and its observability resources are deployed elsewhere. This creates an intentional cross-region query and reliability dependency. Treat this lab topology as an evaluation design, not a production colocation recommendation.
 
 You can rerun validation directly after deployment:
 
@@ -88,7 +95,7 @@ The documented role set is:
 | Monitoring Reader | Lab resource group | Read metrics and monitoring data |
 | Monitoring Contributor | Subscription | Acknowledge and close Azure Monitor alerts |
 
-The Bicep deployment assigns the resource-group roles. If Monitoring Contributor is needed to acknowledge or close alerts, review the subscription scope and grant it explicitly:
+The Bicep deployment assigns all roles in the table, including subscription-scope Monitoring Contributor. If that assignment was removed or an older deployment is being upgraded, review the scope and grant the missing role explicitly:
 
 ```powershell
 ./scripts/setup-sre-agent.ps1 `
@@ -199,6 +206,6 @@ After the demo:
 1. Turn off both incident response plans.
 2. Open **Settings > Agent consumption** and review active-flow AAUs by thread.
 3. Stop the agent when it is not being evaluated.
-4. Delete the agent before day 31 if you do not intend to pay the fixed always-on charge.
+4. Run `./scripts/teardown.ps1 -ResourceGroup <resource-group>` or delete the agent directly before day 31 if you do not intend to pay the fixed always-on charge.
 
-Deleting the lab resource group does not delete the SRE Agent. Remove the agent separately in **Settings > Basics > Delete agent**.
+The teardown script deletes the SRE Agent before submitting asynchronous resource-group deletion. A successful resource-group deletion also deletes an agent contained in that group. Verify completion with `az group exists -n <resource-group>`; it must return `false`. If group deletion fails, confirm that no `Microsoft.App/agents` resource remains so billing does not continue.

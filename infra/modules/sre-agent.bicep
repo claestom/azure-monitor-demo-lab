@@ -147,7 +147,6 @@ resource deployerAdmin 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'e79298df-d852-4c6d-84f9-5d13249d1e55')
     principalId: deployer().objectId
-    principalType: 'User'
   }
 }
 
@@ -194,6 +193,7 @@ resource logAnalyticsConnector 'Microsoft.App/agents/connectors@2025-05-01-previ
     }
     identity: 'system'
   }
+  dependsOn: [appInsightsConnector]
 }
 
 #disable-next-line BCP081
@@ -209,10 +209,12 @@ resource azureMonitorConnector 'Microsoft.App/agents/connectors@2025-05-01-previ
     }
     identity: 'system'
   }
+  dependsOn: [logAnalyticsConnector]
 }
 
 output name string = agent.name
 output id string = agent.id
 output principalId string = identity.properties.principalId
+output systemPrincipalId string = agent.identity.principalId
 output endpoint string = agent.properties.agentEndpoint
 output portalUrl string = 'https://sre.azure.com/#/agent/${subscription().subscriptionId}/${resourceGroup().name}/${agent.name}'

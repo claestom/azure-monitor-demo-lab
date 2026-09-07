@@ -138,7 +138,15 @@ if ($agents.Count -gt 1) {
   throw "Multiple Azure SRE Agents were found in '$ResourceGroup': $($agents.name -join ', '). Pass a resource group containing one lab agent."
 }
 
-$agent = az resource show --subscription $SubscriptionId --ids $agents[0].id --api-version 2025-05-01-preview -o json | ConvertFrom-Json
+$agentOutput = az resource show --subscription $SubscriptionId --ids $agents[0].id --api-version 2025-05-01-preview -o json 2>&1
+if ($LASTEXITCODE -ne 0) {
+  $agentError = $agentOutput -join "`n"
+  if ($agentError -match 'InvalidApiVersion|ApiVersionNotSupported|NoRegisteredProviderFound') {
+    throw 'Azure SRE Agent preview API 2025-05-01-preview is unavailable. Update the lab to the current Microsoft.App/agents API before deploying or validating the agent.'
+  }
+  throw "Could not read the Azure SRE Agent. Azure CLI returned:`n$agentError"
+}
+$agent = ($agentOutput -join "`n") | ConvertFrom-Json
 Write-Check 'SRE Agent resource' ($agent.location -eq $sreAgentLocation) "$($agent.name) in $($agent.location)"
 if ($agent.location -ne $sreAgentLocation) {
   throw "SRE Agent '$($agent.name)' is in '$($agent.location)', expected '$sreAgentLocation'."
@@ -148,7 +156,15 @@ $incidentPlatformType = $agent.properties.incidentManagementConfiguration.type
 $incidentPlatformConnected = $incidentPlatformType -eq 'AzMonitor'
 Write-Check 'Azure Monitor incident platform' $incidentPlatformConnected ($(if ($incidentPlatformConnected) { 'connected' } else { 'not connected; use Incidents > Triggers & response plans > Connect an incident platform' }))
 
-$connectors = @(az rest --method get --url "https://management.azure.com$($agent.id)/connectors?api-version=2025-05-01-preview" --query value -o json | ConvertFrom-Json)
+$connectorOutput = az rest --method get --url "https://management.azure.com$($agent.id)/connectors?api-version=2025-05-01-preview" --query value -o json 2>&1
+if ($LASTEXITCODE -ne 0) {
+  $connectorError = $connectorOutput -join "`n"
+  if ($connectorError -match 'InvalidApiVersion|ApiVersionNotSupported|NoRegisteredProviderFound') {
+    throw 'Azure SRE Agent connector preview API 2025-05-01-preview is unavailable. Update the lab before validating connectors.'
+  }
+  throw "Could not read the Azure SRE Agent connectors. Azure CLI returned:`n$connectorError"
+}
+$connectors = @(($connectorOutput -join "`n") | ConvertFrom-Json)
 foreach ($connectorName in @('app-insights', 'log-analytics', 'azure-monitor')) {
   $present = @($connectors | Where-Object { $_.name -eq $connectorName }).Count -gt 0
   Write-Check "Connector $connectorName" $present ($(if ($present) { 'configured' } else { 'not found' }))

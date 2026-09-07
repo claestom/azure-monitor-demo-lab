@@ -25,6 +25,16 @@ if (-not $Yes) {
   if ($confirm -ne 'DELETE') { Write-Host "Aborted." -ForegroundColor Yellow; return }
 }
 
+# Delete billable SRE Agent resources explicitly before the asynchronous RG delete.
+$sreAgents = @(az resource list -g $ResourceGroup --resource-type Microsoft.App/agents -o json | ConvertFrom-Json)
+foreach ($sreAgent in $sreAgents) {
+  Write-Host "Deleting SRE Agent $($sreAgent.name) before resource-group cleanup ..." -ForegroundColor Yellow
+  az resource delete --ids $sreAgent.id --api-version 2025-05-01-preview
+  if ($LASTEXITCODE -ne 0) {
+    throw "Failed to delete SRE Agent '$($sreAgent.name)'. Stop before deleting the resource group and verify the agent manually to avoid continued billing."
+  }
+}
+
 # Remove dependencies that can prevent Azure from deleting the monitoring estate.
 # The final RG deletion remains --no-wait.
 Write-Host "Removing LAW replication, DCR associations, DCRs, and DCEs ..." -ForegroundColor Yellow
@@ -91,4 +101,8 @@ if (Test-Path $setupHm) {
 
 Write-Host "Deleting $ResourceGroup ..." -ForegroundColor Yellow
 az group delete -n $ResourceGroup --yes --no-wait
-Write-Host "Delete kicked off (running in background)." -ForegroundColor Green
+if ($LASTEXITCODE -ne 0) {
+  throw "Azure CLI failed to submit deletion for resource group '$ResourceGroup'."
+}
+Write-Host "Delete request accepted (running in background)." -ForegroundColor Green
+Write-Host "Verify completion with: az group exists -n $ResourceGroup" -ForegroundColor Green
