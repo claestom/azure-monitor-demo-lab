@@ -336,14 +336,14 @@ if ($aiEnabled) {
   }
 }
 
-# 7. Optional SRE Agent stage. Agent creation and trial activation are portal-only;
-#    this runs the guarded readiness check and prints the swedencentral handoff.
+# 7. Optional SRE Agent stage. Bicep creates the agent and Azure Monitor connectors;
+#    this verifies the deployed resource and prints the portal URL.
 $sreAgentEnabled = $false
 if ($null -ne $labCfg -and $null -ne $labCfg.stageToggles -and $null -ne $labCfg.stageToggles.enableStageSreAgent) {
   $sreAgentEnabled = [bool]$labCfg.stageToggles.enableStageSreAgent
 }
 if ($sreAgentEnabled) {
-  Write-Step "SRE Agent stage enabled - validating readiness and printing the trial setup handoff"
+  Write-Step "SRE Agent stage enabled - verifying the deployed agent and Azure Monitor connectors"
   $setupSreAgent = Join-Path $PSScriptRoot 'setup-sre-agent.ps1'
   & $setupSreAgent -SubscriptionId $labCfg.subscriptionId -ResourceGroup $ResourceGroup
 }

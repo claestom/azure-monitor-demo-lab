@@ -2,7 +2,7 @@
 
 > **Goal:** connect an Azure SRE Agent to the lab's Azure Monitor alerts and observability data, then demonstrate alert-driven investigation across Application Insights, Log Analytics, metrics, Resource Graph, and Activity Logs.
 >
-> **Deployment model:** Azure SRE Agent is created in [sre.azure.com](https://sre.azure.com/). The lab does not pretend that a portal operation is an IaC resource. `scripts/setup-sre-agent.ps1` validates the lab and the agent identity's Azure RBAC after creation.
+> **Deployment model:** the one-shot Bicep path deploys `Microsoft.App/agents`, a dedicated managed identity, least-privilege RBAC, and Azure Monitor connectors. `scripts/setup-sre-agent.ps1` validates the deployed agent and prints its portal URL.
 >
 > **Region:** the SRE Agent is hard pinned to **Sweden Central** (`swedencentral`). Do not select another region for this lab.
 
@@ -29,7 +29,7 @@ References:
 - [Azure Monitor alerts in Azure SRE Agent](https://learn.microsoft.com/azure/sre-agent/azure-monitor-alerts)
 - [Diagnose with Azure Observability](https://learn.microsoft.com/azure/sre-agent/diagnose-azure-observability)
 
-## 1. Validate the lab
+## 1. Deploy the agent
 
 Enable the stage in `lab.config.json`:
 
@@ -39,9 +39,17 @@ Enable the stage in `lab.config.json`:
 }
 ```
 
-For a one-shot deployment, `deploy.ps1` runs the read-only SRE Agent readiness check after the lab and its telemetry are available. For staged Bicep or Terraform deployments, `post-staged-deploy.ps1` runs the same handoff. This toggle does not create a billable agent because creation and trial activation remain portal operations.
+For a one-shot deployment, `deploy.ps1` maps this toggle to the Bicep `enableSreAgent` parameter. The deployment creates:
 
-You can also run the readiness check directly before creating the agent:
+- `Microsoft.App/agents` in `swedencentral`
+- A regional user-assigned managed identity
+- Reader, Monitoring Reader, and Log Analytics Reader access to the lab resource group
+- SRE Agent Administrator access for the deploying user and agent identity
+- Azure Monitor, Application Insights, and Log Analytics connectors
+
+The agent uses Review mode, Low access, the Microsoft Foundry automatic model, and a 1,000 monthly Agent Unit limit. Creating the resource can start billing. Eligible new customers receive the 30-day always-on charge waiver automatically; confirm the evaluation status in **Settings > Agent consumption** after deployment.
+
+You can rerun validation directly after deployment:
 
 ```powershell
 ./scripts/setup-sre-agent.ps1 `
@@ -49,30 +57,26 @@ You can also run the readiness check directly before creating the agent:
   -ResourceGroup <resource-group>
 ```
 
-The check pins Azure CLI to the explicit subscription and verifies that the resource group contains Log Analytics, Application Insights, App Service, AKS, and Azure Monitor alert rules.
+The check pins Azure CLI to the explicit subscription and verifies the lab resources, SRE Agent region, connectors, managed identity, and RBAC.
 
-## 2. Create one trial agent
+## 2. Review the deployed agent
 
-1. Open [sre.azure.com](https://sre.azure.com/) and create an agent.
-2. Confirm that the 30-day trial banner is visible. If it is absent, assume standard pricing applies.
-3. Name the agent `Azure Monitor Demo SRE`.
-4. Select **Sweden Central** (`swedencentral`). This location is mandatory for this lab.
-5. Add the lab resource group as a managed resource group.
-6. Select the **Reader** permission level for the first evaluation.
-7. Finish creation, then open **Settings > Azure settings > Go to Identity**.
-8. Copy the user-assigned managed identity's Object (principal) ID.
+1. Open the URL printed by `deploy.ps1`, or open [sre.azure.com](https://sre.azure.com/).
+2. Select the deployed `sre-amlab-<suffix>` agent.
+3. Confirm the region is **Sweden Central** and the action mode is **Review**.
+4. Open **Settings > Agent consumption** and confirm whether the 30-day evaluation applies.
+5. Open **Settings > Azure settings > Go to Identity** to inspect the managed identity.
 
 Reader mode supports investigation and uses on-behalf-of approval when a write is needed. Only an SRE Agent Administrator using a work or school account can approve that elevation.
 
 ## 3. Verify permissions
 
-Run the script again with the agent identity:
+Run the validation script. It discovers the agent identity automatically:
 
 ```powershell
 ./scripts/setup-sre-agent.ps1 `
   -SubscriptionId <subscription-id> `
-  -ResourceGroup <resource-group> `
-  -AgentPrincipalId <agent-uami-object-id>
+  -ResourceGroup <resource-group>
 ```
 
 The documented role set is:
@@ -84,24 +88,22 @@ The documented role set is:
 | Monitoring Reader | Lab resource group | Read metrics and monitoring data |
 | Monitoring Contributor | Subscription | Acknowledge and close Azure Monitor alerts |
 
-Agent creation normally assigns these roles when the managed resource group and Azure Monitor incident platform are configured. If an assignment is missing, review the scope and grant it explicitly:
+The Bicep deployment assigns the resource-group roles. If Monitoring Contributor is needed to acknowledge or close alerts, review the subscription scope and grant it explicitly:
 
 ```powershell
 ./scripts/setup-sre-agent.ps1 `
   -SubscriptionId <subscription-id> `
   -ResourceGroup <resource-group> `
-  -AgentPrincipalId <agent-uami-object-id> `
   -GrantMissingRoles
 ```
 
 The script requires typing `GRANT` before it creates role assignments. Use `-Yes` only in controlled automation.
 
-## 4. Connect Azure Monitor
+## 4. Verify Azure Monitor
 
-1. In the SRE Agent portal, open **Builder > Incident platform**.
-2. Select **Azure Monitor**, choose the lab subscription, and save.
-3. Open **Builder > Incident response plans** and switch to Table view.
-4. Delete the generated quickstart plan before adding the plans below. Leaving it active can process the same incident twice or route it to the wrong custom agent.
+1. In the SRE Agent portal, open **Builder > Connectors** and confirm Azure Monitor, Application Insights, and Log Analytics are present.
+2. Open **Builder > Incident response plans** and switch to Table view.
+3. Delete any generated quickstart plan before adding the plans below. Leaving it active can process the same incident twice or route it to the wrong custom agent.
 
 The Azure Monitor scanner checks approximately every minute. Its initial lookback is one day, repeated firings from the same alert rule merge into one active thread, and alert status synchronizes approximately every five minutes.
 

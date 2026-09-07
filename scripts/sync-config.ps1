@@ -88,7 +88,7 @@ $stages = $cfg.stageToggles
 if ($null -eq $stages) { $stages = [pscustomobject]@{ enableStageA=$true; enableStageB=$true; enableStageC=$true; enableStageD=$true; enableStageE=$true; enableStageAI=$false; enableStageSreAgent=$false } }
 # AI stage is optional and defaults off when absent from the config.
 $enableStageAI = if ($null -eq $stages.enableStageAI) { $false } else { [bool]$stages.enableStageAI }
-# SRE Agent is portal-created, so this orchestration toggle is not emitted as an IaC variable.
+# SRE Agent is optional and defaults off when absent from the config.
 $enableStageSreAgent = if ($null -eq $stages.enableStageSreAgent) { $false } else { [bool]$stages.enableStageSreAgent }
 
 # ---------------------------------------------------------------------------
@@ -133,6 +133,7 @@ $bicepParams = [ordered]@{
     'dailyCapGb'      = @{ value = [int]$dailyCapGb }
     'aksNodeCount'    = @{ value = [int]$aksNodeCount }
     'enableAi'        = @{ value = $enableStageAI }
+    'enableSreAgent'  = @{ value = $enableStageSreAgent }
     'enableLawReplication'   = @{ value = $enableLawReplication }
     'lawReplicationLocation' = @{ value = $lawReplicationLocation }
   }
@@ -183,5 +184,5 @@ Write-Host "   - $azureTargetPath" -ForegroundColor DarkGray
 Write-Host "   - $bicepParamsPath" -ForegroundColor DarkGray
 Write-Host "   - $tfVarsPath"      -ForegroundColor DarkGray
 if ($enableStageSreAgent) {
-  Write-Host "   - SRE Agent post-deployment handoff enabled (swedencentral)" -ForegroundColor DarkGray
+  Write-Host "   - SRE Agent deployment enabled (swedencentral)" -ForegroundColor DarkGray
 }

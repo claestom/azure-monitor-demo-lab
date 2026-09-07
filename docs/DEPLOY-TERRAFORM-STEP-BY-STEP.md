@@ -222,7 +222,7 @@ terraform apply -var-file stages.tfvars
 
 The AI stage creates the Foundry account, project, four model deployments, App Insights connection, token alerts, AI FinOps query pack and workbook, and the AI tier in the workload health model. It requires the Stage A Application Insights resource but does not require Stages B to E.
 
-### Optional SRE Agent trial handoff
+### Optional SRE Agent stage
 
 Set `stageToggles.enableStageSreAgent` to `true` in `lab.config.json`. After `terraform apply`, run:
 
@@ -230,7 +230,7 @@ Set `stageToggles.enableStageSreAgent` to `true` in `lab.config.json`. After `te
 ./scripts/post-staged-deploy.ps1 -ResourceGroup $rg
 ```
 
-The toggle is consumed by the post-deployment script and is intentionally not emitted as a Terraform variable. Azure SRE Agent creation and trial activation happen in `sre.azure.com`; select the mandatory `swedencentral` region and follow [STAGE-SRE-AGENT.md](STAGE-SRE-AGENT.md).
+The repository's Terraform path does not yet define `Microsoft.App/agents`, so this toggle cannot provision the agent. Use the one-shot Bicep path for native deployment, or create an equivalent agent in `swedencentral` before running the post-deployment validation. Follow [STAGE-SRE-AGENT.md](STAGE-SRE-AGENT.md) for the required identity, connectors, and Review-mode configuration.
 
 ### Step 8 - Security stage validation
 

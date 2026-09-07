@@ -170,7 +170,7 @@ az deployment group create -g $rg --name stage-ai-foundry --template-file infra/
 
 Stage AI depends only on Stage A and can be deployed before or after Stages B to E. If you are using the central config workflow, set `stageToggles.enableStageAI` to `true` in `lab.config.json`, run `./scripts/sync-config.ps1`, and deploy the generated parameters with the same Stage AI template. The stage is off by default because the model deployments are billable.
 
-### SRE Agent trial handoff (optional)
+### SRE Agent trial deployment (optional)
 
 Set `stageToggles.enableStageSreAgent` to `true` in `lab.config.json`, then run the normal staged post-deployment command:
 
@@ -178,7 +178,7 @@ Set `stageToggles.enableStageSreAgent` to `true` in `lab.config.json`, then run 
 ./scripts/post-staged-deploy.ps1 -ResourceGroup $rg
 ```
 
-The toggle runs `setup-sre-agent.ps1` after telemetry is available. It does not create an ARM resource. Create the trial agent in `sre.azure.com`, select the mandatory `swedencentral` region, and follow [STAGE-SRE-AGENT.md](STAGE-SRE-AGENT.md).
+For the one-shot Bicep path, the toggle emits `enableSreAgent=true`. Bicep creates the agent in `swedencentral`, its identity and RBAC, and the Azure Monitor connectors. `setup-sre-agent.ps1` verifies the deployment afterward. Follow [STAGE-SRE-AGENT.md](STAGE-SRE-AGENT.md) to add the custom investigators and response plans.
 
 ## 6) Recommended repo evolution for clean staging
 

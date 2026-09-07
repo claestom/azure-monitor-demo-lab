@@ -72,6 +72,9 @@ param enableMetricsExportDcr bool = false
 @description('Enable the optional AI stage — Microsoft Foundry workload (account, project, chat/embed/optimize/model-router deployments) + App Insights connection + token alerts + query pack/workbook/health model. Off by default (billable models, region-limited).')
 param enableAi bool = false
 
+@description('Deploy Azure SRE Agent in Sweden Central with Azure Monitor, Application Insights, and Log Analytics connectors. Off by default (billable usage).')
+param enableSreAgent bool = false
+
 @description('Model Router deployment version for the AI feature. VERIFY for your region with "az cognitiveservices account list-models".')
 param routerModelVersion string = '2025-08-07'
 
@@ -108,6 +111,7 @@ var costWorkbookName    = 'wb-${namePrefix}-cost'
 var sliUamiName         = 'id-sli-${namePrefix}'
 var platformLogsDcrName = 'dcr-${namePrefix}-platformlogs'
 var metricsExportDcrName = 'dcr-${namePrefix}-metricsexport'
+var sreAgentName         = 'sre-${namePrefix}-${take(suffix, 5)}'
 
 // AI feature (Foundry) is pinned to swedencentral, independent of the lab region —
 // the gpt-5-* / model-router SKUs + Foundry portal + CloudHealth preview are region-limited.
@@ -159,6 +163,19 @@ module appInsights 'modules/appinsights.bicep' = {
     name: appInsightsName
     location: location
     workspaceId: lawAppInsights.outputs.id
+    tags: commonTags
+  }
+}
+
+module sreAgent 'modules/sre-agent.bicep' = if (enableSreAgent) {
+  name: 'sre-agent'
+  params: {
+    name: sreAgentName
+    appInsightsId: appInsights.outputs.id
+    appInsightsAppId: appInsights.outputs.appId
+    appInsightsConnectionString: appInsights.outputs.connectionString
+    logAnalyticsId: lawCentral.outputs.id
+    managedResourceGroupId: resourceGroup().id
     tags: commonTags
   }
 }
@@ -933,6 +950,12 @@ output aiFoundryAccountName string     = enableAi ? foundry!.outputs.accountName
 output aiProjectEndpoint string        = enableAi ? foundry!.outputs.projectEndpoint : ''
 output aiChatDeployment string         = enableAi ? foundry!.outputs.chatDeployment : ''
 output aiRouterDeployment string       = enableAi ? foundry!.outputs.routerDeployment : ''
+
+// Optional SRE Agent stage (empty unless enableSreAgent = true)
+output sreAgentEnabled bool            = enableSreAgent
+output sreAgentName string             = enableSreAgent ? sreAgent!.outputs.name : ''
+output sreAgentEndpoint string         = enableSreAgent ? sreAgent!.outputs.endpoint : ''
+output sreAgentPortalUrl string        = enableSreAgent ? sreAgent!.outputs.portalUrl : ''
 
 // NEW — Alert Processing Rules nightly window
 output nightlyMaintenanceRuleName string = alertProcessingRules.outputs.nightlyMaintenanceRuleName
