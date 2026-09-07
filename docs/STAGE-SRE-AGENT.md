@@ -110,13 +110,23 @@ The Azure Monitor scanner checks approximately every minute. Its initial lookbac
 
 ## 5. Create the custom agents
 
-Open **Builder > Agent Canvas** and select **Create > Custom Agent**. Custom-agent names can contain only letters, numbers, or hyphens and must be 36 characters or fewer. In the Custom Agent form, enter the name and supplied **Instructions**, then scroll below Instructions to **Handoff Description**. Some portal versions label this field **Handoff instructions**. Enter the indicated handoff text and save. **Handoff Agents**, tools, and knowledge sources are separate optional settings and can remain empty for this lab.
+Open **Builder > Agent Canvas** and select **Create > Custom Agent**. Custom-agent names can contain only letters, numbers, or hyphens and must be 36 characters or fewer. Enter the name and supplied **Instructions**, leave Skills, Tools, and Hooks at their inherited defaults, and select **Create**. The current creation dialog does not expose a handoff field. A handoff description is not required here because each incident response plan explicitly selects its response subagent.
+
+<details>
+<summary><b>Optional: add handoff instructions after creation</b></summary>
+
+Open **Builder > Agent Canvas > Test playground**, select the custom agent from the **Custom agent/Tool** list, and use **Form view**. Enter the handoff text in **Handoff instructions**, then select **Apply**:
+
+- `amlab-app-investigator`: `Investigates App Service and Application Insights incidents.`
+- `amlab-platform-investigator`: `Investigates AKS and virtual machine incidents.`
+
+This text helps chat orchestration decide when to delegate. It does not control incident routing; the response plan does that.
+
+</details>
 
 ### Application Investigator
 
 Create a custom agent named `amlab-app-investigator` with these instructions:
-
-**Handoff description:** `Investigates App Service and Application Insights incidents.`
 
 ```text
 Investigate Azure Monitor incidents for the Azure Monitor Demo Lab resource group.
@@ -133,8 +143,6 @@ signal and application failure rate before declaring recovery.
 ### Platform Investigator
 
 Create a custom agent named `amlab-platform-investigator` with these instructions:
-
-**Handoff description:** `Investigates AKS and virtual machine incidents.`
 
 ```text
 Investigate Azure Monitor incidents for AKS and virtual machines in the Azure

@@ -2499,8 +2499,8 @@ Start with one known workload and a bounded cost envelope. The trial removes the
 
 Complete this setup once before triggering any alerts:
 
-1. Open **Builder > Agent Canvas**, select **Create > Custom Agent**, and create `amlab-app-investigator`. Custom-agent names can contain only letters, numbers, or hyphens and must be 36 characters or fewer. Paste the instructions from [Stage SRE Agent - Application Investigator](STAGE-SRE-AGENT.md#application-investigator). In the same form, scroll below **Instructions** to **Handoff Description** (shown as **Handoff instructions** in some portal versions), enter `Investigates App Service and Application Insights incidents`, and save.
-2. Create `amlab-platform-investigator` the same way. Enter `Investigates AKS and virtual machine incidents` in **Handoff Description** or **Handoff instructions**, paste the instructions from [Stage SRE Agent - Platform Investigator](STAGE-SRE-AGENT.md#platform-investigator), and save.
+1. Open **Builder > Agent Canvas**, select **Create > Custom Agent**, and create `amlab-app-investigator`. Custom-agent names can contain only letters, numbers, or hyphens and must be 36 characters or fewer. Paste the instructions from [Stage SRE Agent - Application Investigator](STAGE-SRE-AGENT.md#application-investigator), leave Skills, Tools, and Hooks at their inherited defaults, and select **Create**.
+2. Create `amlab-platform-investigator` the same way with the instructions from [Stage SRE Agent - Platform Investigator](STAGE-SRE-AGENT.md#platform-investigator). A handoff description is not required for this lab because each response plan explicitly selects its response subagent.
 3. Open **Incidents > Triggers & response plans** and select **Create a response plan**. If the button is disabled, connect Azure Monitor first and wait for the green connected status.
 4. Create the application plan:
    - **Incident response plan name:** `amlab-app-alerts`
