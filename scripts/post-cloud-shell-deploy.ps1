@@ -80,7 +80,7 @@ Write-Step "Running App Service and AKS post-deployment setup"
 Write-Step "Provisioning service group and health model prerequisites"
 & (Join-Path $PSScriptRoot 'setup-health-model.ps1') -ResourceGroup $ResourceGroup
 
-Write-Step "Provisioning demo SLI prerequisites"
-& (Join-Path $PSScriptRoot 'setup-slis.ps1') -ResourceGroup $ResourceGroup
+Write-Step "Verifying demo SLI prerequisites and source metrics"
+& (Join-Path $PSScriptRoot 'setup-slis.ps1') -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup
 
 Write-Host "`nCloud Shell post-deployment setup completed." -ForegroundColor Green

@@ -2057,7 +2057,7 @@ Health Models *require* Service Groups precisely because the same resource may h
 ---
 
 <a id="s46"></a>
-## 46 · Service Level Indicators (SLIs / SLOs) — error budgets on the workload (preview)
+## 46 · Service Level Indicators (SLIs / SLOs) - error budgets on the workload (preview)
 
 **Audience:** SRE leads, platform owners — same crowd as #45, one layer up from "healthy yes/no".
 **Time:** 4–5 min.
@@ -2074,34 +2074,43 @@ Health Models *require* Service Groups precisely because the same resource may h
 | UAMI `id-sli-amlab` + Monitoring Reader + Monitoring Metrics Publisher on `amw-amlab` | `infra/modules/sli-identity.bicep` (auto) | SLI plane needs a UAMI with read on the source AMW and write back to the destination AMW. |
 | Monitoring Metrics Publisher on AMW default DCR + DCE | `scripts/setup-slis.ps1` (auto) | The AMW's auto-created DCR/DCE live in `MA_amw-amlab_<region>_managed`. SLI ingestion fails without grants here too. |
 | Service group `amlab-workload` | `scripts/setup-health-model.ps1` (auto) | Same SG that hosts the Health Model. |
-| SLIs themselves — **created manually in the portal for now** | _(see below)_ | The `Microsoft.Monitor/slis@2025-03-01-preview` RP currently rejects the enum wire values documented in the Bicep schema and the .NET SDK. The lab pre-stages everything the SLI needs; you create the two SLIs in the portal with one click each. |
+| AKS Managed Prometheus source metrics | AKS monitoring add-on (auto) | The setup script verifies `up`, `kube_pod_status_phase`, and the pod-start histogram bucket/count series before the demo. |
+| Sample SLIs | Azure portal (manual) | Create the two preview resources using the field values below. The script intentionally avoids depending on a changing preview API contract. |
 
-> **Why portal-only right now?** This is a preview API. The published schema and the live control-plane validator disagree on enum spellings for `operator` / `comparator`. `setup-slis.ps1` keeps the helper functions in place for the day the spec settles; today it prints a portal URL plus the exact UAMI + AMW IDs you need to paste.
+> The `Microsoft.Monitor/slis` API remains in preview. Portal creation is intentional: the portal tracks current control-plane validation while the script provides stable prerequisite, RBAC, and metric-flow checks.
 
-### Pre-demo: create the two SLIs (one-time, ≈2 min)
+### Pre-demo: verify metrics and create the two SLIs
 
-`scripts/setup-slis.ps1` runs as part of `deploy.ps1` and prints a portal URL + the exact field values. Open the URL it gives you:
+`scripts/setup-slis.ps1` runs as part of `deploy.ps1`, `post-staged-deploy.ps1`, and the Cloud Shell post-deployment wrapper. It verifies the service group, identity, destination permissions, and source metric series, then prints the portal URL and resource IDs:
+
+```powershell
+./scripts/setup-slis.ps1 `
+   -ResourceGroup rg-azure-monitor-lab-one-button120 `
+   -ServiceGroupId amlab-workload
+```
+
+Do not continue if the script reports a missing metric. A successful run confirms that all four documented source metric families currently return at least one series from `amw-amlab`.
 
 > `https://portal.azure.com/#@<tenant>/resource/providers/Microsoft.Management/serviceGroups/amlab-workload/serviceLevelIndicators`
 
-Click **+ Add SLI** twice and fill the two forms with the values the script printed. The cheat-sheet:
+Open the URL, select **+ Add SLI**, and create these definitions:
 
-**SLI #1 — `sli-aks-pods-running`** (Availability, Window-Based)
-- Source AMW: `amw-amlab`, identity = UAMI `id-sli-amlab` (client-ID GUID from the script)
-- Signal s1: `kube_pod_status_phase`, filter `phase == Running`, temporal Average / 5 min, spatial Sum
+**SLI #1: `sli-aks-pods-running`** (Availability, Window-Based)
+- Source AMW: `amw-amlab`, identity = UAMI `id-sli-amlab`
+- Signal s1: `kube_pod_status_phase`, filter `phase == running`, temporal Average / 5 min, spatial Sum
 - Signal s2: `kube_pod_status_phase`, temporal Average / 5 min, spatial Sum
-- **Important:** keep both signal sources' spatial dimensions identical (both empty, or both `[cluster]`). Mis-aligned dimensions fail validation.
-- Signal formula: `(100 * $s1) / $s2`
+- Keep both signal sources' spatial dimensions identical. Use no dimensions or use `cluster` for both.
+- Signal formula: `(100 * s1) / s2`
 - Window uptime criteria: `>= 95`
 - Baseline: `99` / `7d` / RollingDays
 - Destination AMW: `amw-amlab` (same UAMI)
 
-**SLI #2 — `sli-aks-pod-start-latency`** (Latency, Window-Based)
+**SLI #2: `sli-aks-pod-start-latency`** (Latency, Window-Based)
 - Same source AMW + identity
 - Signal s1: `kubelet_pod_start_duration_seconds_bucket`, filter `le == 30`, temporal Rate / 5 min, spatial Sum
 - Signal s2: `kubelet_pod_start_duration_seconds_count`, temporal Rate / 5 min, spatial Sum
-- Same dimensions rule.
-- Signal formula: `(100 * $s1) / $s2`
+- Keep both signal sources' spatial dimensions identical.
+- Signal formula: `(100 * s1) / s2`
 - Window uptime criteria: `>= 95`
 - Baseline: `95` / `7d` / RollingDays
 - Destination AMW: `amw-amlab`
@@ -2109,26 +2118,24 @@ Click **+ Add SLI** twice and fill the two forms with the values the script prin
 > First data points appear ~10-15 min after the SLI saves, once the streaming rule provisions and the destination metrics start emitting in the AMW.
 
 ### Click-through (4 min)
-1. **Portal → Service groups → `amlab-workload` → Service Level Indicators**. You'll see both SLIs created above.
+1. **Portal > Service groups > `amlab-workload` > Service Level Indicators**. Open the two manually created SLIs.
 2. Open `sli-aks-pods-running`:
-   - **Definition** tab — show the formula `(100 × $s1) / $s2`, the two signal sources (running vs total), the uptime criteria `>= 95`, and the SLO baseline (`99` / 7d rolling).
-   - **Compliance** tab — current compliance %, error budget remaining as a sparkline.
-3. Open `sli-aks-pod-start-latency` — same layout, but on a histogram-derived ratio. Point out that Window-Based is the answer for histogram metrics where Request-Based doesn't fit.
-4. Show the **destination metrics** the SLI emits back into the AMW (sliComplianceRatio, sliBaselineRatio, sliErrorBudgetRatio). These can be graphed in Grafana or fed back into the Health Model as additional signals — the "SLO → workload health" closing loop.
+   - **Definition** tab - show the `(100 * s1) / s2` formula, uptime criteria `>= 95`, and SLO baseline (`99` / 7d rolling).
+   - **Compliance** tab - show current compliance and error budget remaining.
+3. Open `sli-aks-pod-start-latency` - show the percentage of pod starts completed within 30 seconds.
+4. Show the **destination metrics** the SLI emits back into the AMW (sliComplianceRatio, sliBaselineRatio, sliErrorBudgetRatio). These can be graphed in Grafana or fed back into the Health Model as additional signals, closing the SLO-to-workload-health loop.
 
 ### Break-the-lab story (≈90 s)
-1. `kubectl scale deployment frontend --replicas=0 -n frontend` — pods stop, `kube_pod_status_phase{phase=Running}` drops.
-2. Wait one or two 5-min windows. `sli-aks-pods-running` compliance drops below `95`. Baseline compliance % starts trending down; error-budget burn becomes visible.
-3. Restore with `kubectl scale deployment frontend --replicas=2 -n frontend`. Compliance recovers within 1–2 windows.
+1. Scale a demo AKS deployment to zero replicas so its running-pod signal drops.
+2. Wait one or two 5-minute windows. `sli-aks-pods-running` compliance drops and error-budget burn becomes visible.
+3. Restore the deployment. Availability compliance recovers after running-pod windows resume.
 
 ### Where it lives in the code
 ```
 infra/modules/sli-identity.bicep   UAMI + role assignments on AMW
 infra/main.bicep                   Wires sliIdentity in + exports outputs
 scripts/setup-slis.ps1             Grants Metrics Publisher on AMW DCR/DCE
-                                   + prints portal handoff (URL + UAMI/AMW IDs).
-                                   SLI PUTs are parked behind a comment until
-                                   the preview-RP enum wire format stabilizes.
+                                   + verifies source metrics + prints portal inputs.
 scripts/deploy.ps1                 Chains setup-health-model.ps1 + setup-slis.ps1
 scripts/teardown.ps1               Tears SLIs down before deleting the RG (idempotent)
 ```
@@ -2142,7 +2149,7 @@ scripts/teardown.ps1               Tears SLIs down before deleting the RG (idemp
 
 ```powershell
 ./scripts/setup-slis.ps1 -Teardown
-# DELETEs both SLI extension resources on the service group. Idempotent.
+# Deletes the two documented portal-created SLIs. Idempotent.
 ```
 
 ### Killer line
