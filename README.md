@@ -1,6 +1,6 @@
 # Azure Monitor Demo Lab
 
-A self-contained demo of the Azure Monitor and Microsoft Sentinel stack. Everything runs from a single config file that stays out of git, so you can stand the whole thing up in your own subscription and tear it back down when you're finished.
+A self-contained demo centered on Azure Monitor, AI, and Azure SRE Agent, with optional Microsoft Sentinel scenarios. Everything runs from a single config file that stays out of git, so you can stand the whole thing up in your own subscription and tear it back down when you're finished.
 
 - One resource group: the whole lab lands in `rg-azure-monitor-lab`.
 - Two ways to deploy it: Bicep or Terraform.
@@ -126,11 +126,11 @@ The pre-flight checks *availability and quota*, not *live service capacity*. Tra
 
 > Optional SRE Agent evaluation. Set `stageToggles.enableStageSreAgent` to `true` before running `deploy.ps1`. Bicep deploys one Azure SRE Agent in `swedencentral`, its managed identity and RBAC, and Azure Monitor, Application Insights, and Log Analytics connectors. New eligible customers can use a 30-day waiver of the fixed always-on charge while active Azure Agent Unit usage remains billable. Follow [Stage SRE Agent](docs/STAGE-SRE-AGENT.md) to add the Review-mode response plans and run scenarios 54 through 58.
 
-> SRE Agent is disabled by default and creates no SRE resources or SRE-related role assignments when disabled. Native provisioning is available only through the Bicep path; the Terraform path requires manual agent creation.
+> SRE Agent is disabled by default and creates no SRE resources or SRE-related role assignments when disabled. The one-shot and portal paths use `infra/main.bicep`; strict Bicep staging and Terraform use the dedicated `infra/stages/60-sre-agent` template. Terraform orchestrates that compiled Bicep stage through AzAPI.
 
 ### Option 3: Staged workshop (progressive deployment)
 
-Use the staged approach when you want to pause between capabilities, walk through the lab with an audience, or deploy only the stages needed for a particular demo. Stages A to E can be toggled in `lab.config.json`, and the optional AI stage can be enabled separately after Stage A.
+Use the staged approach when you want to pause between capabilities, walk through the lab with an audience, or deploy only the stages needed for a particular demo. Stages A to E can be toggled in `lab.config.json`. The optional AI and SRE Agent stages can be enabled separately after Stage A. Bicep deploys SRE Agent with `infra/stages/60-sre-agent.bicep`; Terraform deploys the compiled stage when `enable_stage_sre_agent = true`.
 
 Step-by-step guides:
 

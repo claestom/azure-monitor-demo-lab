@@ -173,3 +173,26 @@ resource "azapi_resource" "stage_ai" {
     }
   }
 }
+
+# Optional SRE Agent stage: Azure SRE Agent, managed identities, Azure Monitor,
+# Application Insights and Log Analytics connectors, and required RBAC. The shared
+# Bicep module hard pins the agent to swedencentral. It references Stage A resources.
+resource "azapi_resource" "stage_sre_agent" {
+  count     = var.enable_stage_sre_agent ? 1 : 0
+  type      = "Microsoft.Resources/deployments@2022-09-01"
+  name      = "stage-sre-agent"
+  parent_id = data.azurerm_resource_group.lab.id
+
+  depends_on = [azapi_resource.stage_a]
+
+  body = {
+    properties = {
+      mode     = "Incremental"
+      template = sensitive(jsondecode(file("${path.module}/../infra/stages/60-sre-agent.json")))
+      parameters = {
+        namePrefix = { value = var.name_prefix }
+        ownerTag   = { value = var.owner_tag }
+      }
+    }
+  }
+}

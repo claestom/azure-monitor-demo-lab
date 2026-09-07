@@ -31,6 +31,7 @@ For workshop planning and customer expectation-setting, use:
 - [STAGE-D-SECURITY-POSTURE.md](STAGE-D-SECURITY-POSTURE.md)
 - [STAGE-E-OPTIONAL-ADVANCED.md](STAGE-E-OPTIONAL-ADVANCED.md)
 - [STAGE-AI.md](STAGE-AI.md)
+- [STAGE-SRE-AGENT.md](STAGE-SRE-AGENT.md)
 
 ## 3) Stage model (recommended)
 
@@ -42,6 +43,7 @@ Deploy in this order.
 4. Stage D - Security posture scenarios
 5. Stage E - Optional advanced/security add-ons
 6. Stage AI - Optional Microsoft Foundry GenAI workload (off by default)
+7. Stage SRE Agent - Optional Azure SRE Agent evaluation (off by default)
 
 ## 4) Stage details (scenarios + deployed services)
 
@@ -55,6 +57,7 @@ Use this as the workshop script: each stage adds a bounded set of capabilities a
 | Stage D - Security posture (Azure Monitor native) | Build non-SIEM security posture detections directly in Azure Monitor. | 27, 47, 48, 49 | Log Analytics RBAC model (workspace/table/row scope), AzureActivity routing prerequisite, scheduled query alerts for control-plane drift, role assignment changes, and exfil early-warning correlation, alert routing via existing Action Group. |
 | Stage E - Optional advanced/security add-ons | Layer advanced SOC and reliability preview capabilities. | 43, 44, 45, 46 | Optional Sentinel onboarding + analytics rule, search job/restore script workflow enablement, health model resources, SLI identity prerequisites and helper scripts, optional service-group/SLI setup flow. |
 | Stage AI - Optional GenAI workload | Add a Microsoft Foundry workload emitting token/trace/cost telemetry, with AI FinOps observability. Off by default (billable models, region-limited). | - | Foundry (AI Services) account + project pinned to swedencentral, four model deployments (gpt-5-mini, text-embedding-3-small, gpt-5.4, model-router), App Insights connection, token anomaly + spike metric alerts, AI FinOps query pack + workbook, and an AI tier folded into the workload health model. Agents + traffic via scripts/setup-ai.ps1. |
+| Stage SRE Agent - Optional incident investigation | Add Azure SRE Agent investigation and Review-mode response workflows. Off by default (preview and billable). | 54, 55, 56, 57, 58 | Azure SRE Agent hard pinned to swedencentral, system-assigned and user-assigned managed identities, Azure Monitor, Application Insights, and Log Analytics connectors, resource-group reader roles, and subscription-scope Monitoring Contributor. |
 
 ### Stage dependency chain
 
@@ -64,6 +67,7 @@ Use this as the workshop script: each stage adds a bounded set of capabilities a
 4. Stage D depends on Stage A ingestion and Stage C action routing.
 5. Stage E depends on prior stages, especially LAW and monitoring identities.
 6. Stage AI depends only on Stage A (it connects to `appi-amlab`); deploy it any time after Stage A.
+7. Stage SRE Agent depends only on Stage A (Application Insights and central LAW); deploy it any time after Stage A.
 
 ### Stage acceptance criteria (high level)
 
@@ -73,6 +77,7 @@ Use this as the workshop script: each stage adds a bounded set of capabilities a
 4. Stage D done: scenario 47/48/49 queries return data and alert rules evaluate.
 5. Stage E done: optional feature endpoints/blades become accessible and testable.
 6. Stage AI done: Foundry model deployments exist, App Insights receives AI telemetry, and the AI FinOps queries return data after `setup-ai.ps1` runs.
+7. Stage SRE Agent done: the agent is in `swedencentral`, all three connectors are configured, and identity-specific RBAC validation passes.
 
 ## 5) Practical deployment commands (stage-by-stage)
 
@@ -170,15 +175,21 @@ az deployment group create -g $rg --name stage-ai-foundry --template-file infra/
 
 Stage AI depends only on Stage A and can be deployed before or after Stages B to E. If you are using the central config workflow, set `stageToggles.enableStageAI` to `true` in `lab.config.json`, run `./scripts/sync-config.ps1`, and deploy the generated parameters with the same Stage AI template. The stage is off by default because the model deployments are billable.
 
-### SRE Agent trial deployment (optional)
+### Stage SRE Agent deploy (optional)
 
-Set `stageToggles.enableStageSreAgent` to `true` in `lab.config.json`, then run the normal staged post-deployment command:
+This stage depends on Stage A. Set `stageToggles.enableStageSreAgent` to `true` in `lab.config.json`, then deploy the dedicated stage template:
+
+```powershell
+az deployment group create -g $rg --name stage-sre-agent --template-file infra/stages/60-sre-agent.bicep --parameters namePrefix=amlab
+```
+
+The template creates the agent in `swedencentral`, its identities and RBAC, and the Azure Monitor, Application Insights, and Log Analytics connectors. Then run the normal staged post-deployment command to validate the agent and print its portal URL:
 
 ```powershell
 ./scripts/post-staged-deploy.ps1 -ResourceGroup $rg
 ```
 
-For the one-shot Bicep path, the toggle emits `enableSreAgent=true`. Bicep creates the agent in `swedencentral`, its identity and RBAC, and the Azure Monitor connectors. `setup-sre-agent.ps1` verifies the deployment afterward. Follow [STAGE-SRE-AGENT.md](STAGE-SRE-AGENT.md) to add the custom investigators and response plans.
+For the one-shot Bicep path, the toggle emits `enableSreAgent=true` and `main.bicep` creates the same resources. Follow [STAGE-SRE-AGENT.md](STAGE-SRE-AGENT.md) to add the custom investigators and response plans.
 
 ## 6) Recommended repo evolution for clean staging
 
@@ -188,6 +199,8 @@ For a cleaner customer story, split orchestration into:
 - infra/stages/20-alerting.bicep
 - infra/stages/30-security-posture.bicep
 - infra/stages/40-optional-advanced.bicep
+- infra/stages/50-ai.bicep
+- infra/stages/60-sre-agent.bicep
 
 Each stage should accept prior-stage outputs as parameters and be deployable idempotently.
 

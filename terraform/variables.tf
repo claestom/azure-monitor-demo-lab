@@ -100,6 +100,12 @@ variable "enable_stage_ai" {
   default = false
 }
 
+variable "enable_stage_sre_agent" {
+  type        = bool
+  default     = false
+  description = "Deploy the optional preview Azure SRE Agent stage. The agent is hard pinned to swedencentral and can incur billable usage."
+}
+
 variable "ai_location" {
   type        = string
   default     = "swedencentral"
