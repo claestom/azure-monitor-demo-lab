@@ -2513,7 +2513,7 @@ An Azure Monitor alert should begin an evidence-based investigation without an e
 
 ### Click-path / commands
 
-1. Confirm `amlab-app-alerts` is enabled in Review mode.
+1. In `sre.azure.com`, open the lab agent, select **Builder > Incident response plans**, and switch to **Table view**. Confirm the `amlab-app-alerts` row is enabled and its mode is **Review**. If the row is absent, create the plan from [Stage SRE Agent - Create response plans](STAGE-SRE-AGENT.md#6-create-response-plans) before continuing.
 2. Run `./scripts/break-the-lab.ps1 -ResourceGroup <resource-group>`.
 3. Wait for `alert-webapp-5xx` or `alert-appinsights-failed-requests` to fire.
 4. In the SRE Agent portal, open the new incident thread.
