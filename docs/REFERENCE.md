@@ -270,8 +270,9 @@ azure-monitor-demo-lab/
 │   │   ├─ 20-alerting.bicep        ← Action Group · alerts · AMBA · processing rules
 │   │   ├─ 30-security-posture.bicep← Sentinel · security alerts · LAW RBAC
 │   │   ├─ 40-optional-advanced.bicep ← Connection Monitor · flow logs · data export · etc.
-│   │   └─ 50-ai.bicep              ← (optional) Foundry GenAI workload · token alerts · AI FinOps observability
-│   └─ modules/                     ← 40+ reusable Bicep modules (incl. the optional AI stage)
+│   │   ├─ 50-ai.bicep              ← (optional) Foundry GenAI workload · token alerts · AI FinOps observability
+│   │   └─ 60-sre-agent.bicep       ← (optional) SRE Agent · connectors · identity and RBAC
+│   └─ modules/                     ← 40+ reusable Bicep modules (including optional AI and SRE stages)
 │       ├─ law.bicep · appinsights.bicep · azure-monitor-workspace.bicep
 │       ├─ network.bicep · vm-linux.bicep · vm-windows.bicep · vmss.bicep · aks.bicep
 │       ├─ grafana.bicep · appservice.bicep · availability-test.bicep

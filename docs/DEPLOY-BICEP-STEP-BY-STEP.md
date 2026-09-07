@@ -172,13 +172,19 @@ Stage AI depends only on Stage A and can be deployed before or after Stages B to
 
 ### SRE Agent trial deployment (optional)
 
-Set `stageToggles.enableStageSreAgent` to `true` in `lab.config.json`, then run the normal staged post-deployment command:
+This stage depends on Stage A. Set `stageToggles.enableStageSreAgent` to `true` in `lab.config.json`, then deploy the dedicated stage template:
+
+```powershell
+az deployment group create -g $rg --name stage-sre-agent --template-file infra/stages/60-sre-agent.bicep --parameters namePrefix=amlab
+```
+
+The template creates the agent in `swedencentral`, its identities and RBAC, and the Azure Monitor, Application Insights, and Log Analytics connectors. Then run the normal staged post-deployment command to validate the agent and print its portal URL:
 
 ```powershell
 ./scripts/post-staged-deploy.ps1 -ResourceGroup $rg
 ```
 
-For the one-shot Bicep path, the toggle emits `enableSreAgent=true`. Bicep creates the agent in `swedencentral`, its identity and RBAC, and the Azure Monitor connectors. `setup-sre-agent.ps1` verifies the deployment afterward. Follow [STAGE-SRE-AGENT.md](STAGE-SRE-AGENT.md) to add the custom investigators and response plans.
+For the one-shot Bicep path, the toggle emits `enableSreAgent=true` and `main.bicep` creates the same resources. Follow [STAGE-SRE-AGENT.md](STAGE-SRE-AGENT.md) to add the custom investigators and response plans.
 
 ## 6) Recommended repo evolution for clean staging
 
@@ -188,6 +194,8 @@ For a cleaner customer story, split orchestration into:
 - infra/stages/20-alerting.bicep
 - infra/stages/30-security-posture.bicep
 - infra/stages/40-optional-advanced.bicep
+- infra/stages/50-ai.bicep
+- infra/stages/60-sre-agent.bicep
 
 Each stage should accept prior-stage outputs as parameters and be deployable idempotently.
 

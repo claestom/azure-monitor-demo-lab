@@ -52,6 +52,18 @@ For a one-shot deployment, `deploy.ps1` maps this toggle to the Bicep `enableSre
 - SRE Agent Administrator access for the deploying user and agent identity
 - Azure Monitor, Application Insights, and Log Analytics connectors
 
+For a strict staged Bicep deployment, deploy Stage A first and then deploy the dedicated SRE Agent stage:
+
+```powershell
+az deployment group create `
+  -g <resource-group> `
+  --name stage-sre-agent `
+  --template-file infra/stages/60-sre-agent.bicep `
+  --parameters namePrefix=amlab
+```
+
+The staged template deploys the same agent, connectors, identities, and role assignments as the one-shot path.
+
 The agent uses Review mode, Low access, the Microsoft Foundry automatic model, and a 1,000 monthly Agent Unit limit. Creating the resource can start billing. Eligible new customers receive the 30-day always-on charge waiver automatically; confirm the evaluation status in **Settings > Agent consumption** after deployment.
 
 The agent remains in `swedencentral` even when the lab and its observability resources are deployed elsewhere. This creates an intentional cross-region query and reliability dependency. Treat this lab topology as an evaluation design, not a production colocation recommendation.
