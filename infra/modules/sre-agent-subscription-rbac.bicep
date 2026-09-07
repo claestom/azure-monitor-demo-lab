@@ -4,9 +4,9 @@ targetScope = 'subscription'
 param principalId string
 
 resource monitoringContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(subscription().id, principalId, '43bfe7e3-6883-4a1e-b686-33a7fe5db0c7')
+  name: guid(subscription().id, principalId, '749f88d5-cbae-40b8-bcfc-e573ddc772fa')
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43bfe7e3-6883-4a1e-b686-33a7fe5db0c7')
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '749f88d5-cbae-40b8-bcfc-e573ddc772fa')
     principalId: principalId
     principalType: 'ServicePrincipal'
   }
