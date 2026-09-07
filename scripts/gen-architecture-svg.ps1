@@ -1,4 +1,4 @@
-# Generates docs/architecture-overview.svg — a self-contained, dark-mode architecture
+# Generates docs/architecture-overview-sre.svg — a self-contained, dark-mode architecture
 # diagram that uses the official Azure service icons (from the draw.io azure2 library)
 # and preserves the exact groups + relationships shown in the README Mermaid diagram.
 #
@@ -166,6 +166,6 @@ foreach ($id in $nodes.Keys) {
 
 [void]$sb.AppendLine('</svg>')
 
-$outPath = Join-Path $repoRoot 'docs/architecture-overview.svg'
+$outPath = Join-Path $repoRoot 'docs/architecture-overview-sre.svg'
 [IO.File]::WriteAllText($outPath, $sb.ToString(), [Text.UTF8Encoding]::new($false))
 Write-Output "Wrote $outPath ($($sb.Length) bytes), $($iconPaths.Count) icons in $iconDir"

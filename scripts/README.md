@@ -18,7 +18,7 @@ Most scripts use the Azure CLI and require `az login`. Scripts that work with AK
 | `post-deploy.ps1` | Publishes the .NET sample to App Service and applies the AKS frontend, load generator, and OpenTelemetry workloads. Normally called by `deploy.ps1`. | `./scripts/post-deploy.ps1 -ResourceGroup <rg> -WebAppName <app> -AksName <aks> -WebAppHost <host>` |
 | `post-staged-deploy.ps1` | After a staged Bicep or Terraform deployment, discovers the App Service, AKS cluster, and central LAW, then runs the setup used by `deploy.ps1`. | `./scripts/post-staged-deploy.ps1 -ResourceGroup <rg>` |
 | `post-cloud-shell-deploy.ps1` | Cloud Shell-specific portal wrapper that pins the subscription and resolves Application Insights through ARM without optional Azure CLI extensions. | `./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` |
-| `gen-architecture-svg.ps1` | Regenerates `docs/architecture-overview.svg` from the architecture definition and local Azure icons. | `./scripts/gen-architecture-svg.ps1` |
+| `gen-architecture-svg.ps1` | Regenerates `docs/architecture-overview-sre.svg` from the architecture definition and local Azure icons. | `./scripts/gen-architecture-svg.ps1` |
 
 For a fresh deployment, use `deploy.ps1` rather than calling `post-deploy.ps1` directly.
 
