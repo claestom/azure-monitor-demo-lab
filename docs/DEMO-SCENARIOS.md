@@ -1474,13 +1474,13 @@ Every chart in App Insights now sprouts **vertical lines** at the exact second t
 
 ### What's deployed
 
-| Script | Annotation name | Category |
+| Script | Annotation name | Event category |
 |---|---|---|
 | `scripts/post-deploy.ps1` | `deploy-YYYYMMDD-HHMMSS` | Deployment |
 | `scripts/break-the-lab.ps1` | `break-the-lab-YYYYMMDD-HHMMSS` | Incident |
 | `scripts/restore-the-lab.ps1` | `restore-YYYYMMDD-HHMMSS` | Deployment |
 
-All three call `scripts/send-release-annotation.ps1` which PUTs to `…/Annotations?api-version=2015-05-01`.
+All three call `scripts/send-release-annotation.ps1`, which PUTs to `…/Annotations?api-version=2015-05-01`. Application Insights only displays markers whose wire-level category is `Deployment`, so the helper uses that display category for every marker and stores the logical value above as `EventCategory` metadata. Release annotations are chart metadata, not `customEvents`, and cannot be found with a `customEvents` KQL query.
 
 ### Click-path
 
@@ -2579,14 +2579,14 @@ The same break action gives the AKS frontend an invalid image and raises pod hea
 **Time:** 3 min.
 
 ### Story
-Symptoms alone do not establish cause. The agent checks Activity Logs and release annotations around the first failure, then separates observed changes from its inference about causality.
+Symptoms alone do not establish cause. The agent checks Activity Logs, deployment operations, and telemetry around the first failure, then separates observed changes from its inference about causality. The presenter independently verifies the release annotation in the Application Insights chart because release annotations are chart metadata rather than KQL telemetry.
 
 ### Click-path / commands
 
 1. Continue in either investigation from scenarios 55 or 56.
 2. Ask: `What changed in the 15 minutes before this incident, and which change is most likely related? Separate evidence from inference.`
 3. Show the VM deallocation operations in Activity Logs.
-4. Show the `break-the-lab-*` incident annotation in Application Insights.
+4. Open Application Insights **Performance** or **Failures** and show the `break-the-lab-*` annotation. Do not ask the agent to find it in `customEvents`; release annotations are not stored there.
 5. Compare each timestamp with the first failed request and unhealthy pod signal.
 
 ### Killer line
