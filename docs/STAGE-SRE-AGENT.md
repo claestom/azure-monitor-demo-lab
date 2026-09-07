@@ -110,9 +110,13 @@ The Azure Monitor scanner checks approximately every minute. Its initial lookbac
 
 ## 5. Create the custom agents
 
+Open **Builder > Agent Canvas**, select **Create > Custom Agent**, and complete the fields for each investigator below. Use the supplied text as **Instructions**, add the indicated **Handoff description**, and save the custom agent. Tools and handoff agents are optional for this lab.
+
 ### Application Investigator
 
 Create a custom agent named `AMLab Application Investigator` with these instructions:
+
+**Handoff description:** `Investigates App Service and Application Insights incidents.`
 
 ```text
 Investigate Azure Monitor incidents for the Azure Monitor Demo Lab resource group.
@@ -130,6 +134,8 @@ signal and application failure rate before declaring recovery.
 
 Create a custom agent named `AMLab Platform Investigator` with these instructions:
 
+**Handoff description:** `Investigates AKS and virtual machine incidents.`
+
 ```text
 Investigate Azure Monitor incidents for AKS and virtual machines in the Azure
 Monitor Demo Lab resource group. For AKS, inspect KubePodInventory,
@@ -143,16 +149,14 @@ resource change. Verify the original signal after an approved mitigation.
 
 ## 6. Create response plans
 
-Keep both plans in **Review** mode for the trial.
-
-Open **Incidents > Triggers & response plans** and select **Create a response plan**. Review mode is the **Agent autonomy level** selected inside each response plan; it is separate from the agent-level Review mode.
+Keep both plans in **Review** mode for the trial. Open **Incidents > Triggers & response plans** and select **Create a response plan**. For each row below, enter the plan name, severity, title filter, and response custom agent in **Step 1: Response plan**. Set **Agent autonomy level** to **Review** because the default is Autonomous. Select **Next**, choose **Last 7 days** in **Step 2: Incidents preview**, review any matches, and select **Create**. An empty preview is expected when no matching alert has fired yet.
 
 | Plan | Severity | Title contains | Custom agent |
 |---|---|---|---|
 | `amlab-app-alerts` | Sev2 | `webapp` or `failed-requests` | AMLab Application Investigator |
 | `amlab-platform-alerts` | Sev2, Sev3 | `aks`, `pod`, or `vm` | AMLab Platform Investigator |
 
-If the title filter accepts only one value, create one plan per title fragment. Turn off plans when the demo is idle to prevent expected lab alerts from consuming active-flow AAUs.
+The portal currently accepts one **Title contains** value per plan. Use `webapp` for `amlab-app-alerts` and `aks` for `amlab-platform-alerts`. To cover each additional title fragment in the table, clone the corresponding plan with a unique name and replace the title filter. Confirm every plan shows status **On** and mode **Review**. Turn off plans when the demo is idle to prevent expected lab alerts from consuming active-flow AAUs.
 
 ## 7. Run the scenarios
 

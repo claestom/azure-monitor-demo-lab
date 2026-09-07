@@ -2495,6 +2495,30 @@ Start with one known workload and a bounded cost envelope. The trial removes the
 
 6. Open **Incidents > Triggers & response plans** and show Azure Monitor connected to the lab subscription. If **Connect an incident platform** is displayed, connect Azure Monitor before continuing.
 
+### Required setup before Scenario 55
+
+Complete this setup once before triggering any alerts:
+
+1. Open **Builder > Agent Canvas**, select **Create > Custom Agent**, and create `AMLab Application Investigator`. Paste the instructions from [Stage SRE Agent - Application Investigator](STAGE-SRE-AGENT.md#application-investigator), describe its handoff as `Investigates App Service and Application Insights incidents`, and save.
+2. Create `AMLab Platform Investigator` the same way. Paste the instructions from [Stage SRE Agent - Platform Investigator](STAGE-SRE-AGENT.md#platform-investigator), describe its handoff as `Investigates AKS and virtual machine incidents`, and save.
+3. Open **Incidents > Triggers & response plans** and select **Create a response plan**. If the button is disabled, connect Azure Monitor first and wait for the green connected status.
+4. Create the application plan:
+   - **Incident response plan name:** `amlab-app-alerts`
+   - **Severity:** `Sev2`
+   - **Title contains:** `webapp`
+   - **Response subagent:** `AMLab Application Investigator`
+   - **Agent autonomy level:** `Review` (the default is Autonomous)
+5. Select **Next**, choose **Last 7 days** for the incidents preview, review any matches, and select **Create**. An empty preview does not block creation when no matching alert has fired yet.
+6. Repeat the wizard for the platform plan:
+   - **Incident response plan name:** `amlab-platform-alerts`
+   - **Severity:** `Sev2` and `Sev3`
+   - **Title contains:** `aks`
+   - **Response subagent:** `AMLab Platform Investigator`
+   - **Agent autonomy level:** `Review`
+7. Confirm both rows show status **On** and mode **Review**. Delete or turn off any generated quickstart response plan to prevent duplicate routing.
+
+The portal currently accepts one **Title contains** value per plan. To route the `failed-requests`, `pod`, or `vm` title variants as well, clone the appropriate plan with a unique name and replace the title filter.
+
 ### Killer line
 > *"The trial removes idle agent cost for 30 days, while this scope and consumption view keep every investigation deliberate, measurable, and attributable."*
 
@@ -2513,9 +2537,9 @@ An Azure Monitor alert should begin an evidence-based investigation without an e
 
 ### Click-path / commands
 
-1. In `sre.azure.com`, open the lab agent and select **Incidents > Triggers & response plans**. Confirm the `amlab-app-alerts` row is enabled and its agent autonomy level is **Review**. If the row is absent, select **Create a response plan** and use [Stage SRE Agent - Create response plans](STAGE-SRE-AGENT.md#6-create-response-plans). If that button is disabled, connect Azure Monitor first.
+1. In `sre.azure.com`, open the lab agent and select **Incidents > Triggers & response plans**. Confirm the `amlab-app-alerts` row created in Scenario 54 is **On** and its mode is **Review**. If it is absent, complete the required setup in Scenario 54 before continuing.
 2. Run `./scripts/break-the-lab.ps1 -ResourceGroup <resource-group>`.
-3. Wait for `alert-webapp-5xx` or `alert-appinsights-failed-requests` to fire.
+3. Wait for `alert-webapp-5xx` to fire. If you also cloned the plan with the `failed-requests` title filter, `alert-appinsights-failed-requests` can start the same workflow.
 4. In the SRE Agent portal, open the new incident thread.
 5. Ask: `Which endpoint failed, when did impact begin, and what evidence supports the likely cause?`
 6. Point out evidence from App Service metrics plus Application Insights requests, exceptions, traces, or dependencies.
