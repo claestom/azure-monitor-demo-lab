@@ -110,11 +110,11 @@ The Azure Monitor scanner checks approximately every minute. Its initial lookbac
 
 ## 5. Create the custom agents
 
-Open **Builder > Agent Canvas**, select **Create > Custom Agent**, and complete the fields for each investigator below. Use the supplied text as **Instructions**, add the indicated **Handoff description**, and save the custom agent. Tools and handoff agents are optional for this lab.
+Open **Builder > Agent Canvas** and select **Create > Custom Agent**. Custom-agent names can contain only letters, numbers, or hyphens and must be 36 characters or fewer. In the Custom Agent form, enter the name and supplied **Instructions**, then scroll below Instructions to **Handoff Description**. Some portal versions label this field **Handoff instructions**. Enter the indicated handoff text and save. **Handoff Agents**, tools, and knowledge sources are separate optional settings and can remain empty for this lab.
 
 ### Application Investigator
 
-Create a custom agent named `AMLab Application Investigator` with these instructions:
+Create a custom agent named `amlab-app-investigator` with these instructions:
 
 **Handoff description:** `Investigates App Service and Application Insights incidents.`
 
@@ -132,7 +132,7 @@ signal and application failure rate before declaring recovery.
 
 ### Platform Investigator
 
-Create a custom agent named `AMLab Platform Investigator` with these instructions:
+Create a custom agent named `amlab-platform-investigator` with these instructions:
 
 **Handoff description:** `Investigates AKS and virtual machine incidents.`
 
@@ -153,8 +153,8 @@ Keep both plans in **Review** mode for the trial. Open **Incidents > Triggers & 
 
 | Plan | Severity | Title contains | Custom agent |
 |---|---|---|---|
-| `amlab-app-alerts` | Sev2 | `webapp` or `failed-requests` | AMLab Application Investigator |
-| `amlab-platform-alerts` | Sev2, Sev3 | `aks`, `pod`, or `vm` | AMLab Platform Investigator |
+| `amlab-app-alerts` | Sev2 | `webapp` or `failed-requests` | `amlab-app-investigator` |
+| `amlab-platform-alerts` | Sev2, Sev3 | `aks`, `pod`, or `vm` | `amlab-platform-investigator` |
 
 The portal currently accepts one **Title contains** value per plan. Use `webapp` for `amlab-app-alerts` and `aks` for `amlab-platform-alerts`. To cover each additional title fragment in the table, clone the corresponding plan with a unique name and replace the title filter. Confirm every plan shows status **On** and mode **Review**. Turn off plans when the demo is idle to prevent expected lab alerts from consuming active-flow AAUs.
 

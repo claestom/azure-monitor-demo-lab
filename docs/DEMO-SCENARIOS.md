@@ -2499,21 +2499,21 @@ Start with one known workload and a bounded cost envelope. The trial removes the
 
 Complete this setup once before triggering any alerts:
 
-1. Open **Builder > Agent Canvas**, select **Create > Custom Agent**, and create `AMLab Application Investigator`. Paste the instructions from [Stage SRE Agent - Application Investigator](STAGE-SRE-AGENT.md#application-investigator), describe its handoff as `Investigates App Service and Application Insights incidents`, and save.
-2. Create `AMLab Platform Investigator` the same way. Paste the instructions from [Stage SRE Agent - Platform Investigator](STAGE-SRE-AGENT.md#platform-investigator), describe its handoff as `Investigates AKS and virtual machine incidents`, and save.
+1. Open **Builder > Agent Canvas**, select **Create > Custom Agent**, and create `amlab-app-investigator`. Custom-agent names can contain only letters, numbers, or hyphens and must be 36 characters or fewer. Paste the instructions from [Stage SRE Agent - Application Investigator](STAGE-SRE-AGENT.md#application-investigator). In the same form, scroll below **Instructions** to **Handoff Description** (shown as **Handoff instructions** in some portal versions), enter `Investigates App Service and Application Insights incidents`, and save.
+2. Create `amlab-platform-investigator` the same way. Enter `Investigates AKS and virtual machine incidents` in **Handoff Description** or **Handoff instructions**, paste the instructions from [Stage SRE Agent - Platform Investigator](STAGE-SRE-AGENT.md#platform-investigator), and save.
 3. Open **Incidents > Triggers & response plans** and select **Create a response plan**. If the button is disabled, connect Azure Monitor first and wait for the green connected status.
 4. Create the application plan:
    - **Incident response plan name:** `amlab-app-alerts`
    - **Severity:** `Sev2`
    - **Title contains:** `webapp`
-   - **Response subagent:** `AMLab Application Investigator`
+   - **Response subagent:** `amlab-app-investigator`
    - **Agent autonomy level:** `Review` (the default is Autonomous)
 5. Select **Next**, choose **Last 7 days** for the incidents preview, review any matches, and select **Create**. An empty preview does not block creation when no matching alert has fired yet.
 6. Repeat the wizard for the platform plan:
    - **Incident response plan name:** `amlab-platform-alerts`
    - **Severity:** `Sev2` and `Sev3`
    - **Title contains:** `aks`
-   - **Response subagent:** `AMLab Platform Investigator`
+   - **Response subagent:** `amlab-platform-investigator`
    - **Agent autonomy level:** `Review`
 7. Confirm both rows show status **On** and mode **Review**. Delete or turn off any generated quickstart response plan to prevent duplicate routing.
 
@@ -2562,7 +2562,7 @@ The same break action gives the AKS frontend an invalid image and raises pod hea
 
 1. Keep the lab broken from scenario 55, or run `break-the-lab.ps1` again after restoring it.
 2. Wait for `alert-aks-pod-restart-spike` or `amba-aks-pods-not-ready` to fire.
-3. Open the SRE Agent investigation routed to `AMLab Platform Investigator`.
+3. Open the SRE Agent investigation routed to `amlab-platform-investigator`.
 4. Ask: `Identify the failing Kubernetes object and show the pod status, event, and log evidence.`
 5. Confirm that the agent inspects `KubePodInventory`, `ContainerLogV2`, Kubernetes events, and relevant metrics.
 6. Do not approve remediation yet.
