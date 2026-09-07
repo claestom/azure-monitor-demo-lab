@@ -102,8 +102,9 @@ The script requires typing `GRANT` before it creates role assignments. Use `-Yes
 ## 4. Verify Azure Monitor
 
 1. In the SRE Agent portal, open **Builder > Connectors** and confirm Azure Monitor, Application Insights, and Log Analytics are present.
-2. Open **Builder > Incident response plans** and switch to Table view.
-3. Delete any generated quickstart plan before adding the plans below. Leaving it active can process the same incident twice or route it to the wrong custom agent.
+2. Open **Incidents > Triggers & response plans**.
+3. If the page displays **Connect an incident platform**, select it, choose **Azure Monitor**, select the lab subscription, and save. The **Create a response plan** button remains disabled until this connection is complete.
+4. On the **Triggers & response plans** tab, delete any generated quickstart plan before adding the plans below. Leaving it active can process the same incident twice or route it to the wrong custom agent.
 
 The Azure Monitor scanner checks approximately every minute. Its initial lookback is one day, repeated firings from the same alert rule merge into one active thread, and alert status synchronizes approximately every five minutes.
 
@@ -143,6 +144,8 @@ resource change. Verify the original signal after an approved mitigation.
 ## 6. Create response plans
 
 Keep both plans in **Review** mode for the trial.
+
+Open **Incidents > Triggers & response plans** and select **Create a response plan**. Review mode is the **Agent autonomy level** selected inside each response plan; it is separate from the agent-level Review mode.
 
 | Plan | Severity | Title contains | Custom agent |
 |---|---|---|---|

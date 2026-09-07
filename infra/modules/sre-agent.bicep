@@ -99,6 +99,10 @@ resource agent 'Microsoft.App/agents@2025-05-01-preview' = {
     experimentalSettings: {
       EnableWorkspaceTools: true
     }
+    incidentManagementConfiguration: {
+      type: 'AzMonitor'
+      connectionName: 'azmonitor'
+    }
   }
   dependsOn: [
     reader

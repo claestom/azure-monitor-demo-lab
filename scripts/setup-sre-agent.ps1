@@ -144,6 +144,10 @@ if ($agent.location -ne $sreAgentLocation) {
   throw "SRE Agent '$($agent.name)' is in '$($agent.location)', expected '$sreAgentLocation'."
 }
 
+$incidentPlatformType = $agent.properties.incidentManagementConfiguration.type
+$incidentPlatformConnected = $incidentPlatformType -eq 'AzMonitor'
+Write-Check 'Azure Monitor incident platform' $incidentPlatformConnected ($(if ($incidentPlatformConnected) { 'connected' } else { 'not connected; use Incidents > Triggers & response plans > Connect an incident platform' }))
+
 $connectors = @(az rest --method get --url "https://management.azure.com$($agent.id)/connectors?api-version=2025-05-01-preview" --query value -o json | ConvertFrom-Json)
 foreach ($connectorName in @('app-insights', 'log-analytics', 'azure-monitor')) {
   $present = @($connectors | Where-Object { $_.name -eq $connectorName }).Count -gt 0

@@ -2493,7 +2493,7 @@ Start with one known workload and a bounded cost envelope. The trial removes the
 
    </details>
 
-6. Open **Builder > Incident platform** and show Azure Monitor connected to the lab subscription.
+6. Open **Incidents > Triggers & response plans** and show Azure Monitor connected to the lab subscription. If **Connect an incident platform** is displayed, connect Azure Monitor before continuing.
 
 ### Killer line
 > *"The trial removes idle agent cost for 30 days, while this scope and consumption view keep every investigation deliberate, measurable, and attributable."*
@@ -2513,7 +2513,7 @@ An Azure Monitor alert should begin an evidence-based investigation without an e
 
 ### Click-path / commands
 
-1. In `sre.azure.com`, open the lab agent, select **Builder > Incident response plans**, and switch to **Table view**. Confirm the `amlab-app-alerts` row is enabled and its mode is **Review**. If the row is absent, create the plan from [Stage SRE Agent - Create response plans](STAGE-SRE-AGENT.md#6-create-response-plans) before continuing.
+1. In `sre.azure.com`, open the lab agent and select **Incidents > Triggers & response plans**. Confirm the `amlab-app-alerts` row is enabled and its agent autonomy level is **Review**. If the row is absent, select **Create a response plan** and use [Stage SRE Agent - Create response plans](STAGE-SRE-AGENT.md#6-create-response-plans). If that button is disabled, connect Azure Monitor first.
 2. Run `./scripts/break-the-lab.ps1 -ResourceGroup <resource-group>`.
 3. Wait for `alert-webapp-5xx` or `alert-appinsights-failed-requests` to fire.
 4. In the SRE Agent portal, open the new incident thread.
