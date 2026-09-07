@@ -2463,7 +2463,36 @@ Start with one known workload and a bounded cost envelope. The trial removes the
 2. In `sre.azure.com`, show the trial banner and its remaining days.
 3. Show that the agent location is **Sweden Central** (`swedencentral`), the lab's required SRE Agent region.
 4. Open **Settings > Agent consumption** and show the active-flow allocation and usage by thread.
-5. Run the setup script again without `-AgentPrincipalId`; it discovers the agent's user-assigned identity automatically. Show the three action-UAMI checks and four connector-system-identity checks. To show the UAMI object ID manually, open **Settings > Azure settings > Go to Identity**, then copy **Object (principal) ID** from the identity Overview page.
+5. Run the setup script again without `-AgentPrincipalId`; it discovers the agent's user-assigned identity automatically. Show the three action-UAMI checks and four connector-system-identity checks.
+
+   <details>
+   <summary><b>Optional: find the action UAMI object ID</b></summary>
+
+   Open the agent in `sre.azure.com`, select **Settings > Azure settings > Go to Identity**, and copy **Object (principal) ID** from the managed identity Overview page. Alternatively, retrieve it with Azure CLI:
+
+    ```powershell
+    $agentId = az resource list `
+       --subscription <subscription-id> `
+       --resource-group <resource-group> `
+       --resource-type Microsoft.App/agents `
+       --query '[0].id' -o tsv
+
+    $identityId = az resource show `
+       --subscription <subscription-id> `
+       --ids $agentId `
+       --api-version 2025-05-01-preview `
+       --query 'identity.userAssignedIdentities | keys(@)[0]' -o tsv
+
+    az identity show `
+       --subscription <subscription-id> `
+       --ids $identityId `
+       --query principalId -o tsv
+    ```
+
+    Passing the returned value with `-AgentPrincipalId` is optional and is mainly useful when validating a specific identity explicitly.
+
+   </details>
+
 6. Open **Builder > Incident platform** and show Azure Monitor connected to the lab subscription.
 
 ### Killer line
