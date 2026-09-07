@@ -66,8 +66,10 @@ After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, 
 ```powershell
 git clone https://github.com/claestom/azure-monitor-demo-lab.git
 cd azure-monitor-demo-lab
-az account set --subscription <subscription-id>
-./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
+$subscriptionId = Read-Host 'Subscription ID'
+$resourceGroup = Read-Host 'Resource group name'
+az account set --subscription $subscriptionId
+./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup
 ```
 
 If the repository is already present in Cloud Shell, update it before rerunning the wrapper:
@@ -75,7 +77,9 @@ If the repository is already present in Cloud Shell, update it before rerunning 
 ```powershell
 cd ~/azure-monitor-demo-lab
 git pull
-./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
+$subscriptionId = Read-Host 'Subscription ID'
+$resourceGroup = Read-Host 'Resource group name'
+./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup
 ```
 
 The optional AI stage deploys Microsoft Foundry and four billable model deployments in `swedencentral`, together with AI monitoring, token alerts, and an AI FinOps workbook. If you enabled it in the portal, use the dedicated Cloud Shell AI wrapper to create the demo agents and generate simulated traffic without optional Azure CLI extensions:

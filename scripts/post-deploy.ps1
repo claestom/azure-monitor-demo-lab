@@ -47,7 +47,24 @@ Start-Sleep -Seconds 30
 Write-Step "Publishing AmlabHello (workloads/webapp) and zip-deploying"
 $pub = Join-Path $tempDirectory "amlab-pub-$([guid]::NewGuid().ToString('N'))"
 $csproj = Join-Path $PSScriptRoot '..' 'workloads' 'webapp' 'AmlabHello.csproj'
-dotnet publish $csproj -c Release -o $pub --nologo --verbosity quiet
+$previousWorkloadIntegrityCheck = $env:DOTNET_SKIP_WORKLOAD_INTEGRITY_CHECK
+$env:DOTNET_SKIP_WORKLOAD_INTEGRITY_CHECK = '1'
+try {
+  dotnet publish $csproj -c Release -o $pub --nologo --verbosity quiet
+  $publishExitCode = $LASTEXITCODE
+} finally {
+  if ($null -eq $previousWorkloadIntegrityCheck) {
+    Remove-Item Env:DOTNET_SKIP_WORKLOAD_INTEGRITY_CHECK -ErrorAction SilentlyContinue
+  } else {
+    $env:DOTNET_SKIP_WORKLOAD_INTEGRITY_CHECK = $previousWorkloadIntegrityCheck
+  }
+}
+if ($publishExitCode -ne 0) {
+  throw "AmlabHello publish failed with exit code $publishExitCode. Confirm that the .NET 8 or later SDK is available."
+}
+if (-not (Test-Path (Join-Path $pub 'AmlabHello.dll'))) {
+  throw "AmlabHello publish completed without producing '$pub/AmlabHello.dll'."
+}
 $zip = "$pub.zip"
 Compress-Archive -Path (Join-Path $pub '*') -DestinationPath $zip -Force
 $deployOutput = ''
