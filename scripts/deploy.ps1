@@ -314,10 +314,10 @@ Write-Step "Provisioning service group + RG member (scenario 45 prerequisite)"
 $setupHm = Join-Path $PSScriptRoot 'setup-health-model.ps1'
 & $setupHm -ResourceGroup $ResourceGroup
 
-# 5. Service Level Indicators (scenario 46) — extension on the service group.
-Write-Step "Provisioning demo SLIs (scenario 46)"
+# 5. Verify the portal-created SLI prerequisites and source metrics (scenario 46).
+Write-Step "Verifying demo SLI prerequisites and source metrics (scenario 46)"
 $setupSli = Join-Path $PSScriptRoot 'setup-slis.ps1'
-& $setupSli -ResourceGroup $ResourceGroup
+& $setupSli -SubscriptionId $active.id -ResourceGroup $ResourceGroup
 
 # 6. Optional AI feature — create the demo agents + simulate GenAI traffic, but only
 #    when lab.config.json enabled it (stageToggles.enableStageAI -> Bicep enableAi).

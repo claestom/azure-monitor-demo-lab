@@ -85,9 +85,9 @@ Write-Step "Provisioning service group and health model prerequisites"
 $setupHm = Join-Path $PSScriptRoot 'setup-health-model.ps1'
 & $setupHm -ResourceGroup $ResourceGroup
 
-Write-Step "Provisioning demo SLI prerequisites"
+Write-Step "Verifying demo SLI prerequisites and source metrics"
 $setupSli = Join-Path $PSScriptRoot 'setup-slis.ps1'
-& $setupSli -ResourceGroup $ResourceGroup
+& $setupSli -SubscriptionId $active.id -ResourceGroup $ResourceGroup
 
 $labConfigPath = Join-Path $PSScriptRoot '..' 'lab.config.json'
 $sreAgentEnabled = $false
