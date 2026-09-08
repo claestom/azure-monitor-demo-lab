@@ -2116,8 +2116,8 @@ Open the URL, select **+ Add SLI**, and create these definitions:
 
 **SLI #2: `sli-aks-pod-start-latency`** (Latency, Window-Based)
 - Same source AMW + identity
-- Signal A: metric `kubelet_pod_start_duration_seconds_bucket`, metric aggregation `Rate`, filter `le eq 30`, **Summarize `Sum` for dimension `cluster`**
-- Signal B: metric `kubelet_pod_start_duration_seconds_count`, metric aggregation `Rate`, no filter, **Summarize `Sum` for dimension `cluster`**
+- Signal A: metric `kubelet_pod_start_duration_seconds_bucket`, metric aggregation `Rate` over `5` minutes, filter `le eq 30`, **Summarize `Sum` for dimension `cluster`**
+- Signal B: metric `kubelet_pod_start_duration_seconds_count`, metric aggregation `Rate` over `5` minutes, no filter, **Summarize `Sum` for dimension `cluster`**
 - Signal formula: `(100 * A) / B`. Signal IDs are uppercase and the formula must use uppercase letters.
 - Window uptime criteria: `>= 95`
 - Baseline: `95` / `7d` / RollingDays
@@ -2127,7 +2127,14 @@ Open the URL, select **+ Add SLI**, and create these definitions:
 
 > Select **Validate** after entering the signals and formula. The Signal Preview pane is populated by validation and can show "Could not find appropriate columns for Line Chart" before the first successful validation. Treat an error returned by **Validate**, rather than the pre-validation preview placeholder, as the configuration result.
 
-> First data points appear ~10-15 min after the SLI saves, once the streaming rule provisions and the destination metrics start emitting in the AMW.
+The pod-start histogram counters only change when pods start. After creating the latency SLI, generate fresh samples with a rolling restart that keeps the deployment available:
+
+```powershell
+kubectl -n demo rollout restart deployment/hello-frontend
+kubectl -n demo rollout status deployment/hello-frontend
+```
+
+First data points can take 10-15 minutes to appear after a valid source window, once the streaming rule provisions and the destination metrics start emitting in the AMW.
 
 ### Click-through (4 min)
 1. **Portal > Service groups > `amlab-workload` > Service Level Indicators**. Open the two manually created SLIs.
@@ -2135,7 +2142,7 @@ Open the URL, select **+ Add SLI**, and create these definitions:
    - **Definition** tab - show the `(100 * A) / B` formula, uptime criteria `>= 95`, and SLO baseline (`99` / 7d rolling).
    - **Compliance** tab - show current compliance and error budget remaining.
 3. Open `sli-aks-pod-start-latency` - show the percentage of pod starts completed within 30 seconds.
-4. Show the **destination metrics** the SLI emits back into the AMW (sliComplianceRatio, sliBaselineRatio, sliErrorBudgetRatio). These can be graphed in Grafana or fed back into the Health Model as additional signals, closing the SLO-to-workload-health loop.
+4. Show the **destination metrics** the SLI emits back into the AMW: `<sli-name>:Value`, `<sli-name>:Uptime`, and `<sli-name>:Downtime`, in the service-group metric namespace. These can be graphed in Grafana or fed back into the Health Model as additional signals, closing the SLO-to-workload-health loop.
 
 ### Break-the-lab story (≈90 s)
 1. Scale a demo AKS deployment to zero replicas so its running-pod signal drops.

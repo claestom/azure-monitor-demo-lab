@@ -120,6 +120,7 @@ $metricsPublisherRoleId = '3913510d-42f4-4e42-8a64-420c390055eb'
 $roleRequirements = @(
   [pscustomobject]@{ Name = 'Monitoring Reader'; Id = $monitoringReaderRoleId; Scope = $amw.id }
   [pscustomobject]@{ Name = 'Monitoring Metrics Publisher'; Id = $metricsPublisherRoleId; Scope = $amw.id }
+  [pscustomobject]@{ Name = 'Monitoring Reader'; Id = $monitoringReaderRoleId; Scope = $ingestion.dataCollectionRuleResourceId }
   [pscustomobject]@{ Name = 'Monitoring Metrics Publisher'; Id = $metricsPublisherRoleId; Scope = $ingestion.dataCollectionRuleResourceId }
   [pscustomobject]@{ Name = 'Monitoring Metrics Publisher'; Id = $metricsPublisherRoleId; Scope = $ingestion.dataCollectionEndpointResourceId }
 )
