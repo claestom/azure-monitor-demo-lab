@@ -2084,13 +2084,17 @@ Health Models *require* Service Groups precisely because the same resource may h
 `scripts/setup-slis.ps1` runs as part of `deploy.ps1`, `post-staged-deploy.ps1`, and the Cloud Shell post-deployment wrapper. It verifies the service group, identity, destination permissions, and source metric series, then prints the portal URL and resource IDs:
 
 ```powershell
+./scripts/start-the-lab.ps1 `
+   -ResourceGroup rg-azure-monitor-lab-one-button120 `
+   -Wait
+
 ./scripts/setup-slis.ps1 `
    -SubscriptionId 794194cd-a4b7-4024-970c-9533c4babff0 `
    -ResourceGroup rg-azure-monitor-lab-one-button120 `
    -ServiceGroupId amlab-workload
 ```
 
-Do not continue if the script reports a missing metric. A successful run confirms that all four documented source metric families currently return at least one series from `amw-amlab`.
+The AKS cluster must be running before the portal can preview these signals. After a stopped cluster starts, allow Managed Prometheus time to emit fresh samples. Do not continue if `setup-slis.ps1` reports a missing metric. A successful run confirms that all four documented source metric families currently return at least one series from `amw-amlab`.
 
 > `https://portal.azure.com/#@<tenant>/resource/providers/Microsoft.Management/serviceGroups/amlab-workload/serviceLevelIndicators`
 
