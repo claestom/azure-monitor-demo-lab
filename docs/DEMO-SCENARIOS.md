@@ -2084,46 +2084,76 @@ Health Models *require* Service Groups precisely because the same resource may h
 `scripts/setup-slis.ps1` runs as part of `deploy.ps1`, `post-staged-deploy.ps1`, and the Cloud Shell post-deployment wrapper. It verifies the service group, identity, destination permissions, and source metric series, then prints the portal URL and resource IDs:
 
 ```powershell
+$subscriptionId = '<subscription-id>'
+$resourceGroup = '<resource-group>'
+
+./scripts/start-the-lab.ps1 `
+   -ResourceGroup $resourceGroup `
+   -Wait
+
 ./scripts/setup-slis.ps1 `
-   -ResourceGroup rg-azure-monitor-lab-one-button120 `
+   -SubscriptionId $subscriptionId `
+   -ResourceGroup $resourceGroup `
    -ServiceGroupId amlab-workload
 ```
 
-Do not continue if the script reports a missing metric. A successful run confirms that all four documented source metric families currently return at least one series from `amw-amlab`.
+The AKS cluster must be running before the portal can preview these signals. After a stopped cluster starts, allow Managed Prometheus time to emit fresh samples. Do not continue if `setup-slis.ps1` reports a missing metric. A successful run confirms that all four documented source metric families currently return at least one series from `amw-amlab`.
 
 > `https://portal.azure.com/#@<tenant>/resource/providers/Microsoft.Management/serviceGroups/amlab-workload/serviceLevelIndicators`
 
 Open the URL, select **+ Add SLI**, and create these definitions:
 
+> Resource names are reused across lab deployments. In both portal pickers, verify the full resource ID and select `amw-amlab` and `id-sli-amlab` from the target resource group. Selecting identically named resources from another RG can leave Signal Preview empty.
+
 **SLI #1: `sli-aks-pods-running`** (Availability, Window-Based)
 - Source AMW: `amw-amlab`, identity = UAMI `id-sli-amlab`
-- Signal s1: `kube_pod_status_phase`, filter `phase == running`, temporal Average / 5 min, spatial Sum
-- Signal s2: `kube_pod_status_phase`, temporal Average / 5 min, spatial Sum
-- Keep both signal sources' spatial dimensions identical. Use no dimensions or use `cluster` for both.
-- Signal formula: `(100 * s1) / s2`
+- Signal A: metric `kube_pod_status_phase`, metric aggregation `Average`, filter `phase eq running`, **Summarize `Sum` for dimension `cluster`**
+- Signal B: metric `kube_pod_status_phase`, metric aggregation `Average`, no filter, **Summarize `Sum` for dimension `cluster`**
+- Signal formula: `(100 * A) / B`. Signal IDs are uppercase and the formula must use uppercase letters.
 - Window uptime criteria: `>= 95`
 - Baseline: `99` / `7d` / RollingDays
 - Destination AMW: `amw-amlab` (same UAMI)
 
 **SLI #2: `sli-aks-pod-start-latency`** (Latency, Window-Based)
 - Same source AMW + identity
-- Signal s1: `kubelet_pod_start_duration_seconds_bucket`, filter `le == 30`, temporal Rate / 5 min, spatial Sum
-- Signal s2: `kubelet_pod_start_duration_seconds_count`, temporal Rate / 5 min, spatial Sum
-- Keep both signal sources' spatial dimensions identical.
-- Signal formula: `(100 * s1) / s2`
+- Signal A: metric `kubelet_pod_start_duration_seconds_bucket`, metric aggregation `Rate` over `5` minutes, filter `le eq 30`, **Summarize `Sum` for dimension `cluster`**
+- Signal B: metric `kubelet_pod_start_duration_seconds_count`, metric aggregation `Rate` over `5` minutes, no filter, **Summarize `Sum` for dimension `cluster`**
+- Signal formula: `(100 * A) / B`. Signal IDs are uppercase and the formula must use uppercase letters.
 - Window uptime criteria: `>= 95`
 - Baseline: `95` / `7d` / RollingDays
 - Destination AMW: `amw-amlab`
 
-> First data points appear ~10-15 min after the SLI saves, once the streaming rule provisions and the destination metrics start emitting in the AMW.
+> The portal requires every signal in a formula to use the same spatial aggregation configuration. For both Signal A and Signal B, select **Summarize = Sum** and **dimension = cluster**. Choosing Average for one signal and Sum for the other produces the "different spatial aggregation types" validation error.
+
+> Select **Validate** after entering the signals and formula. The Signal Preview pane is populated by validation and can show "Could not find appropriate columns for Line Chart" before the first successful validation. Treat an error returned by **Validate**, rather than the pre-validation preview placeholder, as the configuration result.
+
+The pod-start histogram counters only change when pods start. After creating the latency SLI, generate fresh samples with a rolling restart that keeps the deployment available:
+
+```powershell
+kubectl -n demo rollout restart deployment/hello-frontend
+kubectl -n demo rollout status deployment/hello-frontend
+```
+
+First data points can take 10-15 minutes to appear after a valid source window, once the streaming rule provisions and the destination metrics start emitting in the AMW.
+
+### Reading error budget and burn rate
+
+Azure Monitor compares the measured SLI with the **baseline target**, which is the SLO. The gap between perfect reliability and that target is the allowed unreliability. For example, a `99%` baseline provides a `1%` error budget over the selected evaluation period.
+
+- **Error Budget Remaining** shows how much of that allowed unreliability is still available before the service misses its baseline target. It answers: *"How much more failure can we absorb?"* A falling value means unsuccessful requests or bad windows are consuming the budget. An exhausted budget means there is no remaining tolerance for failure within the evaluation period.
+- **Burn Rate** shows how quickly the error budget is being consumed. It answers: *"At the current rate, how urgently do we need to act?"* A fast-burn condition usually indicates a sudden regression. A slow-burn condition indicates sustained degradation that can still cause an SLO miss if it continues.
+- **Use them together:** Error Budget Remaining describes the reliability margin left; Burn Rate describes the urgency. A healthy remaining budget with a sharp fast burn can require immediate action, while a gradual slow burn calls for investigation before it becomes an SLO miss.
+
+Azure Monitor can alert when the SLI falls below its baseline, when a fast burn consumes budget rapidly over a short lookback, or when a slow burn persists over a longer lookback. See [Service level indicators in Azure Monitor](https://learn.microsoft.com/azure/azure-monitor/fundamentals/service-level-indicators-create#understand-baseline-target-error-budget-and-burn-rate).
 
 ### Click-through (4 min)
 1. **Portal > Service groups > `amlab-workload` > Service Level Indicators**. Open the two manually created SLIs.
 2. Open `sli-aks-pods-running`:
-   - **Definition** tab - show the `(100 * s1) / s2` formula, uptime criteria `>= 95`, and SLO baseline (`99` / 7d rolling).
-   - **Compliance** tab - show current compliance and error budget remaining.
+   - **Definition** tab - show the `(100 * A) / B` formula, uptime criteria `>= 95`, and SLO baseline (`99` / 7d rolling).
+   - **Compliance** tab - show current compliance and error budget remaining. Explain that remaining budget is the failure margin left before the SLO is missed.
+   - **Burn Rate** - explain that this is the speed of budget consumption: fast burn points to a sudden regression; slow burn points to sustained degradation.
 3. Open `sli-aks-pod-start-latency` - show the percentage of pod starts completed within 30 seconds.
-4. Show the **destination metrics** the SLI emits back into the AMW (sliComplianceRatio, sliBaselineRatio, sliErrorBudgetRatio). These can be graphed in Grafana or fed back into the Health Model as additional signals, closing the SLO-to-workload-health loop.
+4. Show the **destination metrics** the SLI emits back into the AMW: `<sli-name>:Value`, `<sli-name>:Uptime`, and `<sli-name>:Downtime`, in the service-group metric namespace. These can be graphed in Grafana or fed back into the Health Model as additional signals, closing the SLO-to-workload-health loop.
 
 ### Break-the-lab story (≈90 s)
 1. Scale a demo AKS deployment to zero replicas so its running-pod signal drops.
@@ -2134,7 +2164,7 @@ Open the URL, select **+ Add SLI**, and create these definitions:
 ```
 infra/modules/sli-identity.bicep   UAMI + role assignments on AMW
 infra/main.bicep                   Wires sliIdentity in + exports outputs
-scripts/setup-slis.ps1             Grants Metrics Publisher on AMW DCR/DCE
+scripts/setup-slis.ps1             Verifies source and destination RBAC on the AMW/DCR/DCE
                                    + verifies source metrics + prints portal inputs.
 scripts/deploy.ps1                 Chains setup-health-model.ps1 + setup-slis.ps1
 scripts/teardown.ps1               Tears SLIs down before deleting the RG (idempotent)

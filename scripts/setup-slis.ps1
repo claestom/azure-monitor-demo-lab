@@ -109,32 +109,41 @@ if (-not $amw.id) {
 Write-Info "UAMI: $($uami.id)"
 Write-Info "AMW : $($amw.id)"
 
-Write-Step 'Ensuring SLI destination ingestion permissions'
+Write-Step 'Ensuring SLI source and destination permissions'
 $ingestion = $amw.properties.defaultIngestionSettings
 if (-not $ingestion.dataCollectionRuleResourceId) {
   throw "Azure Monitor Workspace 'amw-amlab' has no default ingestion DCR."
 }
 
+$monitoringReaderRoleId = '43d0d8ad-25c7-4714-9337-8ba259a9fe05'
 $metricsPublisherRoleId = '3913510d-42f4-4e42-8a64-420c390055eb'
-foreach ($scope in @($ingestion.dataCollectionRuleResourceId, $ingestion.dataCollectionEndpointResourceId)) {
-  if (-not $scope) { continue }
-  $assignments = az role assignment list --assignee-object-id $uami.principalId --scope $scope -o json 2>$null | ConvertFrom-Json
-  $existing = $assignments | Where-Object { $_.roleDefinitionId -like "*/$metricsPublisherRoleId" } | Select-Object -First 1
+$roleRequirements = @(
+  [pscustomobject]@{ Name = 'Monitoring Reader'; Id = $monitoringReaderRoleId; Scope = $amw.id }
+  [pscustomobject]@{ Name = 'Monitoring Metrics Publisher'; Id = $metricsPublisherRoleId; Scope = $amw.id }
+  [pscustomobject]@{ Name = 'Monitoring Reader'; Id = $monitoringReaderRoleId; Scope = $ingestion.dataCollectionRuleResourceId }
+  [pscustomobject]@{ Name = 'Monitoring Metrics Publisher'; Id = $metricsPublisherRoleId; Scope = $ingestion.dataCollectionRuleResourceId }
+  [pscustomobject]@{ Name = 'Monitoring Metrics Publisher'; Id = $metricsPublisherRoleId; Scope = $ingestion.dataCollectionEndpointResourceId }
+)
+
+foreach ($requirement in $roleRequirements) {
+  if (-not $requirement.Scope) { continue }
+  $assignments = az role assignment list --assignee-object-id $uami.principalId --scope $requirement.Scope -o json 2>$null | ConvertFrom-Json
+  $existing = $assignments | Where-Object { $_.roleDefinitionId -like "*/$($requirement.Id)" } | Select-Object -First 1
   if ($existing) {
-    Write-Info "Monitoring Metrics Publisher already assigned on $scope"
+    Write-Info "$($requirement.Name) already assigned on $($requirement.Scope)"
     continue
   }
 
   az role assignment create `
     --assignee-object-id $uami.principalId `
     --assignee-principal-type ServicePrincipal `
-    --role $metricsPublisherRoleId `
-    --scope $scope `
+    --role $requirement.Id `
+    --scope $requirement.Scope `
     --only-show-errors | Out-Null
   if ($LASTEXITCODE -ne 0) {
-    throw "Failed to assign Monitoring Metrics Publisher on '$scope'."
+    throw "Failed to assign $($requirement.Name) on '$($requirement.Scope)'."
   }
-  Write-Info "Assigned Monitoring Metrics Publisher on $scope"
+  Write-Info "Assigned $($requirement.Name) on $($requirement.Scope)"
 }
 
 Write-Step 'Verifying Managed Prometheus source metrics'
