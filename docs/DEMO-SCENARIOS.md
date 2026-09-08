@@ -2084,13 +2084,16 @@ Health Models *require* Service Groups precisely because the same resource may h
 `scripts/setup-slis.ps1` runs as part of `deploy.ps1`, `post-staged-deploy.ps1`, and the Cloud Shell post-deployment wrapper. It verifies the service group, identity, destination permissions, and source metric series, then prints the portal URL and resource IDs:
 
 ```powershell
+$subscriptionId = '<subscription-id>'
+$resourceGroup = '<resource-group>'
+
 ./scripts/start-the-lab.ps1 `
-   -ResourceGroup rg-azure-monitor-lab-sre-agent-8-9 `
+   -ResourceGroup $resourceGroup `
    -Wait
 
 ./scripts/setup-slis.ps1 `
-   -SubscriptionId 794194cd-a4b7-4024-970c-9533c4babff0 `
-   -ResourceGroup rg-azure-monitor-lab-sre-agent-8-9 `
+   -SubscriptionId $subscriptionId `
+   -ResourceGroup $resourceGroup `
    -ServiceGroupId amlab-workload
 ```
 
@@ -2100,7 +2103,7 @@ The AKS cluster must be running before the portal can preview these signals. Aft
 
 Open the URL, select **+ Add SLI**, and create these definitions:
 
-> Resource names are reused across lab deployments. In both portal pickers, verify the full resource ID and select `amw-amlab` and `id-sli-amlab` from `rg-azure-monitor-lab-sre-agent-8-9`. Selecting identically named resources from another RG can leave Signal Preview empty.
+> Resource names are reused across lab deployments. In both portal pickers, verify the full resource ID and select `amw-amlab` and `id-sli-amlab` from the target resource group. Selecting identically named resources from another RG can leave Signal Preview empty.
 
 **SLI #1: `sli-aks-pods-running`** (Availability, Window-Based)
 - Source AMW: `amw-amlab`, identity = UAMI `id-sli-amlab`
@@ -2121,6 +2124,8 @@ Open the URL, select **+ Add SLI**, and create these definitions:
 - Destination AMW: `amw-amlab`
 
 > The portal requires every signal in a formula to use the same spatial aggregation configuration. For both Signal A and Signal B, select **Summarize = Sum** and **dimension = cluster**. Choosing Average for one signal and Sum for the other produces the "different spatial aggregation types" validation error.
+
+> Select **Validate** after entering the signals and formula. The Signal Preview pane is populated by validation and can show "Could not find appropriate columns for Line Chart" before the first successful validation. Treat an error returned by **Validate**, rather than the pre-validation preview placeholder, as the configuration result.
 
 > First data points appear ~10-15 min after the SLI saves, once the streaming rule provisions and the destination metrics start emitting in the AMW.
 
