@@ -56,6 +56,7 @@ For a fresh deployment, use `deploy.ps1` rather than calling `post-deploy.ps1` d
 | `setup-sre-agent.ps1` | Validates the deployed SRE Agent, connectors, and identity-specific RBAC. It discovers the agent identities automatically and is read-only unless `-GrantMissingRoles` is explicitly supplied. | `./scripts/setup-sre-agent.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` |
 | `setup-health-model.ps1` | Creates or removes the optional tenant-scoped Service Group and its RG relationship. | `./scripts/setup-health-model.ps1 -ResourceGroup <rg>` or add `-Teardown` |
 | `setup-slis.ps1` | Verifies the Service Group, identity permissions, and Managed Prometheus source metrics for portal-created SLIs. `-Teardown` removes the two documented samples. | `./scripts/setup-slis.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` or add `-Teardown` |
+| `demo-slis.ps1` | Creates, inspects, or removes isolated AKS workloads that move the availability and pod-start latency SLIs. | `./scripts/demo-slis.ps1 -SubscriptionId <sub> -ResourceGroup <rg> -Mode Degrade` |
 | `setup-rbac-demo.ps1` | Discovers the central LAW and RG-specific custom role, then creates the service principals and role assignments used by the granular RBAC demonstration. | `./scripts/setup-rbac-demo.ps1 -ResourceGroup <rg>` |
 | `demo-granular-rbac.ps1` | Runs the granular RBAC demonstration query using the generated local RBAC configuration. | `./scripts/demo-granular-rbac.ps1` |
 

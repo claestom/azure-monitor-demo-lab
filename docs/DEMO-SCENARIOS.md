@@ -2127,7 +2127,7 @@ Open the URL, select **+ Add SLI**, and create these definitions:
 
 > Select **Validate** after entering the signals and formula. The Signal Preview pane is populated by validation and can show "Could not find appropriate columns for Line Chart" before the first successful validation. Treat an error returned by **Validate**, rather than the pre-validation preview placeholder, as the configuration result.
 
-The pod-start histogram counters only change when pods start. After creating the latency SLI, generate fresh samples with a rolling restart that keeps the deployment available:
+The pod-start histogram counters only change when pods start. A rolling restart generates fresh samples while keeping the deployment available, but healthy starts normally leave the latency SLI at 100%:
 
 ```powershell
 kubectl -n demo rollout restart deployment/hello-frontend
@@ -2156,9 +2156,41 @@ Azure Monitor can alert when the SLI falls below its baseline, when a fast burn 
 4. Show the **destination metrics** the SLI emits back into the AMW: `<sli-name>:Value`, `<sli-name>:Uptime`, and `<sli-name>:Downtime`, in the service-group metric namespace. These can be graphed in Grafana or fed back into the Health Model as additional signals, closing the SLO-to-workload-health loop.
 
 ### Break-the-lab story (≈90 s)
-1. Scale a demo AKS deployment to zero replicas so its running-pod signal drops.
-2. Wait one or two 5-minute windows. `sli-aks-pods-running` compliance drops and error-budget burn becomes visible.
-3. Restore the deployment. Availability compliance recovers after running-pod windows resume.
+Use the dedicated helper to move both SLIs without changing `hello-frontend`:
+
+```powershell
+./scripts/demo-slis.ps1 `
+   -SubscriptionId $subscriptionId `
+   -ResourceGroup $resourceGroup `
+   -Mode Degrade
+```
+
+The script replaces two temporary deployments in the `demo` namespace, so each `Degrade` run generates fresh pod-start samples:
+
+- `sli-unavailable` creates five pods that remain Pending because the image tag intentionally does not exist. This adds non-running pod states and lowers `sli-aks-pods-running`.
+- `sli-slow-start` creates three pods with a 45-second init-container delay. These starts fall outside the SLI's 30-second latency bucket and lower `sli-aks-pod-start-latency` during the active rate window.
+
+Inspect the test workloads at any time:
+
+```powershell
+./scripts/demo-slis.ps1 `
+   -SubscriptionId $subscriptionId `
+   -ResourceGroup $resourceGroup `
+   -Mode Status
+```
+
+Allow one or two 5-minute source windows plus the SLI processing delay. The live latency value is event-driven and can recover after the slow starts leave the five-minute source window. Seven-day compliance and error-budget changes are more gradual.
+
+Restore both signals by deleting only the temporary test deployments:
+
+```powershell
+./scripts/demo-slis.ps1 `
+   -SubscriptionId $subscriptionId `
+   -ResourceGroup $resourceGroup `
+   -Mode Restore
+```
+
+Do not scale `hello-frontend` to zero for this test. When its pod series disappear, the formula can lose both numerator and denominator instead of producing a clear bad ratio.
 
 ### Where it lives in the code
 ```
@@ -2166,6 +2198,7 @@ infra/modules/sli-identity.bicep   UAMI + role assignments on AMW
 infra/main.bicep                   Wires sliIdentity in + exports outputs
 scripts/setup-slis.ps1             Verifies source and destination RBAC on the AMW/DCR/DCE
                                    + verifies source metrics + prints portal inputs.
+scripts/demo-slis.ps1              Creates, inspects, or removes temporary SLI degradation workloads.
 scripts/deploy.ps1                 Chains setup-health-model.ps1 + setup-slis.ps1
 scripts/teardown.ps1               Tears SLIs down before deleting the RG (idempotent)
 ```
