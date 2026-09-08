@@ -2085,6 +2085,7 @@ Health Models *require* Service Groups precisely because the same resource may h
 
 ```powershell
 ./scripts/setup-slis.ps1 `
+   -SubscriptionId 794194cd-a4b7-4024-970c-9533c4babff0 `
    -ResourceGroup rg-azure-monitor-lab-one-button120 `
    -ServiceGroupId amlab-workload
 ```
@@ -2097,30 +2098,30 @@ Open the URL, select **+ Add SLI**, and create these definitions:
 
 **SLI #1: `sli-aks-pods-running`** (Availability, Window-Based)
 - Source AMW: `amw-amlab`, identity = UAMI `id-sli-amlab`
-- Signal s1: `kube_pod_status_phase`, filter `phase == running`, temporal Average / 5 min, spatial Sum
-- Signal s2: `kube_pod_status_phase`, temporal Average / 5 min, spatial Sum
-- Keep both signal sources' spatial dimensions identical. Use no dimensions or use `cluster` for both.
-- Signal formula: `(100 * s1) / s2`
+- Signal A: metric `kube_pod_status_phase`, metric aggregation `Average`, filter `phase eq running`, **Summarize `Sum` for dimension `cluster`**
+- Signal B: metric `kube_pod_status_phase`, metric aggregation `Average`, no filter, **Summarize `Sum` for dimension `cluster`**
+- Signal formula: `(100 * A) / B`. Signal IDs are uppercase and the formula must use uppercase letters.
 - Window uptime criteria: `>= 95`
 - Baseline: `99` / `7d` / RollingDays
 - Destination AMW: `amw-amlab` (same UAMI)
 
 **SLI #2: `sli-aks-pod-start-latency`** (Latency, Window-Based)
 - Same source AMW + identity
-- Signal s1: `kubelet_pod_start_duration_seconds_bucket`, filter `le == 30`, temporal Rate / 5 min, spatial Sum
-- Signal s2: `kubelet_pod_start_duration_seconds_count`, temporal Rate / 5 min, spatial Sum
-- Keep both signal sources' spatial dimensions identical.
-- Signal formula: `(100 * s1) / s2`
+- Signal A: metric `kubelet_pod_start_duration_seconds_bucket`, metric aggregation `Rate`, filter `le eq 30`, **Summarize `Sum` for dimension `cluster`**
+- Signal B: metric `kubelet_pod_start_duration_seconds_count`, metric aggregation `Rate`, no filter, **Summarize `Sum` for dimension `cluster`**
+- Signal formula: `(100 * A) / B`. Signal IDs are uppercase and the formula must use uppercase letters.
 - Window uptime criteria: `>= 95`
 - Baseline: `95` / `7d` / RollingDays
 - Destination AMW: `amw-amlab`
+
+> The portal requires every signal in a formula to use the same spatial aggregation configuration. For both Signal A and Signal B, select **Summarize = Sum** and **dimension = cluster**. Choosing Average for one signal and Sum for the other produces the "different spatial aggregation types" validation error.
 
 > First data points appear ~10-15 min after the SLI saves, once the streaming rule provisions and the destination metrics start emitting in the AMW.
 
 ### Click-through (4 min)
 1. **Portal > Service groups > `amlab-workload` > Service Level Indicators**. Open the two manually created SLIs.
 2. Open `sli-aks-pods-running`:
-   - **Definition** tab - show the `(100 * s1) / s2` formula, uptime criteria `>= 95`, and SLO baseline (`99` / 7d rolling).
+   - **Definition** tab - show the `(100 * A) / B` formula, uptime criteria `>= 95`, and SLO baseline (`99` / 7d rolling).
    - **Compliance** tab - show current compliance and error budget remaining.
 3. Open `sli-aks-pod-start-latency` - show the percentage of pod starts completed within 30 seconds.
 4. Show the **destination metrics** the SLI emits back into the AMW (sliComplianceRatio, sliBaselineRatio, sliErrorBudgetRatio). These can be graphed in Grafana or fed back into the Health Model as additional signals, closing the SLO-to-workload-health loop.
