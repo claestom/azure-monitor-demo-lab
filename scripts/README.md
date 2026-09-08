@@ -30,9 +30,9 @@ For a fresh deployment, use `deploy.ps1` rather than calling `post-deploy.ps1` d
 | `break-the-lab.ps1` | Intentionally degrades the lab: stops VMs, crashloops the AKS frontend, and increases load-generator failures. | `./scripts/break-the-lab.ps1 -ResourceGroup <rg>` |
 | `restore-the-lab.ps1` | Reverses the break scenario by starting VMs, restoring the AKS image, and applying a healthy load generator. | `./scripts/restore-the-lab.ps1 -ResourceGroup <rg>` |
 | `start-ramp.ps1` | Starts a 60-minute AKS load test against the App Service for Smart Detection and autoscale demonstrations. | `./scripts/start-ramp.ps1 -ResourceGroup <rg>` |
-| `teardown.ps1` | Removes tenant-scoped demo artifacts, disables LAW replication, removes nested DCR associations, deletes DCRs and DCEs where possible, then deletes the resource group. | `./scripts/teardown.ps1 -ResourceGroup <rg> -Yes` |
+| `teardown.ps1` | Removes tenant-scoped demo artifacts and monitoring dependencies, then deletes every resource group whose name contains the complete requested resource group name, including AKS-managed `MC_` groups. | `./scripts/teardown.ps1 -ResourceGroup <rg> -Yes` |
 
-`teardown.ps1` is destructive. The `-Yes` switch skips the confirmation prompt. If omitted, the script requires you to type `DELETE`.
+`teardown.ps1` is destructive. It lists all matching resource groups before deletion. The `-Yes` switch skips the confirmation prompt. If omitted, the script requires you to type `DELETE`.
 
 ## Telemetry and monitoring demos
 

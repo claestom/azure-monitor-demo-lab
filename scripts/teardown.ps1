@@ -9,6 +9,26 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 
+if ([string]::IsNullOrWhiteSpace($ResourceGroup)) {
+  throw 'ResourceGroup cannot be empty.'
+}
+
+function Remove-MatchingResourceGroups {
+  param([string[]] $Names)
+
+  foreach ($name in $Names) {
+    Write-Host "Deleting $name ..." -ForegroundColor Yellow
+    az group delete -n $name --yes --no-wait
+    if ($LASTEXITCODE -ne 0) {
+      throw "Azure CLI failed to submit deletion for resource group '$name'."
+    }
+  }
+
+  Write-Host "Delete requests accepted (running in background)." -ForegroundColor Green
+  Write-Host "Verify completion with:" -ForegroundColor Green
+  $Names | ForEach-Object { Write-Host "  az group exists -n '$_'" -ForegroundColor Green }
+}
+
 # Subscription guardrail
 $targetFile = Join-Path $PSScriptRoot '..' '.azure-target.json'
 if (Test-Path $targetFile) {
@@ -20,9 +40,38 @@ if (Test-Path $targetFile) {
   }
 }
 
+# Include Azure-managed and auxiliary resource groups whose names contain the
+# complete requested RG name, such as MC_<rg>_<aks>_<region>.
+$allResourceGroupNames = @(az group list --query '[].name' -o json | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0) {
+  throw 'Failed to list resource groups for teardown discovery.'
+}
+$resourceGroupsToDelete = @(
+  $allResourceGroupNames |
+    Where-Object { $_.IndexOf($ResourceGroup, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 } |
+    Sort-Object { if ($_ -ieq $ResourceGroup) { 0 } else { 1 } }, { $_ }
+)
+
+if ($resourceGroupsToDelete.Count -eq 0) {
+  Write-Host "No resource groups contain '$ResourceGroup'. Nothing to delete." -ForegroundColor Yellow
+  return
+}
+
 if (-not $Yes) {
-  $confirm = Read-Host "About to delete RG '$ResourceGroup' and EVERYTHING in it. Type DELETE to confirm"
+  Write-Host "The following resource groups contain '$ResourceGroup' and will be deleted:" -ForegroundColor Yellow
+  $resourceGroupsToDelete | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
+  $confirm = Read-Host 'Type DELETE to confirm deletion of every resource group listed above'
   if ($confirm -ne 'DELETE') { Write-Host "Aborted." -ForegroundColor Yellow; return }
+} else {
+  Write-Host "Deleting resource groups whose names contain '$ResourceGroup':" -ForegroundColor Yellow
+  $resourceGroupsToDelete | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow }
+}
+
+$primaryResourceGroupExists = @($allResourceGroupNames | Where-Object { $_ -ieq $ResourceGroup }).Count -gt 0
+if (-not $primaryResourceGroupExists) {
+  Write-Host "The original resource group no longer exists; deleting matched auxiliary resource groups directly." -ForegroundColor Yellow
+  Remove-MatchingResourceGroups -Names $resourceGroupsToDelete
+  return
 }
 
 # Delete billable SRE Agent resources explicitly before the asynchronous RG delete.
@@ -99,10 +148,4 @@ if (Test-Path $setupHm) {
   & $setupHm -ResourceGroup $ResourceGroup -Teardown
 }
 
-Write-Host "Deleting $ResourceGroup ..." -ForegroundColor Yellow
-az group delete -n $ResourceGroup --yes --no-wait
-if ($LASTEXITCODE -ne 0) {
-  throw "Azure CLI failed to submit deletion for resource group '$ResourceGroup'."
-}
-Write-Host "Delete request accepted (running in background)." -ForegroundColor Green
-Write-Host "Verify completion with: az group exists -n $ResourceGroup" -ForegroundColor Green
+Remove-MatchingResourceGroups -Names $resourceGroupsToDelete
