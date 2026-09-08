@@ -72,8 +72,6 @@ az account set --subscription $subscriptionId
 ./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup
 ```
 
-> **SLI manual step:** The Deploy to Azure button and Cloud Shell wrapper do not create the two preview SLI resources. After the wrapper reports that all four source metrics are flowing, open the SLI portal URL it prints and create `sli-aks-pods-running` and `sli-aks-pod-start-latency` using the field values in [Scenario 46](docs/DEMO-SCENARIOS.md#s46). Use the `amw-amlab` workspace and `id-sli-amlab` identity from the resource group you deployed. Allow 10-15 minutes after a valid source window for the evaluated SLI metrics to appear.
-
 If the repository is already present in Cloud Shell, update it before rerunning the wrapper:
 
 ```powershell
@@ -84,19 +82,7 @@ $resourceGroup = Read-Host 'Resource group name'
 ./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup
 ```
 
-The optional AI stage deploys Microsoft Foundry and four billable model deployments in `swedencentral`, together with AI monitoring, token alerts, and an AI FinOps workbook. If you enabled it in the portal, use the dedicated Cloud Shell AI wrapper to create the demo agents and generate simulated traffic without optional Azure CLI extensions:
-
-```powershell
-./scripts/setup-ai-cloud-shell.ps1 -SubscriptionId <subscription-id> -ResourceGroup <resource-group>
-```
-
-If you enabled the optional SRE Agent stage, run its setup script to validate the agent, connectors, managed identity, region, and RBAC, and to print the SRE Agent portal URL:
-
-```powershell
-./scripts/setup-sre-agent.ps1 `
-	-SubscriptionId <subscription-id> `
-	-ResourceGroup <resource-group>
-```
+> **Next:** Follow the [post-deployment guide for the portal option](docs/POST-DEPLOYMENT.md#portal-deployment) to finish the scenarios and optional stages you enabled.
 
 > Use Option 2 for a scripted one-shot deployment, or Option 3 for the staged workshop and progressive deployment.
 
@@ -136,11 +122,7 @@ The pre-flight checks *availability and quota*, not *live service capacity*. Tra
 
 </details>
 
-> Optional AI stage. An extra stage (off by default) adds a Microsoft Foundry GenAI workload (pinned to `swedencentral`) that emits token, trace, and cost telemetry, plus token-spike alerts and an AI FinOps query pack and workbook. Turn it on with `stageToggles.enableStageAI` (Bicep one-shot) or Terraform's `enable_stage_ai`, then run `./scripts/setup-ai.ps1` to create the demo agents and simulate traffic. Check the Model Router version for your region first (`az cognitiveservices account list-models`).
-
-> Optional SRE Agent evaluation. Set `stageToggles.enableStageSreAgent` to `true` before running `deploy.ps1`. Bicep deploys one Azure SRE Agent in `swedencentral`, its managed identity and RBAC, and Azure Monitor, Application Insights, and Log Analytics connectors. New eligible customers can use a 30-day waiver of the fixed always-on charge while active Azure Agent Unit usage remains billable. Follow [Stage SRE Agent](docs/STAGE-SRE-AGENT.md) to add the Review-mode response plans and run scenarios 54 through 58.
-
-> SRE Agent is disabled by default and creates no SRE resources or SRE-related role assignments when disabled. The one-shot and portal paths use `infra/main.bicep`; strict Bicep staging and Terraform use the dedicated `infra/stages/60-sre-agent` template. Terraform orchestrates that compiled Bicep stage through AzAPI.
+> **Next:** Follow the [post-deployment guide for the scripted one-shot option](docs/POST-DEPLOYMENT.md#scripted-one-shot) to see what `deploy.ps1` already completed and which scenario-specific steps remain.
 
 ### Option 3: Staged workshop (progressive deployment)
 
@@ -150,6 +132,8 @@ Step-by-step guides:
 
 - [Bicep staged deployment](docs/DEPLOY-BICEP-STEP-BY-STEP.md)
 - [Terraform staged deployment](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md)
+
+> **Next:** Follow the [post-deployment guide for the staged option](docs/POST-DEPLOYMENT.md#staged-deployment) after completing the stages you selected.
 
 ## Cost and lifecycle
 
@@ -168,6 +152,7 @@ $rg = "rg-azure-monitor-lab"   # change this to the RG used for your deployment
 |---|---|
 | [REFERENCE.md](docs/REFERENCE.md) | Full capability matrix · every deployed resource · demo walkthrough · cost breakdown · folder layout · optional add-ons · troubleshooting |
 | [DEMO-SCENARIOS.md](docs/DEMO-SCENARIOS.md) | All 58 demo scenarios, each with a story, a click-path, and a "killer line", plus audience-pivoted shortlists |
+| [POST-DEPLOYMENT.md](docs/POST-DEPLOYMENT.md) | Required post-deployment commands by deployment option, conditional stage setup, and optional scenario preparation |
 | [docs/DEPLOY-BICEP-STEP-BY-STEP.md](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md) | Staged deployment tutorials |
 | Stage notes: [A](docs/STAGE-A-FOUNDATION.md) · [B](docs/STAGE-B-WORKLOADS.md) · [C](docs/STAGE-C-ALERTING.md) · [D](docs/STAGE-D-SECURITY-POSTURE.md) · [E](docs/STAGE-E-OPTIONAL-ADVANCED.md) · [AI](docs/STAGE-AI.md) · [SRE Agent](docs/STAGE-SRE-AGENT.md) | Per-stage speaker notes, including optional AI FinOps and SRE Agent evaluation stages |
 | [docs/CUSTOMER-STAGE-HANDOUT.md](docs/CUSTOMER-STAGE-HANDOUT.md) | Per-stage time + cost cheat sheet |

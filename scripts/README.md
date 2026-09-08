@@ -16,7 +16,7 @@ Most scripts use the Azure CLI and require `az login`. Scripts that work with AK
 | `preflight-check.ps1` | Checks regional SKU availability, quota, and Azure resource-provider availability before deployment. | `./scripts/preflight-check.ps1 -Location northeurope` |
 | `deploy.ps1` | Runs the one-shot Bicep deployment, including resource creation, post-deployment workloads, health model setup, SLI prerequisite verification, optional AI setup, and optional SRE Agent deployment and validation. The preview SLIs remain a manual portal step. | `./scripts/deploy.ps1 -ResourceGroup rg-my-lab -Location northeurope` |
 | `post-deploy.ps1` | Publishes the .NET sample to App Service and applies the AKS frontend, load generator, and OpenTelemetry workloads. Normally called by `deploy.ps1`. | `./scripts/post-deploy.ps1 -ResourceGroup <rg> -WebAppName <app> -AksName <aks> -WebAppHost <host>` |
-| `post-staged-deploy.ps1` | After a staged Bicep or Terraform deployment, discovers the App Service, AKS cluster, and central LAW, then runs the setup used by `deploy.ps1`. | `./scripts/post-staged-deploy.ps1 -ResourceGroup <rg>` |
+| `post-staged-deploy.ps1` | After Stage B, discovers the App Service, AKS cluster, and central LAW, then configures the workloads. SLI verification runs only when the Stage E identity exists. | `./scripts/post-staged-deploy.ps1 -ResourceGroup <rg>` |
 | `post-cloud-shell-deploy.ps1` | Cloud Shell-specific portal wrapper that pins the subscription, configures workloads, and verifies SLI prerequisites. It prints the manual portal handoff because preview SLIs are not created automatically. | `./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` |
 | `gen-architecture-svg.ps1` | Regenerates `docs/architecture-overview-sre.svg` from the architecture definition and local Azure icons. | `./scripts/gen-architecture-svg.ps1` |
 
@@ -56,10 +56,12 @@ For a fresh deployment, use `deploy.ps1` rather than calling `post-deploy.ps1` d
 | `setup-sre-agent.ps1` | Validates the deployed SRE Agent, connectors, and identity-specific RBAC. It discovers the agent identities automatically and is read-only unless `-GrantMissingRoles` is explicitly supplied. | `./scripts/setup-sre-agent.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` |
 | `setup-health-model.ps1` | Creates or removes the optional tenant-scoped Service Group and its RG relationship. | `./scripts/setup-health-model.ps1 -ResourceGroup <rg>` or add `-Teardown` |
 | `setup-slis.ps1` | Verifies the Service Group, identity permissions, and Managed Prometheus source metrics for portal-created SLIs. `-Teardown` removes the two documented samples. | `./scripts/setup-slis.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` or add `-Teardown` |
-| `setup-rbac-demo.ps1` | Creates the service principals and role assignments used by the granular RBAC demonstration. | `./scripts/setup-rbac-demo.ps1 -ResourceGroup <rg>` |
+| `setup-rbac-demo.ps1` | Discovers the central LAW and RG-specific custom role, then creates the service principals and role assignments used by the granular RBAC demonstration. | `./scripts/setup-rbac-demo.ps1 -ResourceGroup <rg>` |
 | `demo-granular-rbac.ps1` | Runs the granular RBAC demonstration query using the generated local RBAC configuration. | `./scripts/demo-granular-rbac.ps1` |
 
 ## Recommended sequence after deployment
+
+Start with the [post-deployment guide](../docs/POST-DEPLOYMENT.md) to determine what your deployment method already completed and which enabled stages need follow-up. The commands below generate optional demo telemetry; they are not required after every deployment.
 
 ```powershell
 $rg = "rg-azure-monitor-lab"  # replace with the RG used for your deployment
