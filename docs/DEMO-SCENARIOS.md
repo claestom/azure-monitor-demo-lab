@@ -2085,12 +2085,12 @@ Health Models *require* Service Groups precisely because the same resource may h
 
 ```powershell
 ./scripts/start-the-lab.ps1 `
-   -ResourceGroup rg-azure-monitor-lab-one-button120 `
+   -ResourceGroup rg-azure-monitor-lab-sre-agent-8-9 `
    -Wait
 
 ./scripts/setup-slis.ps1 `
    -SubscriptionId 794194cd-a4b7-4024-970c-9533c4babff0 `
-   -ResourceGroup rg-azure-monitor-lab-one-button120 `
+   -ResourceGroup rg-azure-monitor-lab-sre-agent-8-9 `
    -ServiceGroupId amlab-workload
 ```
 
@@ -2099,6 +2099,8 @@ The AKS cluster must be running before the portal can preview these signals. Aft
 > `https://portal.azure.com/#@<tenant>/resource/providers/Microsoft.Management/serviceGroups/amlab-workload/serviceLevelIndicators`
 
 Open the URL, select **+ Add SLI**, and create these definitions:
+
+> Resource names are reused across lab deployments. In both portal pickers, verify the full resource ID and select `amw-amlab` and `id-sli-amlab` from `rg-azure-monitor-lab-sre-agent-8-9`. Selecting identically named resources from another RG can leave Signal Preview empty.
 
 **SLI #1: `sli-aks-pods-running`** (Availability, Window-Based)
 - Source AMW: `amw-amlab`, identity = UAMI `id-sli-amlab`
