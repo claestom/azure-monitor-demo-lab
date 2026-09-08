@@ -83,4 +83,16 @@ Write-Step "Provisioning service group and health model prerequisites"
 Write-Step "Verifying demo SLI prerequisites and source metrics"
 & (Join-Path $PSScriptRoot 'setup-slis.ps1') -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup
 
-Write-Host "`nCloud Shell post-deployment setup completed." -ForegroundColor Green
+Write-Host @"
+
+Cloud Shell post-deployment setup completed.
+
+Manual SLI step still required:
+  1. Open the SLI portal URL printed above.
+  2. Create sli-aks-pods-running and sli-aks-pod-start-latency.
+  3. Use amw-$NamePrefix and id-sli-$NamePrefix from resource group '$ResourceGroup'.
+  4. Follow Scenario 46 in docs/DEMO-SCENARIOS.md for the exact fields and warm-up step.
+
+The Deploy to Azure button and this wrapper prepare SLI prerequisites but do not
+create the Microsoft.Monitor/slis preview resources.
+"@ -ForegroundColor Green

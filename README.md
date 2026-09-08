@@ -61,7 +61,7 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 | **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
 | **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook, optional AI and SRE Agent stages |
 
-After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The Cloud Shell wrapper discovers the deployed resources, publishes the App Service sample, and installs the AKS, Health Model, and SLI demo components without requiring optional Azure CLI extensions:
+After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The Cloud Shell wrapper discovers the deployed resources, publishes the App Service sample, installs the AKS and Health Model demo components, and verifies the identity, RBAC, and Managed Prometheus prerequisites for the SLI demo without requiring optional Azure CLI extensions:
 
 ```powershell
 git clone https://github.com/claestom/azure-monitor-demo-lab.git
@@ -71,6 +71,8 @@ $resourceGroup = Read-Host 'Resource group name'
 az account set --subscription $subscriptionId
 ./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup
 ```
+
+> **SLI manual step:** The Deploy to Azure button and Cloud Shell wrapper do not create the two preview SLI resources. After the wrapper reports that all four source metrics are flowing, open the SLI portal URL it prints and create `sli-aks-pods-running` and `sli-aks-pod-start-latency` using the field values in [Scenario 46](docs/DEMO-SCENARIOS.md#s46). Use the `amw-amlab` workspace and `id-sli-amlab` identity from the resource group you deployed. Allow 10-15 minutes after a valid source window for the evaluated SLI metrics to appear.
 
 If the repository is already present in Cloud Shell, update it before rerunning the wrapper:
 
