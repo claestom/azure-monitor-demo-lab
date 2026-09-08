@@ -2136,11 +2136,22 @@ kubectl -n demo rollout status deployment/hello-frontend
 
 First data points can take 10-15 minutes to appear after a valid source window, once the streaming rule provisions and the destination metrics start emitting in the AMW.
 
+### Reading error budget and burn rate
+
+Azure Monitor compares the measured SLI with the **baseline target**, which is the SLO. The gap between perfect reliability and that target is the allowed unreliability. For example, a `99%` baseline provides a `1%` error budget over the selected evaluation period.
+
+- **Error Budget Remaining** shows how much of that allowed unreliability is still available before the service misses its baseline target. It answers: *"How much more failure can we absorb?"* A falling value means unsuccessful requests or bad windows are consuming the budget. An exhausted budget means there is no remaining tolerance for failure within the evaluation period.
+- **Burn Rate** shows how quickly the error budget is being consumed. It answers: *"At the current rate, how urgently do we need to act?"* A fast-burn condition usually indicates a sudden regression. A slow-burn condition indicates sustained degradation that can still cause an SLO miss if it continues.
+- **Use them together:** Error Budget Remaining describes the reliability margin left; Burn Rate describes the urgency. A healthy remaining budget with a sharp fast burn can require immediate action, while a gradual slow burn calls for investigation before it becomes an SLO miss.
+
+Azure Monitor can alert when the SLI falls below its baseline, when a fast burn consumes budget rapidly over a short lookback, or when a slow burn persists over a longer lookback. See [Service level indicators in Azure Monitor](https://learn.microsoft.com/azure/azure-monitor/fundamentals/service-level-indicators-create#understand-baseline-target-error-budget-and-burn-rate).
+
 ### Click-through (4 min)
 1. **Portal > Service groups > `amlab-workload` > Service Level Indicators**. Open the two manually created SLIs.
 2. Open `sli-aks-pods-running`:
    - **Definition** tab - show the `(100 * A) / B` formula, uptime criteria `>= 95`, and SLO baseline (`99` / 7d rolling).
-   - **Compliance** tab - show current compliance and error budget remaining.
+   - **Compliance** tab - show current compliance and error budget remaining. Explain that remaining budget is the failure margin left before the SLO is missed.
+   - **Burn Rate** - explain that this is the speed of budget consumption: fast burn points to a sudden regression; slow burn points to sustained degradation.
 3. Open `sli-aks-pod-start-latency` - show the percentage of pod starts completed within 30 seconds.
 4. Show the **destination metrics** the SLI emits back into the AMW: `<sli-name>:Value`, `<sli-name>:Uptime`, and `<sli-name>:Downtime`, in the service-group metric namespace. These can be graphed in Grafana or fed back into the Health Model as additional signals, closing the SLO-to-workload-health loop.
 
@@ -2153,7 +2164,7 @@ First data points can take 10-15 minutes to appear after a valid source window, 
 ```
 infra/modules/sli-identity.bicep   UAMI + role assignments on AMW
 infra/main.bicep                   Wires sliIdentity in + exports outputs
-scripts/setup-slis.ps1             Grants Metrics Publisher on AMW DCR/DCE
+scripts/setup-slis.ps1             Verifies source and destination RBAC on the AMW/DCR/DCE
                                    + verifies source metrics + prints portal inputs.
 scripts/deploy.ps1                 Chains setup-health-model.ps1 + setup-slis.ps1
 scripts/teardown.ps1               Tears SLIs down before deleting the RG (idempotent)
