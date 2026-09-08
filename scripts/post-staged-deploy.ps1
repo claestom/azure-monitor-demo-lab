@@ -85,9 +85,16 @@ Write-Step "Provisioning service group and health model prerequisites"
 $setupHm = Join-Path $PSScriptRoot 'setup-health-model.ps1'
 & $setupHm -ResourceGroup $ResourceGroup
 
-Write-Step "Verifying demo SLI prerequisites and source metrics"
-$setupSli = Join-Path $PSScriptRoot 'setup-slis.ps1'
-& $setupSli -SubscriptionId $active.id -ResourceGroup $ResourceGroup
+$sliIdentity = @($resources | Where-Object {
+  $_.type -ieq 'Microsoft.ManagedIdentity/userAssignedIdentities' -and $_.name -ieq "id-sli-$NamePrefix"
+}) | Select-Object -First 1
+if ($sliIdentity) {
+  Write-Step "Verifying demo SLI prerequisites and source metrics"
+  $setupSli = Join-Path $PSScriptRoot 'setup-slis.ps1'
+  & $setupSli -SubscriptionId $active.id -ResourceGroup $ResourceGroup
+} else {
+  Write-Info "SLI identity id-sli-$NamePrefix is not deployed. Skipping SLI verification until Stage E is enabled."
+}
 
 $labConfigPath = Join-Path $PSScriptRoot '..' 'lab.config.json'
 $sreAgentEnabled = $false
