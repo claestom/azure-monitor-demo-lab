@@ -44,6 +44,7 @@ For a fresh deployment, use `deploy.ps1` rather than calling `post-deploy.ps1` d
 | `setup-grafana-alerts.ps1` | Creates the Grafana alert rule for the Managed Prometheus data source. | `./scripts/setup-grafana-alerts.ps1 -ResourceGroup <rg>` |
 | `create-summary-rule.ps1` | Creates or updates the hourly `Perf_Hourly_CL` summary rule. It discovers the suffixed central LAW when `-WorkspaceName` is omitted. | `./scripts/create-summary-rule.ps1 -ResourceGroup <rg>` |
 | `toggle-table-plan.ps1` | Switches a Log Analytics table between `Basic` and `Analytics` plans. | `./scripts/toggle-table-plan.ps1 -ResourceGroup <rg> -TableName ContainerLogV2 -Plan Basic` |
+| `enable-law-replication.ps1` | Enables cross-region replication on the existing suffixed central LAW without redeploying the lab. Uses the documented API `2025-02-01` workspace PUT operation. | `./scripts/enable-law-replication.ps1 -SubscriptionId <sub> -ResourceGroup <rg> -ReplicationLocation westeurope` |
 | `run-search-job.ps1` | Runs a Log Analytics search job over archived or Basic Logs data. | `./scripts/run-search-job.ps1 -ResourceGroup <rg> -TableName ContainerLogV2` |
 | `restore-archived-logs.ps1` | Restores selected archived data for querying. | `./scripts/restore-archived-logs.ps1 -ResourceGroup <rg> -TableName ContainerLogV2 -LookbackDays 14` |
 

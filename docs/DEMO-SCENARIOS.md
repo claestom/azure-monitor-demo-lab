@@ -1729,13 +1729,15 @@ The App Service has **three** diagnostic settings stacked on it — same source 
 ---
 
 <a id="s41"></a>
-## 41 · Cost — LAW cross-region replication (BCDR knob)
+## 41 · Cost: LAW cross-region replication (BCDR knob)
 
 **Audience:** BCDR architects, regulated industries.
-**Time:** 2 min — fact-check + click-path.
+**Time:** 2 min: fact-check + click-path.
 
 ### Story
-LAW now supports **active-active workspace replication** — the workspace is synchronously copied into a second region, query/ingest endpoints continue to work if either region is down. **Off by default in this lab** (it doubles ingest cost) but the Bicep param is wired and ready.
+LAW workspace replication creates a secondary shadow instance in another supported region. New logs are copied to it, but switching ingestion and queries to that region is a manual operation. **Off by default in this lab** because replication adds a charge for all billable ingested data. The Bicep parameter and a focused command for existing workspaces are both available.
+
+Source: [Enhance resilience by replicating your Log Analytics workspace across regions](https://learn.microsoft.com/azure/azure-monitor/logs/workspace-replication?tabs=azure-cli#enable-workspace-replication).
 
 ### What's wired
 
@@ -1752,23 +1754,31 @@ When `enableReplication = true`, the property `replication: { enabled: true, loc
 
 1. Show current state (replication off):
    ```powershell
-   az resource show -g rg-azure-monitor-lab `
-     --resource-type Microsoft.OperationalInsights/workspaces -n law-amlab-central `
-     --query "properties.replication"
+    $workspaceName = az monitor log-analytics workspace list `
+       --resource-group $resourceGroup `
+       --query "[?starts_with(name, 'law-amlab-central-')].name | [0]" -o tsv
+
+    az monitor log-analytics workspace show `
+       --resource-group $resourceGroup `
+       --workspace-name $workspaceName `
+       --query "replication"
    ```
 2. Enable for the demo:
    ```powershell
-   az deployment group create -g rg-azure-monitor-lab `
-     --template-file infra/main.bicep `
-     --parameters @infra/main.parameters.json `
-                  enableLawReplication=true `
-                  lawReplicationLocation=westeurope
+   ./scripts/enable-law-replication.ps1 `
+     -SubscriptionId $subscriptionId `
+     -ResourceGroup $resourceGroup `
+     -ReplicationLocation westeurope
    ```
-3. **`law-amlab-central` → Overview** → wait ~15 min → the *Replication* tile flips to **Active** with a second region listed.
-4. Failover query (set workspace context to the secondary): same KQL, no change.
+   This uses the documented `az rest --method put` request with API `2025-02-01` and updates only the existing central workspace. Historical logs remain in the primary workspace, but only new logs ingested after replication becomes active are copied to the secondary region.
+3. **`law-amlab-central-*` → Overview** → wait for the *Replication* tile to become **Active** with the second region listed. Individual data types can take up to one hour to begin replicating.
+4. Before demonstrating switchover, associate eligible DCRs with the workspace system DCE and confirm each DCR targets only this workspace. This is required for DCR-based ingestion continuity.
+5. Trigger switchover explicitly when the secondary contains enough useful data. Microsoft recommends waiting at least one week after enablement before relying on it for a planned switchover.
+
+> **Compatibility note:** The cited Microsoft Learn page currently lists Container Insights, VM Insights, and Application Insights over Log Analytics workspaces as unsupported for replication and switchover. Do not present those lab paths as protected by this feature.
 
 ### Killer line
-> *"Two regions, one workspace, one KQL surface — and a single Bicep parameter to turn it on the day you need it."*
+> *"Two regions, one workspace, one KQL surface, and one focused command to turn it on for an existing environment."*
 
 ---
 
