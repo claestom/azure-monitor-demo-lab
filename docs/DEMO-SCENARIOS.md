@@ -25,7 +25,7 @@ Pick a workload (or theme) and run only those scenarios. Each row links to the n
 | **Security** | <ul><li>[27](#s27) Granular RBAC</li><li>[43](#s43) Sentinel</li><li>[44](#s44) Search jobs + Restore</li><li>[47](#s47) Control-plane drift watch</li><li>[48](#s48) Privilege escalation watch</li><li>[49](#s49) Exfil early warning</li></ul> |
 | **AI / ML in Azure Monitor** | <ul><li>[16](#s16) Copilot</li><li>[13](#s13) Smart Detection</li><li>[17](#s17) Dynamic Thresholds</li><li>[18](#s18) Code Optimizations</li><li>[19](#s19) Predictive autoscale</li></ul> |
 | **GenAI observability (optional AI stage)** | <ul><li>[53](#s53) AI FinOps — token / trace / cost</li></ul> |
-| **Azure SRE Agent (optional trial)** | <ul><li>[54](#s54) Trial readiness</li><li>[55](#s55) Alert-driven App Service investigation</li><li>[56](#s56) AKS crash-loop diagnosis</li><li>[57](#s57) Change correlation</li><li>[58](#s58) Alert merging and verified recovery</li></ul> |
+| **Azure SRE Agent (optional trial)** | <ul><li>[54](#s54) Trial readiness</li><li>[55](#s55) Alert-driven App Service investigation</li><li>[56](#s56) AKS crash-loop diagnosis</li><li>[57](#s57) Change correlation</li><li>[58](#s58) Alert merging and verified recovery</li><li>[59](#s59) Automatic incident command brief</li></ul> |
 | **Platform foundations** | <ul><li>[5](#s5) Policy auto-onboard</li><li>[6](#s6) Cross-workspace KQL</li><li>[24](#s24) Custom Logs Ingestion API</li><li>[26](#s26) KQL Functions</li><li>[51](#s51) Platform logs at scale (DCR)</li></ul> |
 
 > **Suggested 25-min "by-workload" demos:** App Service → 3, 22, 28, 29, 33 · AKS → 4, 14, 30, 31 · Cost → 9, 11, 20, 39, 42 · Security → 27, 47, 48 · Workload health → 1 + 45 + 46.
@@ -830,7 +830,7 @@ ML model (same engine as dynamic thresholds)
 **Time:** 3–4 min.
 
 ### Story
-Not every log table needs full KQL power. **Basic Logs** costs ~8× less per GB — with the trade-off of 8-day retention and limited KQL operators (no `join`, `summarize`, `union`). For high-volume, low-query tables like `ContainerLogV2`, it's a massive cost win.
+Not every log table needs full KQL power. **Basic Logs** costs ~8× less per GB — with the trade-off of 30-day interactive retention and limited KQL operators (no `join`, `summarize`, `union`). For high-volume, low-query tables like `ContainerLogV2`, it's a massive cost win.
 
 ### Click-path
 
@@ -842,14 +842,14 @@ Not every log table needs full KQL power. **Basic Logs** costs ~8× less per GB 
    ```
 3. Toggle to Basic:
    ```powershell
-   ./scripts/toggle-table-plan.ps1 -Plan Basic
+   ./scripts/toggle-table-plan.ps1 -ResourceGroup $resourceGroup -Plan Basic
    ```
 4. Show what changes:
    - **Works:** `ContainerLogV2 | where LogMessage has "error" | take 10`
    - **Fails:** `ContainerLogV2 | summarize count() by PodName` → error: *summarize not supported on Basic Logs*
 5. Toggle back:
    ```powershell
-   ./scripts/toggle-table-plan.ps1 -Plan Analytics
+   ./scripts/toggle-table-plan.ps1 -ResourceGroup $resourceGroup -Plan Analytics
    ```
 
 ### Key comparison
@@ -857,7 +857,7 @@ Not every log table needs full KQL power. **Basic Logs** costs ~8× less per GB 
 | | Analytics Logs | Basic Logs |
 |---|---|---|
 | **Ingestion cost** | ~$2.76/GB | ~$0.55/GB (8× cheaper) |
-| **Retention** | 30d–730d interactive | 8 days fixed |
+| **Retention** | 30d–730d interactive | 30 days interactive |
 | **KQL** | Full | where, extend, parse, project only |
 | **Alerts** | Standard log search alerts | Supported (higher per-eval cost) |
 | **Search Jobs** | N/A | Use for ad-hoc complex queries |
@@ -2689,6 +2689,31 @@ Repeated alert firings should enrich one active investigation instead of produci
 
 ---
 
+<a id="s59"></a>
+## 59 · Automatic incident command brief
+
+**Audience:** incident commanders, SRE leads, service owners.
+**Time:** 3 min.
+
+### Story
+An incident commander should not need to interrogate the agent before the first useful update appears. The response plan automatically invokes the selected specialist, and the specialist's output contract turns its investigation into a consistent brief with status, impact, evidence, confidence, and the next safe action.
+
+### Click-path / commands
+
+1. Open either investigation created by the response plans in Scenario 55 or 56. Do not enter a prompt.
+2. Show the **Incident command brief** produced automatically by the selected custom investigator.
+3. Confirm that the brief contains the current status, customer or workload impact, affected resources, first signal, likely cause with confidence, timestamped evidence, the smallest safe next action, and missing evidence.
+4. Show that the application route cites Application Insights and App Service evidence, while the platform route cites AKS, VM, or Resource Health evidence.
+5. Compare the initial brief with the recovery evidence collected in Scenario 58, highlighting the difference between the first hypothesis and verified recovery.
+6. Point out that Review mode still requires approval for resource changes even though investigation and incident communication begin automatically.
+
+### Killer line
+> *"Nobody had to ask the first question. The alert selected the specialist, the specialist built the evidence chain, and the incident commander opened a ready-to-use brief."*
+
+**Reference:** [Stage SRE Agent](STAGE-SRE-AGENT.md)
+
+---
+
 ## Updated demo flow (≈50 min)
 
 | Min | Scenario |
@@ -2730,7 +2755,7 @@ Repeated alert firings should enrich one active investigation instead of produci
 | **SecOps** | 27 → 47 → 48 → 49 → 44 |
 | **AI/ML curious** | 16 → 13 → 17 → 18 → 19 → 53 |
 | **Workload owners / SRE leads** | 1 → 45 → 12 → 7 → 8 (Root entity flips Unhealthy) |
-| **SRE Agent evaluation** | 54 → 55 → 56 → 57 → 58 |
+| **SRE Agent evaluation** | 54 → 55 → 56 → 57 → 58 → 59 |
 
 ## Reset between demos
 

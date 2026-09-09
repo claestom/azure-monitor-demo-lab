@@ -113,7 +113,7 @@ The SLI helper verifies prerequisites but intentionally does not create the prev
 
 This section applies only when the optional SRE Agent stage was enabled. Infrastructure deployment creates the Sweden Central agent, identities, RBAC, and monitoring connectors. The setup script validates those resources but does not create portal-owned investigators or response plans.
 
-Before running Scenarios [55 through 58](DEMO-SCENARIOS.md#s55):
+Before running Scenarios [55 through 59](DEMO-SCENARIOS.md#s55):
 
 1. Open the deployed agent in `sre.azure.com`.
 2. Connect Azure Monitor under **Incidents > Triggers & response plans** if it is not already connected.
