@@ -238,6 +238,6 @@ if ($GrantMissingRoles -and $missingRoles.Count -gt 0) {
 Write-Step 'Open the deployed agent'
 Write-Host "  https://sre.azure.com/#/agent/$SubscriptionId/$ResourceGroup/$($agent.name)"
 Write-Host '  The agent is configured in Review mode with Azure Monitor, Application Insights, and Log Analytics connectors.'
-Write-Host '  Add the lab response plans from docs/STAGE-SRE-AGENT.md before running scenarios 54 through 58.'
+Write-Host '  Add the lab response plans from docs/STAGE-SRE-AGENT.md before running scenarios 54 through 59.'
 Write-Host "`nTrial note: baseline always-on charges are waived for 30 days, but active Azure Agent Unit usage is billed." -ForegroundColor Yellow
 Write-Host 'See docs/STAGE-SRE-AGENT.md for the custom agent instructions, response plans, and demo flow.'

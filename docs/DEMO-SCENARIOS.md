@@ -25,7 +25,7 @@ Pick a workload (or theme) and run only those scenarios. Each row links to the n
 | **Security** | <ul><li>[27](#s27) Granular RBAC</li><li>[43](#s43) Sentinel</li><li>[44](#s44) Search jobs + Restore</li><li>[47](#s47) Control-plane drift watch</li><li>[48](#s48) Privilege escalation watch</li><li>[49](#s49) Exfil early warning</li></ul> |
 | **AI / ML in Azure Monitor** | <ul><li>[16](#s16) Copilot</li><li>[13](#s13) Smart Detection</li><li>[17](#s17) Dynamic Thresholds</li><li>[18](#s18) Code Optimizations</li><li>[19](#s19) Predictive autoscale</li></ul> |
 | **GenAI observability (optional AI stage)** | <ul><li>[53](#s53) AI FinOps — token / trace / cost</li></ul> |
-| **Azure SRE Agent (optional trial)** | <ul><li>[54](#s54) Trial readiness</li><li>[55](#s55) Alert-driven App Service investigation</li><li>[56](#s56) AKS crash-loop diagnosis</li><li>[57](#s57) Change correlation</li><li>[58](#s58) Alert merging and verified recovery</li></ul> |
+| **Azure SRE Agent (optional trial)** | <ul><li>[54](#s54) Trial readiness</li><li>[55](#s55) Alert-driven App Service investigation</li><li>[56](#s56) AKS crash-loop diagnosis</li><li>[57](#s57) Change correlation</li><li>[58](#s58) Alert merging and verified recovery</li><li>[59](#s59) Evidence-backed post-incident review</li></ul> |
 | **Platform foundations** | <ul><li>[5](#s5) Policy auto-onboard</li><li>[6](#s6) Cross-workspace KQL</li><li>[24](#s24) Custom Logs Ingestion API</li><li>[26](#s26) KQL Functions</li><li>[51](#s51) Platform logs at scale (DCR)</li></ul> |
 
 > **Suggested 25-min "by-workload" demos:** App Service → 3, 22, 28, 29, 33 · AKS → 4, 14, 30, 31 · Cost → 9, 11, 20, 39, 42 · Security → 27, 47, 48 · Workload health → 1 + 45 + 46.
@@ -2689,6 +2689,31 @@ Repeated alert firings should enrich one active investigation instead of produci
 
 ---
 
+<a id="s59"></a>
+## 59 · Evidence-backed post-incident review
+
+**Audience:** incident commanders, SRE leads, service owners.
+**Time:** 4 min.
+
+### Story
+Recovery ends the outage, but it does not finish the learning. The agent turns the completed investigation thread into a post-incident review grounded in the evidence already collected, then exposes the weakest conclusion instead of presenting every inference as fact.
+
+### Click-path / commands
+
+1. Continue in the recovered incident thread from Scenario 58.
+2. Ask: `Create a post-incident review from this thread. Include impact, detection, a timestamped timeline, root cause and confidence, contributing factors, mitigation, recovery evidence, unresolved questions, and three prioritized follow-up actions. Cite evidence for each conclusion and label inference.`
+3. Compare its timeline with the Azure Monitor alert history, Activity Log operations, Application Insights failure window, and the break and restore annotations.
+4. Ask: `Which conclusion has the weakest evidence, and what additional telemetry would most increase confidence?`
+5. Ask: `Create a six-bullet handoff for the next on-call engineer covering current status, impact, likely cause, mitigation, recovery verification, and the next action.`
+6. Treat the result as a review draft. Confirm owners and due dates outside the agent before using the follow-up actions as commitments.
+
+### Killer line
+> *"The same evidence that drove recovery becomes a review-ready timeline, and the agent shows where confidence ends instead of polishing uncertainty into fact."*
+
+**Reference:** [Stage SRE Agent](STAGE-SRE-AGENT.md)
+
+---
+
 ## Updated demo flow (≈50 min)
 
 | Min | Scenario |
@@ -2730,7 +2755,7 @@ Repeated alert firings should enrich one active investigation instead of produci
 | **SecOps** | 27 → 47 → 48 → 49 → 44 |
 | **AI/ML curious** | 16 → 13 → 17 → 18 → 19 → 53 |
 | **Workload owners / SRE leads** | 1 → 45 → 12 → 7 → 8 (Root entity flips Unhealthy) |
-| **SRE Agent evaluation** | 54 → 55 → 56 → 57 → 58 |
+| **SRE Agent evaluation** | 54 → 55 → 56 → 57 → 58 → 59 |
 
 ## Reset between demos
 

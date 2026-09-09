@@ -190,13 +190,14 @@ The portal currently accepts one **Title contains** value per plan. Use `webapp`
 
 ## 7. Run the scenarios
 
-Scenarios 54 through 58 in `DEMO-SCENARIOS.md` form one 20-minute SRE Agent flow:
+Scenarios 54 through 59 in `DEMO-SCENARIOS.md` form one 24-minute SRE Agent flow:
 
 1. Validate the trial, scope, and permissions.
 2. Trigger an App Service incident and watch automatic investigation start.
 3. Diagnose the AKS crash loop with the platform investigator.
 4. Correlate the incident with Activity Log changes and release annotations.
 5. Demonstrate repeated-alert merging, restore the lab, and verify recovery.
+6. Generate an evidence-backed post-incident review and on-call handoff.
 
 ## 8. Done when
 
@@ -210,6 +211,7 @@ Scenarios 54 through 58 in `DEMO-SCENARIOS.md` form one 20-minute SRE Agent flow
 8. A fired lab alert creates or updates an investigation thread.
 9. The agent cites evidence from at least two Azure observability sources.
 10. The agent confirms recovery after `restore-the-lab.ps1`.
+11. The post-incident review separates evidence from inference and identifies its weakest conclusion.
 
 ## 9. Stop costs
 

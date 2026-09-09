@@ -20,7 +20,7 @@ This one-pager helps customers decide how far to go in a workshop or pilot.
 | Stage D - Security posture | Monitor-native detections for drift, IAM changes, exfil signals (scenarios 27, 47, 48, 49) | 5-12 min | EUR 0-15 | AzureActivity ingestion and scheduled query alerts |
 | Stage E - Optional advanced add-ons | Sentinel/reliability/archival extras (scenarios 43, 44, 45, 46) | 10-20 min | EUR 0-40 | Sentinel analytics usage, archive/restore/search workloads, preview feature telemetry |
 | Stage AI - Optional GenAI workload | Microsoft Foundry account + models (chat/embed/optimize/router), token alerts, AI FinOps observability | 5-10 min + traffic | EUR 5-30 | Per-token model usage while the traffic simulator runs (small at capacity 10; stop it to zero it out); minimal idle cost |
-| Stage SRE Agent - Optional incident investigation | Azure SRE Agent investigation and Review-mode response workflows (scenarios 54-58) | 5-10 min + portal setup | Variable; check current SRE Agent pricing | Active Agent Unit usage during an eligible 30-day always-on charge waiver; fixed always-on and usage charges after the waiver |
+| Stage SRE Agent - Optional incident investigation | Azure SRE Agent investigation and Review-mode response workflows (scenarios 54-59) | 5-10 min + portal setup | Variable; check current SRE Agent pricing | Active Agent Unit usage during an eligible 30-day always-on charge waiver; fixed always-on and usage charges after the waiver |
 
 ## Cumulative monthly range by stop point
 
