@@ -159,7 +159,11 @@ Correlate evidence from 15 minutes before the first signal through 30 minutes
 after it. State the observed impact, timeline, likely cause, confidence, and the
 smallest reversible mitigation. Separate evidence from inference. Do not modify
 resources without approval. After an approved action, verify the original alert
-signal and application failure rate before declaring recovery.
+signal and application failure rate before declaring recovery. Do not wait for
+a follow-up question. End every response-plan run with an `Incident command
+brief` containing current status, customer impact, affected resources, first
+signal, likely cause and confidence, three timestamped evidence bullets with
+their sources, the smallest safe next action, and any missing evidence.
 ```
 
 ### Platform Investigator
@@ -174,7 +178,11 @@ metrics. For virtual machines, inspect power state, heartbeat, metrics, Resource
 Health, and Activity Logs. Build a timestamped evidence chain and identify the
 affected component and blast radius. Separate evidence from inference. Use
 passive diagnostics first. Ask for approval before active VM commands or any
-resource change. Verify the original signal after an approved mitigation.
+resource change. Verify the original signal after an approved mitigation. Do
+not wait for a follow-up question. End every response-plan run with an `Incident
+command brief` containing current status, workload impact, affected resources,
+first signal, likely cause and confidence, three timestamped evidence bullets
+with their sources, the smallest safe next action, and any missing evidence.
 ```
 
 ## 6. Create response plans
@@ -190,14 +198,14 @@ The portal currently accepts one **Title contains** value per plan. Use `webapp`
 
 ## 7. Run the scenarios
 
-Scenarios 54 through 59 in `DEMO-SCENARIOS.md` form one 24-minute SRE Agent flow:
+Scenarios 54 through 59 in `DEMO-SCENARIOS.md` form one 23-minute SRE Agent flow:
 
 1. Validate the trial, scope, and permissions.
 2. Trigger an App Service incident and watch automatic investigation start.
 3. Diagnose the AKS crash loop with the platform investigator.
 4. Correlate the incident with Activity Log changes and release annotations.
 5. Demonstrate repeated-alert merging, restore the lab, and verify recovery.
-6. Generate an evidence-backed post-incident review and on-call handoff.
+6. Show the incident command brief generated automatically by the response-plan investigator.
 
 ## 8. Done when
 
@@ -211,7 +219,7 @@ Scenarios 54 through 59 in `DEMO-SCENARIOS.md` form one 24-minute SRE Agent flow
 8. A fired lab alert creates or updates an investigation thread.
 9. The agent cites evidence from at least two Azure observability sources.
 10. The agent confirms recovery after `restore-the-lab.ps1`.
-11. The post-incident review separates evidence from inference and identifies its weakest conclusion.
+11. The selected investigator produces an incident command brief without waiting for a user prompt.
 
 ## 9. Stop costs
 
