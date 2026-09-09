@@ -64,7 +64,7 @@ Review the deployment output before continuing. If optional AI setup reported a 
 ./scripts/setup-ai.ps1 -ResourceGroup $resourceGroup
 ```
 
-If SRE Agent was enabled, the Azure resources and validation are complete, but the custom investigators and response plans still require portal authoring. Continue with [SRE Agent](#sre-agent).
+If SRE Agent was enabled, the deploy script already completed Steps 1 through 3 of the SRE Agent setup. Skip those steps and continue with [Step 4 - Verify Azure Monitor](STAGE-SRE-AGENT.md#4-verify-azure-monitor) before creating the custom investigators and response plans.
 
 Otherwise, continue with [Manual scenario setup](#manual-scenario-setup).
 
