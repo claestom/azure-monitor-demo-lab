@@ -830,7 +830,7 @@ ML model (same engine as dynamic thresholds)
 **Time:** 3–4 min.
 
 ### Story
-Not every log table needs full KQL power. **Basic Logs** costs ~8× less per GB — with the trade-off of 8-day retention and limited KQL operators (no `join`, `summarize`, `union`). For high-volume, low-query tables like `ContainerLogV2`, it's a massive cost win.
+Not every log table needs full KQL power. **Basic Logs** costs ~8× less per GB — with the trade-off of 30-day interactive retention and limited KQL operators (no `join`, `summarize`, `union`). For high-volume, low-query tables like `ContainerLogV2`, it's a massive cost win.
 
 ### Click-path
 
@@ -842,14 +842,14 @@ Not every log table needs full KQL power. **Basic Logs** costs ~8× less per GB 
    ```
 3. Toggle to Basic:
    ```powershell
-   ./scripts/toggle-table-plan.ps1 -Plan Basic
+   ./scripts/toggle-table-plan.ps1 -ResourceGroup $resourceGroup -Plan Basic
    ```
 4. Show what changes:
    - **Works:** `ContainerLogV2 | where LogMessage has "error" | take 10`
    - **Fails:** `ContainerLogV2 | summarize count() by PodName` → error: *summarize not supported on Basic Logs*
 5. Toggle back:
    ```powershell
-   ./scripts/toggle-table-plan.ps1 -Plan Analytics
+   ./scripts/toggle-table-plan.ps1 -ResourceGroup $resourceGroup -Plan Analytics
    ```
 
 ### Key comparison
@@ -857,7 +857,7 @@ Not every log table needs full KQL power. **Basic Logs** costs ~8× less per GB 
 | | Analytics Logs | Basic Logs |
 |---|---|---|
 | **Ingestion cost** | ~$2.76/GB | ~$0.55/GB (8× cheaper) |
-| **Retention** | 30d–730d interactive | 8 days fixed |
+| **Retention** | 30d–730d interactive | 30 days interactive |
 | **KQL** | Full | where, extend, parse, project only |
 | **Alerts** | Standard log search alerts | Supported (higher per-eval cost) |
 | **Search Jobs** | N/A | Use for ad-hoc complex queries |
