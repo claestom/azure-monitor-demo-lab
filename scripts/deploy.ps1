@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Deploy the Azure Monitor Demo Lab.
+  Deploy the Azure Monitor Lab.
 
 .DESCRIPTION
   1. Creates the resource group (if missing).
@@ -122,7 +122,7 @@ if ($SkipPreflight) {
 
 # 1. Resource group
 Write-Step "Ensuring resource group $ResourceGroup in $Location"
-az group create -n $ResourceGroup -l $Location --tags purpose=azure-monitor-demo-lab owner=demo-lab | Out-Null
+az group create -n $ResourceGroup -l $Location --tags purpose=azure-monitor-lab owner=demo-lab | Out-Null
 
 # 1b. Resource provider registration — Health Models (preview) is not auto-registered
 function Register-ResourceProvider {

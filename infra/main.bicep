@@ -1,5 +1,5 @@
 // =====================================================================================
-// Azure Monitor Demo Lab - main template (Resource Group scope)
+// Azure Monitor Lab - main template (Resource Group scope)
 // Deploys: 2x Log Analytics workspaces, App Insights, VNet, Linux+Windows VMs with VM
 // Insights, AKS with Container Insights + Managed Prometheus + Managed Grafana,
 // App Service with .NET sample app + auto-instrumented App Insights, Action Group,
@@ -124,7 +124,7 @@ var appServiceLocation = 'westeurope'
 
 var commonTags = {
   owner: ownerTag
-  purpose: 'azure-monitor-demo-lab'
+  purpose: 'azure-monitor-lab'
   costCenter: 'demo'
 }
 

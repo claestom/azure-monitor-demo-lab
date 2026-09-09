@@ -2,7 +2,7 @@
 // Application Insights has real traffic + dependencies + intentional failures.
 //
 // Endpoints:
-//   GET /                  -> 200 "Hello from Azure Monitor Demo Lab"
+//   GET /                  -> 200 "Hello from Azure Monitor Lab"
 //   GET /healthz           -> 200 "OK"
 //   GET /api/explode       -> 500 (used by load gen to produce failures)
 //   GET /api/slow          -> 200 after 1.5-3 s (slow-trace demo)
@@ -24,7 +24,7 @@ builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
-app.MapGet("/", () => Results.Text("Hello from Azure Monitor Demo Lab"));
+app.MapGet("/", () => Results.Text("Hello from Azure Monitor Lab"));
 app.MapGet("/healthz", () => Results.Text("OK"));
 
 app.MapGet("/api/explode", () =>

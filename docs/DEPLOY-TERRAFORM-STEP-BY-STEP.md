@@ -1,4 +1,4 @@
-# Azure Monitor Demo Lab - Step-by-Step Deployment with Terraform
+# Azure Monitor Lab - Step-by-Step Deployment with Terraform
 
 This guide is for customers standardizing on Terraform while still using this lab.
 
@@ -164,7 +164,7 @@ Terraform looks the RG up via data source rather than creating it, so `terraform
 
 ```powershell
 $rg = "rg-azure-monitor-lab"   # set this to the RG used for this deployment
-az group create -n $rg -l northeurope --tags purpose=azure-monitor-demo-lab owner=demo-lab
+az group create -n $rg -l northeurope --tags purpose=azure-monitor-lab owner=demo-lab
 ```
 
 If you omit `resource_group_name` from `stages.tfvars`, Terraform defaults to `rg-azure-monitor-lab`. If you use another RG, set the same name in `stages.tfvars` and in `$rg` before running the commands below. If you skip this step, `terraform plan` will fail because the configured resource group was not found.

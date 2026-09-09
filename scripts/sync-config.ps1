@@ -105,7 +105,7 @@ $tfVarsPath       = Join-Path $repoRoot 'terraform' 'stages.tfvars'
 Write-Step "Writing $azureTargetPath"
 $azureTarget = [ordered]@{
   '$schema'                 = 'https://json-schema.org/draft/2020-12/schema'
-  'title'                   = 'Azure Monitor Demo Lab — allowed targets'
+  'title'                   = 'Azure Monitor Lab — allowed targets'
   'description'             = 'Auto-generated from lab.config.json by scripts/sync-config.ps1. Edit lab.config.json, not this file.'
   'expectedSubscriptionId'  = $cfg.subscriptionId
   'expectedSubscriptionName'= $subscriptionName

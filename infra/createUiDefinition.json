@@ -6,7 +6,7 @@
     "config": {
       "isWizard": false,
       "basics": {
-        "description": "**Azure Monitor Demo Lab** — full portal deployment. Every setting is provided here in the UI; no local config file is required. Pick a **Resource group** and **Region**, then step through the tabs to tune workloads, monitoring, and advanced options. Sensible defaults are pre-filled everywhere.",
+        "description": "**Azure Monitor Lab** — full portal deployment. Every setting is provided here in the UI; no local config file is required. Pick a **Resource group** and **Region**, then step through the tabs to tune workloads, monitoring, and advanced options. Sensible defaults are pre-filled everywhere.",
         "resourceGroup": {
           "allowExisting": true,
           "constraints": {

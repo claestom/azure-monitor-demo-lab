@@ -1,4 +1,4 @@
-# Azure Monitor Demo Lab — Full reference
+# Azure Monitor Lab — Full reference
 
 > 👈 **New here? Start with the [README](../README.md).** This is the deep-dive reference: full capability matrix, every deployed resource, the demo walkthrough, cost breakdown, folder layout, operational helpers, and troubleshooting.
 
@@ -197,7 +197,7 @@ The lab supports **60 numbered demo scenarios** (`0` through `59`), each with a 
 
 **Suggested 25-minute "first taste" walkthrough** (covers the cross-stack story):
 
-1. **Resource group overview** — show the ~35 resources, all tagged `purpose=azure-monitor-demo-lab`.
+1. **Resource group overview** — show the ~35 resources, all tagged `purpose=azure-monitor-lab`.
 2. **🚦 Traffic Lights workbook** ([scenario 1](DEMO-SCENARIOS.md#s1)) → currently all **Green**. Talk through the cross-workspace KQL behind it.
 3. **VM Insights** ([scenario 2](DEMO-SCENARIOS.md#s2)) → portal → Insights → Map → topology + Performance for the Linux VM, same for Windows.
 4. **AKS → Insights** ([scenario 4](DEMO-SCENARIOS.md#s4)) → Container Insights blades, then **Workbooks → AKS Prometheus**, then **Grafana** with AMW data source pre-wired.
@@ -263,7 +263,7 @@ Before starting the RG deletion, the script disables LAW replication and removes
 ## Folder layout
 
 ```
-azure-monitor-demo-lab/
+azure-monitor-lab/
 ├─ lab.config.json.example          ← Copy → lab.config.json (gitignored), fill in real values
 ├─ README.md
 ├─ .github/                         ← CODE_OF_CONDUCT · CONTRIBUTING · SECURITY · workflows

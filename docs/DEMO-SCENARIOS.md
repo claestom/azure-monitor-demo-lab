@@ -1,4 +1,4 @@
-# Azure Monitor Demo Lab — Demo Scenarios
+# Azure Monitor Lab — Demo Scenarios
 
 A curated set of demo scenarios you can run with this lab. Each one has a **story**, a **click-path / commands**, and **what to point at** so the audience walks away with the value.
 
@@ -37,7 +37,7 @@ Pick a workload (or theme) and run only those scenarios. Each row links to the n
 
 > *"This is one resource group with a Linux VM, a Windows VM, an AKS cluster, and an App Service. All telemetry flows to two Log Analytics workspaces: one **central** workspace for infrastructure logs, and one **dedicated** to Application Insights. Azure Policy ensures every new resource is auto-wired with diagnostic settings. Everything you see today is built on top of that pipeline."*
 
-Open the resource group → expand the resource list → **show the count**: ~30 resources, all tagged `purpose=azure-monitor-demo-lab`.
+Open the resource group → expand the resource list → **show the count**: ~30 resources, all tagged `purpose=azure-monitor-lab`.
 
 ---
 
@@ -51,7 +51,7 @@ Open the resource group → expand the resource list → **show the count**: ~30
 Modern teams don't want to chain through 10 portal blades to know "is anything broken right now?". This workbook answers that in one screen, with a clear per-resource threshold legend.
 
 ### Click-path
-1. **Monitor → Workbooks** → search **"Azure Monitor Demo Lab"** → open *Traffic Lights*.
+1. **Monitor → Workbooks** → search **"Azure Monitor Lab"** → open *Traffic Lights*.
 2. Read the **legend table** out loud (Green/Orange/Red thresholds per resource type).
 3. Click any Red or Orange row → scroll down to the matching detail pane (VM heartbeat / AKS pods / App Service status codes / App Insights timechart).
 4. Change the time-range pill (15 min / 1 hour / 24 h) and re-run.
@@ -1801,7 +1801,7 @@ Every workbook in the lab so far has been about **the workload's** health. This 
 
 ### Click-path
 
-1. **Monitor → Workbooks** → category **Azure Monitor Demo Lab** → *Cost of monitoring · amlab*.
+1. **Monitor → Workbooks** → category **Azure Monitor Lab** → *Cost of monitoring · amlab*.
 2. Walk the panels:
    - **Daily ingest** — flat line vs spike days.
    - **Top tables** — usually `ContainerLogV2`, `Perf`, `AzureActivity` — the candidates for Basic Logs (scenario 20) or DCR transforms (scenario 11).

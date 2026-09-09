@@ -1,4 +1,4 @@
-# Azure Monitor Demo Lab
+# Azure Monitor Lab
 
 A self-contained demo centered on Azure Monitor, AI, and Azure SRE Agent, with optional Microsoft Sentinel scenarios. Everything runs from a single config file that stays out of git, so you can stand the whole thing up in your own subscription and tear it back down when you're finished.
 
@@ -25,7 +25,7 @@ There's also an optional GenAI workload (off by default) that plugs into the sam
 
 > 📦 For a full, resource-by-resource list of what gets created, see [REFERENCE.md → What gets deployed](docs/REFERENCE.md#what-gets-deployed).
 
-[![Azure Monitor Demo Lab architecture - Azure-icon overview](docs/architecture-overview-sre.svg)](docs/architecture.drawio)
+[![Azure Monitor Lab architecture - Azure-icon overview](docs/architecture-overview-sre.svg)](docs/architecture.drawio)
 
 > 🎨 Full Azure-icon diagram (editable): [docs/architecture.drawio](docs/architecture.drawio). Open it with [diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension. It has a per-tier overview plus a detail page for each pillar, including a dedicated AI / GenAI page.
 
@@ -48,7 +48,7 @@ There's also an optional GenAI workload (off by default) that plugs into the sam
 
 <div align="center">
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-demo-lab%2Fmaster%2Finfra%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-demo-lab%2Fmaster%2Finfra%2FcreateUiDefinition.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-lab%2Fmaster%2Finfra%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-lab%2Fmaster%2Finfra%2FcreateUiDefinition.json)
 
 </div>
 
@@ -64,8 +64,8 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The Cloud Shell wrapper discovers the deployed resources, publishes the App Service sample, installs the AKS and Health Model demo components, and verifies the identity, RBAC, and Managed Prometheus prerequisites for the SLI demo without requiring optional Azure CLI extensions:
 
 ```powershell
-git clone https://github.com/claestom/azure-monitor-demo-lab.git
-cd azure-monitor-demo-lab
+git clone https://github.com/claestom/azure-monitor-lab.git
+cd azure-monitor-lab
 $subscriptionId = Read-Host 'Subscription ID'
 $resourceGroup = Read-Host 'Resource group name'
 az account set --subscription $subscriptionId
@@ -75,7 +75,7 @@ az account set --subscription $subscriptionId
 If the repository is already present in Cloud Shell, update it before rerunning the wrapper:
 
 ```powershell
-cd ~/azure-monitor-demo-lab
+cd ~/azure-monitor-lab
 git pull
 $subscriptionId = Read-Host 'Subscription ID'
 $resourceGroup = Read-Host 'Resource group name'
@@ -92,8 +92,8 @@ This repo ships no secrets. You fill in one central config file, and `sync-confi
 
 ```powershell
 # 1. Clone the repo and enter it
-git clone https://github.com/claestom/azure-monitor-demo-lab.git
-cd azure-monitor-demo-lab
+git clone https://github.com/claestom/azure-monitor-lab.git
+cd azure-monitor-lab
 
 # 2. Copy the template and fill in subscriptionId, tenantId, alertEmail, vmAdminPassword, ...
 Copy-Item lab.config.json.example lab.config.json

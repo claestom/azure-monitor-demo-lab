@@ -1,4 +1,4 @@
-# Azure Monitor Demo Lab - Step-by-Step Deployment with Bicep
+# Azure Monitor Lab - Step-by-Step Deployment with Bicep
 
 This guide shows how to deploy the lab in controlled stages so you can enable scenarios progressively instead of shipping everything at once.
 

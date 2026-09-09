@@ -57,7 +57,7 @@ var eventHubNsName = 'evhns-${namePrefix}-${take(suffix, 5)}'
 
 var commonTags = {
   owner: ownerTag
-  purpose: 'azure-monitor-demo-lab'
+  purpose: 'azure-monitor-lab'
   costCenter: 'demo'
 }
 

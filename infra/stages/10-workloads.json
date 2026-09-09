@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "16392891882887032285"
+      "templateHash": "7942162116419754538"
     }
   },
   "parameters": {
@@ -103,7 +103,7 @@
     "eventHubNsName": "[format('evhns-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
     "commonTags": {
       "owner": "[parameters('ownerTag')]",
-      "purpose": "azure-monitor-demo-lab",
+      "purpose": "azure-monitor-lab",
       "costCenter": "demo"
     },
     "appServiceLocation": "westeurope",

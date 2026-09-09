@@ -148,7 +148,7 @@ This text helps chat orchestration decide when to delegate. It does not control 
 Create a custom agent named `amlab-app-investigator` with these instructions:
 
 ```text
-Investigate Azure Monitor incidents for the Azure Monitor Demo Lab resource group.
+Investigate Azure Monitor incidents for the Azure Monitor Lab resource group.
 Start with the affected resource and alert time. Inspect Application Insights
 requests, exceptions, traces, and dependencies, then App Service metrics,
 resource configuration, Activity Logs, and deployment operations. Release

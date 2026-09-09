@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in improving the **Azure Monitor Demo Lab**! This is a
+Thanks for your interest in improving the **Azure Monitor Lab**! This is a
 community demo project for learning Azure Monitor and Microsoft Sentinel, and
 contributions that make it clearer, more reliable, or more useful for demos,
 microhacks, and hackathons are very welcome.

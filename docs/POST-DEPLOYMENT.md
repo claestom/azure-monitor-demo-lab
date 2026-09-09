@@ -19,8 +19,8 @@ The Deploy to Azure button creates the Azure resources selected in the portal wi
 Run the Cloud Shell wrapper after the portal deployment succeeds:
 
 ```powershell
-git clone https://github.com/claestom/azure-monitor-demo-lab.git
-cd azure-monitor-demo-lab
+git clone https://github.com/claestom/azure-monitor-lab.git
+cd azure-monitor-lab
 ./scripts/post-cloud-shell-deploy.ps1 `
   -SubscriptionId $subscriptionId `
   -ResourceGroup $resourceGroup

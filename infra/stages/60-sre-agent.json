@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "8227180413858850852"
+      "templateHash": "1835971735281744834"
     }
   },
   "parameters": {
@@ -33,7 +33,7 @@
     "sreAgentName": "[format('sre-{0}-{1}', parameters('namePrefix'), take(variables('suffix'), 5))]",
     "commonTags": {
       "owner": "[parameters('ownerTag')]",
-      "purpose": "azure-monitor-demo-lab",
+      "purpose": "azure-monitor-lab",
       "costCenter": "demo"
     }
   },

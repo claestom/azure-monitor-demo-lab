@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Validate the Azure SRE Agent deployed with the Azure Monitor Demo Lab.
+  Validate the Azure SRE Agent deployed with the Azure Monitor Lab.
 
 .DESCRIPTION
   Validates the deployed lab, SRE Agent resource, Azure Monitor connectors, and
