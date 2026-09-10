@@ -4,7 +4,7 @@ A self-contained demo centered on Azure Monitor, AI, and Azure SRE Agent, with o
 
 - One resource group: the whole lab lands in `rg-azure-monitor-lab`.
 - Two ways to deploy it: Bicep or Terraform.
-- Two ways to run it: one-shot for a quick internal demo, or a 5-stage workshop if you'd rather walk through it piece by piece.
+- Three ways to run it: a single-click [Deploy to Azure](#option-1-deploy-to-azure-portal-no-local-setup) button for the Azure portal, a scripted one-shot deployment using PowerShell, or a 5-stage workshop you can walk through piece by piece.
 - 58 demo scenarios that cover Azure Monitor, Sentinel, and Azure SRE Agent from end to end.
 
 It's built for demos, microhacks, and hackathons. Deploy it, poke around, break it, restore it, and tear it down.
@@ -23,8 +23,6 @@ The GenAI workload and Azure SRE Agent can also be deployed on the same telemetr
 > 📦 For a full, resource-by-resource list of what gets created, see [REFERENCE.md → What gets deployed](docs/REFERENCE.md#what-gets-deployed).
 
 [![Azure Monitor Lab architecture - Azure-icon overview](docs/architecture-overview-sre.svg)](docs/architecture.drawio)
-
-> 🎨 Full Azure-icon diagram (editable): [docs/architecture.drawio](docs/architecture.drawio). Open it with [diagrams.net](https://app.diagrams.net) or the VS Code *Draw.io Integration* extension. It has a per-tier overview plus a detail page for each pillar, including a dedicated AI / GenAI page.
 
 ## Prerequisites
 
