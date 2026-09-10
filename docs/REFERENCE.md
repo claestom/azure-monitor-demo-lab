@@ -170,13 +170,13 @@ End-to-end: ~20–25 minutes (AKS + Grafana are the slowest). After it finishes,
 
 Same lab, broken into 5 progressive stages so you can pause for discussion after each one. Each stage is its own Bicep/Terraform deployment with a dedicated speaker-notes doc. Skip stages you don't need (toggles in `lab.config.json` → `stageToggles`).
 
-| Stage | Theme | Adds | Scenarios | Time | Δ €/month |
+| Stage | Theme | Adds | Scenarios | Time | Incremental monthly cost |
 |---|---|---|---|---|---|
-| **A — Foundation** | Telemetry backbone | LAWs · AppI · AMW · DCE · network · storage · Event Hub · Key Vault · diag policies · saved queries · KQL functions · cost + traffic-lights workbooks | 1, 5, 6, 9 | 8–15 min | €5–25 |
-| **B — Workloads & dashboards** | Compute + app telemetry | Linux/Windows VMs · AKS + Container Insights + Managed Prom · Grafana · App Service + auto-instrumented .NET · OTel pods · Connection Monitor · NSG Flow Logs · availability test | 2, 3, 4, 22, 28–32, 34–36, 42 | 20–35 min | €95–145 |
-| **C — Alerts & response** | Detection + routing | Action Group · 7+ metric/KQL/activity alerts · AMBA · dynamic thresholds · alert processing rules · auto-mitigation Logic App · VMSS predictive autoscale | 7, 8, 12, 15, 17, 19, 23, 37 | 5–12 min | €0–10 |
-| **D — Security posture** | Monitor-native detections | Granular RBAC roles · control-plane drift / privilege escalation / exfil scheduled-query alerts | 27, 47, 48, 49 | 5–12 min | €0–15 |
-| **E — Optional advanced** | SOC + reliability previews | Microsoft Sentinel onboarding · search jobs + restore · Service Group + Health Model (preview) · SLIs/SLOs · data export · Prometheus rule group | 43, 44, 45, 46 | 10–20 min | €0–40 |
+| **A — Foundation** | Telemetry backbone | LAWs · AppI · AMW · DCE · network · storage · Event Hub · Key Vault · diag policies · saved queries · KQL functions · cost + traffic-lights workbooks | 1, 5, 6, 9 | 8–15 min | EUR 5–25 / USD 6–28 |
+| **B — Workloads & dashboards** | Compute + app telemetry | Linux/Windows VMs · AKS + Container Insights + Managed Prom · Grafana · App Service + auto-instrumented .NET · OTel pods · Connection Monitor · NSG Flow Logs · availability test | 2, 3, 4, 22, 28–32, 34–36, 42 | 20–35 min | EUR 95–145 / USD 105–160 |
+| **C — Alerts & response** | Detection + routing | Action Group · 7+ metric/KQL/activity alerts · AMBA · dynamic thresholds · alert processing rules · auto-mitigation Logic App · VMSS predictive autoscale | 7, 8, 12, 15, 17, 19, 23, 37 | 5–12 min | EUR 0–10 / USD 0–11 |
+| **D — Security posture** | Monitor-native detections | Granular RBAC roles · control-plane drift / privilege escalation / exfil scheduled-query alerts | 27, 47, 48, 49 | 5–12 min | EUR 0–15 / USD 0–17 |
+| **E — Optional advanced** | SOC + reliability previews | Microsoft Sentinel onboarding · search jobs + restore · Service Group + Health Model (preview) · SLIs/SLOs · data export · Prometheus rule group | 43, 44, 45, 46 | 10–20 min | EUR 0–40 / USD 0–44 |
 | **AI — GenAI observability** *(optional, off)* | AI FinOps on Foundry | Microsoft Foundry account + project (swedencentral) · chat/embedding/optimization/model-router deployments · App Insights tracing · token anomaly + spike alerts · AI FinOps query pack + workbook · AI health tier · agents + traffic (`setup-ai.ps1`) | 53 | 10–15 min | billable models |
 | **SRE Agent (optional, off)** | AI-assisted incident response | Bicep-deployed agent (swedencentral) · managed identity + RBAC · Azure Monitor, App Insights, and LAW connectors · two Review-mode investigators with automatic incident briefs · deployment validation (`setup-sre-agent.ps1`) | 54-59 | 20-25 min | active AAUs; fixed charge waived during eligible trial |
 
@@ -219,25 +219,25 @@ The lab supports **60 numbered demo scenarios** (`0` through `59`), each with a 
 
 ## Cost notes (North Europe, list pricing, May 2026)
 
-Rough monthly burn if left running 24/7:
+Rough monthly burn if left running 24/7. USD estimates use a planning rate of EUR 1 = USD 1.10 and are rounded:
 
-| Component | ~€/month |
-|---|---:|
-| AKS Free tier control plane | 0 |
-| AKS nodes — 2 × Standard_B2s | 60 |
-| Linux + Windows VMs — 2 × Standard_B2s | 60 |
-| Linux VMSS — 1 × Standard_B2s (predictive autoscale demo) | 30 |
-| App Service B1 | 13 |
-| Storage accounts × 2 (LRS, near-empty) | <1 |
-| Event Hub namespace (Standard, 1 TU, near-idle) | ~20 |
-| Key Vault (Standard, light use) | <1 |
-| Azure Managed Grafana Essential | 0 |
-| Managed Prometheus (very low for 2 nodes) | ~1 |
-| LAW ingestion — capped at 1 GB/day × 2 (€2.30/GB) | 5–140 |
-| Workbooks · Action Groups · Policy · Sentinel onboarding | 0 |
-| **Total (idle demo use)** | **~€190 + ingestion** |
+| Component | ~EUR/month | ~USD/month |
+|---|---:|---:|
+| AKS Free tier control plane | 0 | 0 |
+| AKS nodes — 2 × Standard_B2s | 60 | 66 |
+| Linux + Windows VMs — 2 × Standard_B2s | 60 | 66 |
+| Linux VMSS — 1 × Standard_B2s (predictive autoscale demo) | 30 | 33 |
+| App Service B1 | 13 | 14 |
+| Storage accounts × 2 (LRS, near-empty) | <1 | <1.10 |
+| Event Hub namespace (Standard, 1 TU, near-idle) | ~20 | ~22 |
+| Key Vault (Standard, light use) | <1 | <1.10 |
+| Azure Managed Grafana Essential | 0 | 0 |
+| Managed Prometheus (very low for 2 nodes) | ~1 | ~1.10 |
+| LAW ingestion — capped at 1 GB/day × 2 (EUR 2.30/GB / USD 2.53/GB) | 5–140 | 6–154 |
+| Workbooks · Action Groups · Policy · Sentinel onboarding | 0 | 0 |
+| **Total (idle demo use)** | **~190 + ingestion** | **~209 + ingestion** |
 
-> **Optional AI stage** adds pay-per-token Foundry model spend (gpt-5-mini / text-embedding-3-small / gpt-5.4 / model-router) — near-€0 at idle, driven entirely by `setup-ai.ps1` traffic. Delete the Foundry account (or skip the stage) to zero it out.
+> **Optional AI stage** adds pay-per-token Foundry model spend (gpt-5-mini / text-embedding-3-small / gpt-5.4 / model-router) — near EUR 0 / USD 0 at idle, driven entirely by `setup-ai.ps1` traffic. Delete the Foundry account (or skip the stage) to zero it out.
 
 **Cost guardrails baked in:**
 - Both LAWs capped at **1 GB/day** out of the box.
@@ -246,7 +246,7 @@ Rough monthly burn if left running 24/7:
   ```powershell
   az aks stop -g rg-azure-monitor-lab -n aks-amlab
   ```
-  → drops to ~€25/month idle.
+    → drops to roughly EUR 25 / USD 28 per month idle.
 
 ---
 
