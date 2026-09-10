@@ -18,10 +18,7 @@ Everything lands in a single resource group (`rg-azure-monitor-lab`), with telem
 3. The telemetry backplane stores them.
 4. The consumption layer turns them into dashboards, alerts, and responses.
 
-There's also an optional GenAI workload (off by default) that plugs into the same backbone:
-
-- What it adds: a Microsoft Foundry account and project with chat, embedding, optimization, and model-router deployments, plus a few agents and a traffic simulator.
-- How it's observed: token, trace, and cost telemetry flows into Application Insights, which drives token anomaly and spike alerts and an AI FinOps query pack and workbook, and adds an AI tier to the workload health model.
+The GenAI workload and Azure SRE Agent can also be deployed on the same telemetry backbone.
 
 > 📦 For a full, resource-by-resource list of what gets created, see [REFERENCE.md → What gets deployed](docs/REFERENCE.md#what-gets-deployed).
 
