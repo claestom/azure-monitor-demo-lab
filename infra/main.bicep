@@ -679,6 +679,19 @@ module lawRbac 'modules/law-rbac.bicep' = {
   }
 }
 
+// ---------------------------------------------------------------------------------
+// FEATURE 12 — Security posture alerts (control-plane drift, privilege, exfiltration)
+// ---------------------------------------------------------------------------------
+module securityPostureAlerts 'modules/security-posture-alerts.bicep' = {
+  name: 'security-posture-alerts'
+  params: {
+    location: location
+    workspaceId: lawCentral.outputs.id
+    actionGroupId: actionGroup.outputs.id
+    tags: commonTags
+  }
+}
+
 // =================================================================================
 // NEW FEATURES — Network observability, Sentinel, Prom rules, Cost workbook, etc.
 // =================================================================================
