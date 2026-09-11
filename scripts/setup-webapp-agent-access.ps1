@@ -106,10 +106,19 @@ try {
     if ($registration.signInAudience -ne 'AzureADMyOrg' -or $registration.web.redirectUris -notcontains $callback) {
       throw 'The existing registration has a different audience or redirect URI. It was not modified.'
     }
+    if (-not $registration.web.implicitGrantSettings.enableIdTokenIssuance) {
+      $null = Invoke-SetupRequest PATCH "https://graph.microsoft.com/v1.0/applications/$($registration.id)" @{
+        web = @{ implicitGrantSettings = @{
+          enableIdTokenIssuance = $true
+          enableAccessTokenIssuance = [bool]$registration.web.implicitGrantSettings.enableAccessTokenIssuance
+        } }
+      }
+      Write-Host 'Enabled ID-token issuance for the App Service hybrid sign-in flow.'
+    }
   } else {
     $registration = Invoke-SetupRequest POST 'https://graph.microsoft.com/v1.0/applications' @{
       displayName = $displayName; signInAudience = 'AzureADMyOrg'
-      web = @{ redirectUris = @($callback); implicitGrantSettings = @{ enableIdTokenIssuance = $false; enableAccessTokenIssuance = $false } }
+      web = @{ redirectUris = @($callback); implicitGrantSettings = @{ enableIdTokenIssuance = $true; enableAccessTokenIssuance = $false } }
       api = @{ requestedAccessTokenVersion = 2 }
     }
   }

@@ -6,7 +6,7 @@ $fixture = @{
   Credential = [guid]::NewGuid().ToString(); BadTenant = $false; FailRole = $false
   Applications = @(); Principals = @(); Auth = @{ platform = @{ enabled = $false } }
   Settings = @{ ExistingSetting = 'preserve-me' }; RoleDefinitions = @{}; Roles = @()
-  AddedCredentials = 0; Requests = @(); SettingsWrites = @()
+  AddedCredentials = 0; RegistrationUpdates = 0; Requests = @(); SettingsWrites = @()
 }
 $parameters = @{
   SubscriptionId = $fixture.Subscription; TenantId = $fixture.Tenant; ResourceGroup = 'test-rg'
@@ -50,9 +50,18 @@ function Invoke-RestMethod {
   if ($Uri -match '/applications\?') { return @{ value = $fixture.Applications } }
   if ($Uri.EndsWith('/applications') -and $Method -eq 'POST') {
     if ($payload.signInAudience -ne 'AzureADMyOrg' -or $payload.web.redirectUris[0] -ne 'https://test-webapp.azurewebsites.net/.auth/login/aad/callback') { throw 'Unsafe Entra audience or redirect.' }
+    if ($payload.web.implicitGrantSettings.enableIdTokenIssuance -ne $true -or $payload.web.implicitGrantSettings.enableAccessTokenIssuance) { throw 'App Service requires hybrid ID tokens, not implicit access tokens.' }
     $payload.id = $fixture.Registration.ToString(); $payload.appId = $fixture.Client.ToString()
     $fixture.Applications = @($payload)
     return ($payload | ConvertTo-Json -Depth 10 | ConvertFrom-Json)
+  }
+  if ($Uri -eq "https://graph.microsoft.com/v1.0/applications/$($fixture.Registration)" -and $Method -eq 'PATCH') {
+    if ($payload.Count -ne 1 -or $payload.web.Count -ne 1 -or -not $payload.web.ContainsKey('implicitGrantSettings')) { throw 'Sign-in repair must only change the token-issuance settings.' }
+    if ($payload.web.implicitGrantSettings.enableIdTokenIssuance -ne $true) { throw 'Hybrid sign-in ID tokens were not enabled.' }
+    if ($payload.web.implicitGrantSettings.enableAccessTokenIssuance -ne $fixture.Applications[0].web.implicitGrantSettings.enableAccessTokenIssuance) { throw 'Existing access-token policy was modified.' }
+    $fixture.RegistrationUpdates++
+    $fixture.Applications[0].web.implicitGrantSettings = $payload.web.implicitGrantSettings
+    return @{}
   }
   if ($Uri -match '/servicePrincipals\?') { return @{ value = $fixture.Principals } }
   if ($Uri.EndsWith('/servicePrincipals')) { $fixture.Principals = @(@{ appId = $fixture.Client.ToString() }); return @{} }
@@ -88,6 +97,14 @@ if ($fixture.Auth.identityProviders.azureActiveDirectory.validation.defaultAutho
 if ($fixture.SettingsWrites[0]['LabConsole__Sre__Enabled'] -ne 'false' -or $fixture.SettingsWrites[-1]['LabConsole__Sre__Enabled'] -ne 'true') { throw 'Agent enablement was not gated on completed access setup.' }
 & $helper @parameters | Out-Null
 if ($fixture.AddedCredentials -ne 1 -or $fixture.Roles.Count -ne 4) { throw 'Repeated setup recreated a credential or role.' }
+if ($fixture.RegistrationUpdates -ne 0) { throw 'A compatible registration was unnecessarily modified.' }
+$fixture.Applications[0].web.redirectUris += 'https://test-webapp.azurewebsites.net/extra-callback'
+$fixture.Applications[0].web.implicitGrantSettings.enableIdTokenIssuance = $false
+& $helper @parameters | Out-Null
+if ($fixture.RegistrationUpdates -ne 1 -or $fixture.Applications[0].web.implicitGrantSettings.enableIdTokenIssuance -ne $true) { throw 'An older registration was not repaired for hybrid sign-in.' }
+if ($fixture.Applications[0].web.implicitGrantSettings.enableAccessTokenIssuance -or $fixture.Applications[0].web.redirectUris.Count -ne 2) { throw 'Repair changed unrelated registration settings.' }
+& $helper @parameters | Out-Null
+if ($fixture.RegistrationUpdates -ne 1 -or $fixture.AddedCredentials -ne 1 -or $fixture.Roles.Count -ne 4) { throw 'Repaired registration was not idempotent or recreated resources.' }
 $fixture.Roles = @(); $fixture.FailRole = $true
 $caught = $false
 try { & $helper @parameters | Out-Null } catch { $caught = $true }
@@ -97,4 +114,4 @@ $before = $fixture.Requests.Count
 $caught = $false
 try { & $helper @parameters | Out-Null } catch { $caught = $true }
 if (-not $caught -or $fixture.Requests.Count -ne $before) { throw 'Tenant mismatch did not stop before resource operations.' }
-Write-Host 'PASS: hosted operator restrictions, secret transfer, scoped roles, rerun safety, and fail-closed setup.'
+Write-Host 'PASS: hybrid sign-in configuration and repair, operator restrictions, secret transfer, scoped roles, rerun safety, and fail-closed setup.'
