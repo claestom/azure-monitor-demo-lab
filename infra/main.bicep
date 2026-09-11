@@ -44,6 +44,9 @@ param aksNodeVmSize string = 'Standard_B2s'
 @description('AKS node count.')
 param aksNodeCount int = 1
 
+@description('Optional Microsoft Entra object ID of the Grafana lab operator or group. Empty grants Grafana Admin to the deployment identity; set explicitly for CI deployments.')
+param grafanaAdminObjectId string = ''
+
 @description('Public GitHub repo deployed to the App Service (Microsoft .NET hello world sample).')
 param appServiceRepoUrl string = 'https://github.com/Azure-Samples/dotnetcore-docs-hello-world-linux'
 
@@ -404,6 +407,7 @@ module grafana 'modules/grafana.bicep' = {
   name: 'grafana'
   params: {
     name: grafanaName
+    adminObjectId: grafanaAdminObjectId
     location: location
     azureMonitorWorkspaceId: amw.outputs.id
     tags: commonTags

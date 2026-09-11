@@ -30,6 +30,9 @@ param aksNodeVmSize string = 'Standard_B2s'
 @description('AKS node count.')
 param aksNodeCount int = 1
 
+@description('Optional Microsoft Entra object ID of the Grafana lab operator or group. Empty grants Grafana Admin to the deployment identity; set explicitly for CI deployments.')
+param grafanaAdminObjectId string = ''
+
 @description('Tag every resource with this owner.')
 param ownerTag string = 'demo-lab'
 
@@ -153,6 +156,7 @@ module grafana '../modules/grafana.bicep' = {
   name: 'grafana'
   params: {
     name: grafanaName
+    adminObjectId: grafanaAdminObjectId
     location: location
     azureMonitorWorkspaceId: amw.id
     tags: commonTags

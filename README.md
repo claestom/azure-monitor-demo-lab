@@ -1,7 +1,5 @@
 # Azure Monitor Lab
 
-> Development branch: the deployment button and clone commands below use `dev`.
-
 A self-contained demo centered on Azure Monitor, AI, and Azure SRE Agent, with optional Microsoft Sentinel scenarios. Everything runs from a single config file that stays out of git, so you can stand the whole thing up in your own subscription and tear it back down when you're finished.
 
 - One resource group: the whole lab lands in `rg-azure-monitor-lab`.
@@ -46,7 +44,7 @@ The GenAI workload and Azure SRE Agent can also be deployed on the same telemetr
 
 <div align="center">
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-lab%2Fdev%2Finfra%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-lab%2Fdev%2Finfra%2FcreateUiDefinition.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-lab%2Fmaster%2Finfra%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-lab%2Fmaster%2Finfra%2FcreateUiDefinition.json)
 
 </div>
 
@@ -57,12 +55,12 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 | **Basics** | Resource group (recommended `rg-azure-monitor-lab`), Region (recommended `northeurope`), name prefix, alert email, VM admin username + password |
 | **Workloads** | Deploy Linux/Windows VMs, VM size, AKS node size + count |
 | **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
-| **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook, optional AI and SRE Agent stages |
+| **Advanced** | Owner tag, optional Grafana administrator object ID, App Service sample repo, optional SIEM/Teams webhook, optional AI and SRE Agent stages |
 
 After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The Cloud Shell wrapper discovers the deployed resources, publishes the App Service sample, installs the AKS and Health Model demo components, and verifies the identity, RBAC, and Managed Prometheus prerequisites for the SLI demo without requiring optional Azure CLI extensions:
 
 ```powershell
-git clone --branch dev https://github.com/claestom/azure-monitor-lab.git
+git clone --branch master https://github.com/claestom/azure-monitor-lab.git
 cd azure-monitor-lab
 $subscriptionId = Read-Host 'Subscription ID'
 $resourceGroup = Read-Host 'Resource group name'
@@ -74,8 +72,8 @@ If the repository is already present in Cloud Shell, update it before rerunning 
 
 ```powershell
 cd ~/azure-monitor-lab
-git switch dev
-git pull --ff-only origin dev
+git switch master
+git pull --ff-only origin master
 $subscriptionId = Read-Host 'Subscription ID'
 $resourceGroup = Read-Host 'Resource group name'
 ./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup
@@ -91,7 +89,7 @@ This repo ships no secrets. You fill in one central config file, and `sync-confi
 
 ```powershell
 # 1. Clone the repo and enter it
-git clone --branch dev https://github.com/claestom/azure-monitor-lab.git
+git clone --branch master https://github.com/claestom/azure-monitor-lab.git
 cd azure-monitor-lab
 
 # 2. Copy the template and fill in subscriptionId, tenantId, alertEmail, vmAdminPassword, ...
@@ -133,6 +131,14 @@ Step-by-step guides:
 - [Terraform staged deployment](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md)
 
 > **Next:** Follow the [post-deployment guide for the staged option](docs/POST-DEPLOYMENT.md#staged-deployment) after completing the stages you selected.
+
+### Grafana Access
+
+Lab deployment assigns **Grafana Admin** to the deploying identity at the Grafana instance scope. This permits dashboard and alert setup, not subscription-wide administration. It is separate from the **Monitoring Reader** assignment that lets Grafana's own managed identity query telemetry. The assignment is included in one-shot, portal, Stage B, and Terraform deployments.
+
+For a pipeline deployment or a different operator, set `grafanaAdminObjectId` in the [central configuration](lab.config.json.example), use the optional **Grafana administrator object ID** portal field, or set Terraform's `grafana_admin_object_id`. Use a Microsoft Entra user or group **object ID** in the deployment tenant, not an application/client ID. Empty defaults to the deployment identity; automation otherwise grants its service principal access rather than the human operator.
+
+The deploying identity needs `Microsoft.Authorization/roleAssignments/write` at the lab scope, such as Owner or Contributor plus Role Based Access Control Administrator. After deployment, allow up to an hour for Grafana role propagation and sign in with the assigned account. Updating the repository alone does not repair an already-deployed instance; redeploy its lab/Stage B template with the correct operator ID. For view-only participants, grant Grafana Viewer separately. See [Grafana post-deployment checks](docs/POST-DEPLOYMENT.md#grafana-access).
 
 ### Web App Console
 
