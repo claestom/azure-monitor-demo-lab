@@ -21,7 +21,7 @@ if ($LASTEXITCODE -ne 0 -or $account.id -ne $SubscriptionId.ToString() -or $acco
 }
 
 function Get-SessionToken([string] $Resource) {
-  $value = az account get-access-token --subscription $SubscriptionId --tenant $TenantId --resource $Resource --query accessToken --output tsv --only-show-errors
+  $value = az account get-access-token --subscription $SubscriptionId --resource $Resource --query accessToken --output tsv --only-show-errors
   if ($LASTEXITCODE -ne 0 -or -not $value) { throw 'A required Azure authentication token could not be acquired.' }
   return $value
 }

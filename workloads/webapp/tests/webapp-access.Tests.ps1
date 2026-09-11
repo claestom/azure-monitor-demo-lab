@@ -21,7 +21,10 @@ function az {
   if ($args[0] -eq 'account' -and $args[1] -eq 'show') {
     return @{ id = $fixture.Subscription; tenantId = $(if ($fixture.BadTenant) { [guid]::NewGuid() } else { $fixture.Tenant }) } | ConvertTo-Json
   }
-  if ($args[0] -eq 'account' -and $args[1] -eq 'get-access-token') { return 'offline-access-token' }
+  if ($args[0] -eq 'account' -and $args[1] -eq 'get-access-token') {
+    if ($args -contains '--tenant') { throw 'Token acquisition must not combine subscription and tenant arguments.' }
+    return 'offline-access-token'
+  }
   if ($args[0] -eq 'role' -and $args[1] -eq 'definition') {
     $name = $args[[Array]::IndexOf($args, '--name') + 1]
     if (-not $fixture.RoleDefinitions.ContainsKey($name)) { $fixture.RoleDefinitions[$name] = "/providers/Microsoft.Authorization/roleDefinitions/$([guid]::NewGuid())" }
