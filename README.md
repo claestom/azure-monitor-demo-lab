@@ -1,5 +1,7 @@
 # Azure Monitor Lab
 
+> Development branch: the deployment button and clone commands below use `dev`.
+
 A self-contained demo centered on Azure Monitor, AI, and Azure SRE Agent, with optional Microsoft Sentinel scenarios. Everything runs from a single config file that stays out of git, so you can stand the whole thing up in your own subscription and tear it back down when you're finished.
 
 - One resource group: the whole lab lands in `rg-azure-monitor-lab`.
@@ -32,6 +34,7 @@ The GenAI workload and Azure SRE Agent can also be deployed on the same telemetr
 - PowerShell 7+
 - A subscription with quota for ~5 small VMs/nodes (`Standard_B2s`), 1 App Service B1, Managed Grafana, Storage, Event Hub, and Key Vault
 - For the optional AI stage only: Python 3.10+. `scripts/setup-ai.ps1` provisions the demo agents and traffic simulator from [`workloads/ai/`](workloads/ai/), and the models it deploys are billable.
+- For deployments with an SRE Agent: npm and tar on the deployment machine to package the pinned native MCP runtime. The deployed .NET app does not need Node.js.
 
 > Two IaC paths, one config. Bicep is the primary one (`infra/`); Terraform (`terraform/`) is a parallel implementation driven from the same `lab.config.json`. Pick one and don't mix them.
 
@@ -43,7 +46,7 @@ The GenAI workload and Azure SRE Agent can also be deployed on the same telemetr
 
 <div align="center">
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-lab%2Fmaster%2Finfra%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-lab%2Fmaster%2Finfra%2FcreateUiDefinition.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-lab%2Fdev%2Finfra%2Fmain.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fclaestom%2Fazure-monitor-lab%2Fdev%2Finfra%2FcreateUiDefinition.json)
 
 </div>
 
@@ -59,7 +62,7 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The Cloud Shell wrapper discovers the deployed resources, publishes the App Service sample, installs the AKS and Health Model demo components, and verifies the identity, RBAC, and Managed Prometheus prerequisites for the SLI demo without requiring optional Azure CLI extensions:
 
 ```powershell
-git clone https://github.com/claestom/azure-monitor-lab.git
+git clone --branch dev https://github.com/claestom/azure-monitor-lab.git
 cd azure-monitor-lab
 $subscriptionId = Read-Host 'Subscription ID'
 $resourceGroup = Read-Host 'Resource group name'
@@ -71,7 +74,8 @@ If the repository is already present in Cloud Shell, update it before rerunning 
 
 ```powershell
 cd ~/azure-monitor-lab
-git pull
+git switch dev
+git pull --ff-only origin dev
 $subscriptionId = Read-Host 'Subscription ID'
 $resourceGroup = Read-Host 'Resource group name'
 ./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup
@@ -87,7 +91,7 @@ This repo ships no secrets. You fill in one central config file, and `sync-confi
 
 ```powershell
 # 1. Clone the repo and enter it
-git clone https://github.com/claestom/azure-monitor-lab.git
+git clone --branch dev https://github.com/claestom/azure-monitor-lab.git
 cd azure-monitor-lab
 
 # 2. Copy the template and fill in subscriptionId, tenantId, alertEmail, vmAdminPassword, ...
@@ -129,6 +133,16 @@ Step-by-step guides:
 - [Terraform staged deployment](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md)
 
 > **Next:** Follow the [post-deployment guide for the staged option](docs/POST-DEPLOYMENT.md#staged-deployment) after completing the stages you selected.
+
+### Web App Console
+
+The normal post-deployment step publishes the improved [web app](workloads/webapp/README.md) from the checked-out branch. In the Azure portal, open the lab's **App Service**, then select **Browse** to see **Welcome to the Azure Monitor Lab**, with separate **Lab Console**, **SRE MCP Assistant**, and **Foundry Agent Playground** tabs. No separate frontend build is needed when deploying the checked-in assets.
+
+Scripted, staged, and portal/Cloud Shell paths use the same packaging helper. If an SRE Agent is present, the Linux MCP runtime is included automatically. The portal template alone provisions infrastructure; complete its Cloud Shell post-deployment step to publish this application.
+
+Monitoring links and resource context are discovered during publishing. Hosted SRE/Foundry execution remains opt-in: configure App Service Authentication, scoped managed-identity access, and the model settings described in [SRE MCP setup](workloads/webapp/SRE-MCP.md) and [Foundry setup](workloads/webapp/README.md#enable-foundry-access). The console's health, latency, error, checkout, and traffic controls are available without enabling model usage.
+
+For an existing lab, [deploy-webapp.ps1](scripts/deploy-webapp.ps1) updates only the App Service. The optional [hosted access setup](scripts/setup-webapp-agent-access.ps1) configures operator-only sign-in and scoped agent permissions with an explicit opt-in. Both support `-WhatIf` and require explicit subscription and tenant parameters.
 
 ## Cost and lifecycle
 

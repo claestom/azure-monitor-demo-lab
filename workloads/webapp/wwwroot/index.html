@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Welcome to the Azure Monitor Lab</title>
+  <link rel="stylesheet" href="/console.css">
+  <script src="/console.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#controls">Skip to lab controls</a>
+  <header class="topbar">
+    <a class="brand" href="/"><img id="brand-mark" width="28" height="28" alt=""><span>Azure Monitor <strong>Lab</strong></span></a>
+    <span class="environment"><span class="status-dot"></span>Interactive console</span>
+  </header>
+  <main>
+    <section class="intro" aria-labelledby="welcome">
+      <div><p class="eyebrow">OBSERVABILITY / HANDS-ON LAB</p><h1 id="welcome">Welcome to the Azure Monitor Lab</h1></div>
+      <div class="health-readout"><span class="field-label">WEB APP HEALTH</span><span id="health-status"><i data-lucide="circle-help"></i>Not checked</span></div>
+    </section>
+    <nav class="monitoring" aria-label="Monitoring destinations">
+      <span class="nav-label">MONITORING</span>
+      <a data-link="ApplicationInsights" aria-disabled="true"><i data-lucide="scan-line"></i>Application Insights<i data-lucide="external-link"></i></a>
+      <a data-link="Logs" aria-disabled="true"><i data-lucide="logs"></i>Logs<i data-lucide="external-link"></i></a>
+      <a data-link="Workbook" aria-disabled="true"><i data-lucide="panels-top-left"></i>Workbook<i data-lucide="external-link"></i></a>
+      <a data-link="Grafana" aria-disabled="true"><i data-lucide="chart-no-axes-combined"></i>Grafana<i data-lucide="external-link"></i></a>
+      <span id="links-status" class="muted">Loading destinations...</span>
+    </nav>
+    <noscript>This lab console requires JavaScript.</noscript>
+    <div class="app-tabs" role="tablist" aria-label="Lab views">
+      <button id="tab-console" role="tab" aria-controls="panel-console" aria-selected="true" tabindex="0"><i data-lucide="activity"></i>Lab Console</button>
+      <button id="tab-sre" role="tab" aria-controls="panel-sre" aria-selected="false" tabindex="-1"><i data-lucide="scan-line"></i>SRE MCP Assistant</button>
+      <button id="tab-foundry" role="tab" aria-controls="panel-foundry" aria-selected="false" tabindex="-1"><i data-lucide="messages-square"></i>Foundry Agent Playground</button>
+    </div>
+    <div id="panel-console" role="tabpanel" aria-labelledby="tab-console" tabindex="0" class="workspace">
+      <aside id="controls" aria-label="Lab controls">
+        <section class="control-section" aria-labelledby="request-heading">
+          <div class="section-heading"><h2 id="request-heading">Send a request</h2><span class="section-number">01</span></div>
+          <div class="action-grid">
+            <button class="action" data-action="health"><i data-lucide="heart-pulse"></i><span>Check Health<small>GET /healthz</small></span><i data-lucide="arrow-up-right"></i></button>
+            <button class="action" data-action="slow"><i data-lucide="timer"></i><span>Slow Request<small>GET /api/slow</small></span><i data-lucide="arrow-up-right"></i></button>
+            <button class="action danger-accent" data-action="explode"><i data-lucide="triangle-alert"></i><span>Trigger Error<small>GET /api/explode</small></span><i data-lucide="arrow-up-right"></i></button>
+            <button class="action" data-action="dependency"><i data-lucide="network"></i><span>Test Dependency<small>GET /api/dep</small></span><i data-lucide="arrow-up-right"></i></button>
+          </div>
+        </section>
+        <section class="control-section" aria-labelledby="checkout-heading">
+          <div class="section-heading"><h2 id="checkout-heading">Business transaction</h2><span class="section-number">02</span></div>
+          <div class="field-row">
+            <label>Channel<select id="channel" aria-label="Channel"><option value="web">Web</option><option value="mobile">Mobile</option><option value="store">Store</option></select></label>
+            <label>Payment<select id="outcome" aria-label="Payment"><option value="random">Random</option><option value="success">Success</option><option value="declined">Declined</option></select></label>
+          </div>
+          <button class="button secondary full" data-action="checkout"><i data-lucide="shopping-cart"></i>Simulate Checkout<i data-lucide="arrow-right"></i></button>
+          <div id="checkout-result" class="checkout-result" aria-live="polite"><span class="muted">No transactions yet</span></div>
+        </section>
+        <section class="control-section" aria-labelledby="traffic-heading">
+          <div class="section-heading"><h2 id="traffic-heading">Traffic run</h2><span class="section-number">03</span></div>
+          <label>Profile<select id="profile" aria-label="Profile"><option value="normal">Normal traffic</option><option value="latency">Latency spike</option><option value="errors">Error burst</option></select></label>
+          <div class="field-row">
+            <label>Requests<select id="request-count" aria-label="Requests"><option value="5">5 requests</option><option value="10" selected>10 requests</option><option value="20">20 requests</option><option value="30">30 requests</option></select></label>
+            <label>Minimum interval<select id="interval" aria-label="Minimum interval"><option value="1000" selected>1 second</option><option value="2000">2 seconds</option><option value="5000">5 seconds</option></select></label>
+          </div>
+          <div class="run-buttons"><button id="start-run" class="button primary"><i data-lucide="play"></i>Start Run</button><button id="stop-run" class="button secondary" disabled><i data-lucide="square"></i>Stop</button></div>
+          <progress id="run-progress" value="0" max="10" aria-label="Traffic run progress"></progress>
+          <div class="run-caption"><span id="run-status" role="status">Ready</span><span id="run-count">0 / 10</span></div>
+        </section>
+        <section class="advanced control-section" aria-labelledby="performance-heading">
+          <div class="section-heading"><h2 id="performance-heading">Performance experiment</h2><i data-lucide="flask-conical"></i></div>
+          <button id="performance" class="button secondary full"><i data-lucide="cpu"></i>Run Inefficient Code</button>
+          <span id="cooldown" class="muted" role="status">Confirmation required</span>
+        </section>
+      </aside>
+      <div class="results">
+        <section aria-labelledby="session-heading">
+          <div class="section-heading"><h2 id="session-heading">This session</h2><span class="session-tag">BROWSER SESSION</span></div>
+          <div class="metrics">
+            <div class="metric"><span>Total requests</span><strong id="total">0</strong><small>Completed</small></div>
+            <div class="metric"><span>Failed requests</span><strong id="failed">0</strong><small id="failure-rate">0% of requests</small></div>
+            <div class="metric"><span>Average latency</span><strong><span id="average">0</span><small>ms</small></strong><small>Browser round trip</small></div>
+          </div>
+          <div id="live-state" class="live-state" role="status"><span class="status-dot"></span><span id="live-text">Waiting for a request</span><span id="elapsed"></span></div>
+        </section>
+        <section class="chart-section" aria-labelledby="latency-heading">
+          <div class="section-heading"><h2 id="latency-heading">Request latency</h2><span class="legend"><span class="status-dot"></span>Round trip <span class="status-dot failure-dot"></span>Failed</span></div>
+          <div class="chart-frame"><canvas id="latency-chart" role="img" aria-label="Latency of the latest 30 requests in milliseconds"></canvas><div id="chart-empty" class="empty-chart"><i data-lucide="activity"></i><span>No measurements yet</span></div></div>
+        </section>
+        <section class="history-section" aria-labelledby="history-heading">
+          <div class="section-heading"><div class="heading-with-count"><h2 id="history-heading">Request activity</h2><span id="history-count">0</span></div><button id="clear" class="icon-button" title="Clear session results" aria-label="Clear session results"><i data-lucide="trash-2"></i></button></div>
+          <div class="table-scroll"><table><thead><tr><th scope="col">Time</th><th scope="col">Action</th><th scope="col">Status</th><th scope="col">Duration</th><th scope="col"><span class="sr-only">Response details</span></th></tr></thead><tbody id="history"></tbody></table></div>
+          <div id="history-empty" class="empty-history"><i data-lucide="inbox"></i><p>No requests in this session</p></div>
+          <p class="history-note">Latest 100 requests. Azure telemetry may arrive later; alert thresholds still apply.</p>
+        </section>
+      </div>
+    </div>
+    <section id="panel-sre" role="tabpanel" aria-labelledby="tab-sre" tabindex="0" hidden>
+      <div class="agent-heading"><div><p class="eyebrow">AZURE MCP / SRE MANAGEMENT</p><h2>SRE MCP Assistant</h2></div><a id="sre-open" class="button secondary" aria-disabled="true"><i data-lucide="external-link"></i>Open SRE Agent</a></div>
+      <div class="agent-layout">
+        <form id="sre-form" class="agent-settings">
+          <div class="section-heading"><h2>Questions and operations</h2><button id="sre-connect" type="button" class="icon-button" title="Check MCP connection" aria-label="Check MCP connection"><i data-lucide="refresh-cw"></i></button></div>
+          <div id="sre-availability" class="status-band" role="status">Connection not checked</div>
+          <a id="sre-sign-in" class="button secondary" href="/.auth/login/aad?post_login_redirect_uri=/" hidden><i data-lucide="external-link"></i>Sign In</a>
+          <dl class="resource-context"><dt>Resource group</dt><dd id="sre-resource">Not configured</dd><dt>App Service</dt><dd id="sre-app">Not configured</dd></dl>
+          <label>Request<select id="sre-example" aria-label="MCP request preset"><option value="">Custom question</option><option value="List the SRE agents in this resource group.">List SRE agents</option><option value="List the connectors on this SRE agent.">List connectors</option><option value="List active incidents on this SRE agent.">List active incidents</option><option value="List scheduled tasks on this SRE agent.">List scheduled tasks</option><option value="Search memories for deployment failures.">Search memories</option></select></label>
+          <label>Question or operation<textarea id="sre-question" rows="6" maxlength="4000" required placeholder="Which connectors are configured on this SRE agent?" aria-label="MCP question"></textarea></label>
+          <label class="consent"><input id="sre-consent" type="checkbox">I approve model usage and read-only MCP calls for this question.</label>
+          <div class="run-buttons"><button id="sre-send" type="submit" class="button primary" disabled><i data-lucide="send"></i>Send</button><button id="sre-stop" type="button" class="button secondary" disabled><i data-lucide="square"></i>Stop Waiting</button></div>
+          <p class="history-note">Model charges may apply. Do not submit secrets. Approved operations run with the backend identity's permissions.</p>
+          <p id="sre-destination-status" class="history-note">Loading SRE destination...</p>
+          <details class="sre-tools"><summary id="sre-tool-count">MCP tools</summary><ul id="sre-tools"></ul></details>
+        </form>
+        <div class="agent-workspace">
+          <div class="section-heading"><h2>Chat</h2><div class="tool-actions"><button id="sre-refresh" type="button" class="icon-button" title="Refresh MCP chat" aria-label="Refresh MCP chat" disabled><i data-lucide="refresh-cw"></i></button><button id="sre-new" type="button" class="icon-button" title="New MCP chat" aria-label="New MCP chat"><i data-lucide="messages-square"></i></button></div></div>
+          <div id="sre-status" class="status-band" role="status">No questions submitted</div>
+          <div id="sre-messages" class="sre-messages" aria-label="MCP chat"></div>
+          <section id="sre-review" class="sre-review" aria-labelledby="sre-review-heading" hidden>
+            <h3 id="sre-review-heading">Review operation</h3><p id="sre-operation-description"></p>
+            <pre id="sre-operation-preview" aria-label="Exact MCP operation"></pre>
+            <p id="sre-operation-expiry" class="history-note"></p>
+            <p class="history-note">Approval permits this exact operation against Azure. Resuming a schedule can trigger future work. This action may not be reversible.</p>
+            <div class="run-buttons"><button id="sre-approve" class="button primary" type="button"><i data-lucide="check"></i>Approve Operation</button><button id="sre-decline" class="button secondary" type="button"><i data-lucide="x"></i>Decline</button></div>
+          </section>
+          <p id="sre-metadata" class="history-note"></p>
+          <div class="section-heading"><h2>Operation log</h2><span id="sre-operation-count" class="muted">0 operations</span></div>
+          <div id="sre-operations"></div>
+        </div>
+      </div>
+    </section>
+    <section id="panel-foundry" role="tabpanel" aria-labelledby="tab-foundry" tabindex="0" hidden>
+      <div class="agent-heading"><div><p class="eyebrow">FOUNDRY / EXISTING LAB AGENTS</p><h2>Foundry Agent Playground</h2></div><a id="foundry-open" class="button secondary" aria-disabled="true"><i data-lucide="external-link"></i>Open Foundry</a></div>
+      <div class="agent-layout">
+        <form id="agent-form" class="agent-settings">
+          <div class="section-heading"><h2>New task</h2><button id="agent-refresh" type="button" class="icon-button" title="Refresh agent availability" aria-label="Refresh agent availability"><i data-lucide="refresh-cw"></i></button></div>
+          <div id="agent-availability" class="status-band" role="status">Checking availability...</div>
+          <a id="agent-sign-in" class="button secondary" href="/.auth/login/aad?post_login_redirect_uri=/" hidden><i data-lucide="external-link"></i>Sign In</a>
+          <label>Agent<select id="agent-choice" aria-label="Agent" disabled><option value="">No agents available</option></select></label>
+          <div id="agent-model" class="model-label">Model unavailable</div>
+          <label>Task<textarea id="agent-prompt" rows="7" maxlength="4000" required aria-label="Task" placeholder="Enter a task for the selected agent"></textarea></label>
+          <div class="prompt-caption"><span>Fresh thread</span><span id="prompt-length">0 / 4,000</span></div>
+          <label class="consent"><input id="agent-consent" type="checkbox">I approve billable model usage for this task.</label>
+          <div class="run-buttons"><button id="agent-send" type="submit" class="button primary" disabled><i data-lucide="send"></i>Run Agent</button><button id="agent-cancel" type="button" class="button secondary" disabled><i data-lucide="square"></i>Cancel</button></div>
+          <p class="history-note">Do not submit secrets or sensitive data. Cancellation is best-effort; incurred usage may still be billed.</p>
+        </form>
+        <div class="agent-workspace">
+          <div class="section-heading"><h2>Task results</h2><button id="agent-clear" class="icon-button" title="Clear task results" aria-label="Clear task results"><i data-lucide="trash-2"></i></button></div>
+          <div id="agent-status" class="status-band" role="status">No tasks submitted</div>
+          <div id="agent-results" class="agent-results"></div>
+          <p class="history-note">AI-generated answers may be incorrect. Cost estimates use configured rates, exclude caching discounts, and are not billed amounts. Reconcile against Cost Management.</p>
+        </div>
+      </div>
+    </section>
+    <footer><span>Azure Monitor Lab</span><span>Demo environment <span aria-hidden="true">/</span> Intentional failures enabled</span></footer>
+  </main>
+  <div class="mobile-feedback"><div><span class="field-label">LATEST REQUEST</span><span id="mobile-status" role="status">Waiting for a request</span></div><a class="button secondary" href="#session-heading" aria-label="View session activity"><i data-lucide="activity"></i>Activity</a></div>
+  <dialog id="performance-dialog" aria-labelledby="dialog-heading">
+    <form method="dialog"><div class="dialog-icon"><i data-lucide="cpu"></i></div><h2 id="dialog-heading">Run performance experiment?</h2><p>This request deliberately consumes CPU, creates handled exceptions, and makes an outbound call. It can affect other users of this demo app.</p><p>One console experiment per 30 seconds per app instance. Profiler recommendations are not immediate.</p><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button primary" id="confirm-performance" value="confirm"><i data-lucide="play"></i>Run Experiment</button></div></form>
+  </dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
