@@ -13,7 +13,11 @@ param(
   [Parameter(Mandatory)] [string] $AksName,
   [Parameter(Mandatory)] [string] $WebAppHost,
   [string] $CentralLawName,
-  [string] $AppInsightsConnectionString
+  [string] $AppInsightsConnectionString,
+  [switch] $BundleSreMcp,
+  [string] $SreTenantId,
+  [string] $SreModelEndpoint,
+  [string] $SreModelDeployment
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,6 +69,14 @@ if ($publishExitCode -ne 0) {
 if (-not (Test-Path (Join-Path $pub 'AmlabHello.dll'))) {
   throw "AmlabHello publish completed without producing '$pub/AmlabHello.dll'."
 }
+$consoleAccountJson = az account show --query '{id:id,tenantId:tenantId}' --output json
+if ($LASTEXITCODE -ne 0 -or -not $consoleAccountJson) { throw 'Unable to resolve the deployment subscription and tenant.' }
+$consoleAccount = $consoleAccountJson | ConvertFrom-Json
+if ($SreTenantId -and $SreTenantId -ne $consoleAccount.tenantId) { throw 'SRE tenant must match the deployment tenant.' }
+& (Join-Path $PSScriptRoot 'prepare-webapp-package.ps1') `
+  -PublishDirectory $pub -ResourceGroup $ResourceGroup -SubscriptionId $consoleAccount.id -TenantId $consoleAccount.tenantId `
+  -CentralLawName $CentralLawName -BundleSreMcp:$BundleSreMcp `
+  -SreModelEndpoint $SreModelEndpoint -SreModelDeployment $SreModelDeployment
 $zip = "$pub.zip"
 Compress-Archive -Path (Join-Path $pub '*') -DestinationPath $zip -Force
 $deployOutput = ''

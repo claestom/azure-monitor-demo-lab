@@ -95,6 +95,16 @@ The wrapper publishes the sample application, configures the AKS workloads, and 
 
 Continue with [Manual scenario setup](#manual-scenario-setup).
 
+## Grafana access
+
+The lab templates create a **Grafana Admin** role assignment at the Managed Grafana instance scope. By default, it targets the identity running the ARM deployment. Interactive portal and CLI deployments therefore grant the deploying user access. Terraform uses the same compiled Stage B assignment.
+
+When a service principal deploys, set `grafanaAdminObjectId` (central config or Bicep parameter) or `grafana_admin_object_id` (Terraform variable) to the lab operator's or group's Microsoft Entra object ID. An explicit override replaces the deployer as the recipient. For a raw Stage B deployment, pass `grafanaAdminObjectId` to that template; it does not read the local config automatically. The portal wizard exposes the same optional field under Advanced.
+
+If Grafana still reports that a role is required, inspect **Managed Grafana > Access control (IAM)** and verify a Grafana role for the account used to sign in. **Monitoring Reader on the Grafana managed identity is not user access**, and Azure resource ownership alone does not grant Grafana data-plane access. Newly created role assignments may take up to an hour to propagate. The deployment must have permission to create role assignments; a failed role assignment is a deployment failure, not a propagation delay.
+
+Old deployments need the updated one-shot or Stage B template applied once with the intended operator identity. The deterministic assignment name prevents duplicate assignments on subsequent deployments for the same instance, principal, and role. Changing the selected operator does not revoke old assignments in incremental deployment mode; review IAM when operator access changes.
+
 ## Manual scenario setup
 
 The normal deployment scripts intentionally leave some portal, data-plane, and demo-identity tasks to the presenter. Complete only the rows for scenarios you plan to use.

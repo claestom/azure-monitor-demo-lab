@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.37.4.10188",
-      "templateHash": "7942162116419754538"
+      "templateHash": "61419431511614485"
     }
   },
   "parameters": {
@@ -71,6 +71,13 @@
       "defaultValue": 1,
       "metadata": {
         "description": "AKS node count."
+      }
+    },
+    "grafanaAdminObjectId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Optional Microsoft Entra object ID of the Grafana lab operator or group. Empty grants Grafana Admin to the deployment identity; set explicitly for CI deployments."
       }
     },
     "ownerTag": {
@@ -993,6 +1000,9 @@
           "name": {
             "value": "[variables('grafanaName')]"
           },
+          "adminObjectId": {
+            "value": "[parameters('grafanaAdminObjectId')]"
+          },
           "location": {
             "value": "[parameters('location')]"
           },
@@ -1010,7 +1020,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.37.4.10188",
-              "templateHash": "9598521564876409291"
+              "templateHash": "8848555372212880413"
             }
           },
           "parameters": {
@@ -1032,6 +1042,13 @@
                 "description": "Azure Monitor Workspace resource ID to integrate (Managed Prometheus)."
               }
             },
+            "adminObjectId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Optional Microsoft Entra object ID of the lab operator or group to grant Grafana Admin. Empty assigns the deployment identity; set explicitly when deploying through automation."
+              }
+            },
             "tags": {
               "type": "object",
               "defaultValue": {},
@@ -1039,6 +1056,9 @@
                 "description": "Resource tags."
               }
             }
+          },
+          "variables": {
+            "adminPrincipalId": "[if(empty(parameters('adminObjectId')), deployer().objectId, parameters('adminObjectId'))]"
           },
           "resources": [
             {
@@ -1074,6 +1094,19 @@
                 "principalId": "[reference(resourceId('Microsoft.Dashboard/grafana', parameters('name')), '2024-10-01', 'full').identity.principalId]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '43d0d8ad-25c7-4714-9337-8ba259a9fe05')]",
                 "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Dashboard/grafana', parameters('name'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.Dashboard/grafana/{0}', parameters('name'))]",
+              "name": "[guid(resourceId('Microsoft.Dashboard/grafana', parameters('name')), variables('adminPrincipalId'), '22926164-76b3-42b3-bc55-97df8dab3e41')]",
+              "properties": {
+                "principalId": "[variables('adminPrincipalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '22926164-76b3-42b3-bc55-97df8dab3e41')]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Dashboard/grafana', parameters('name'))]"

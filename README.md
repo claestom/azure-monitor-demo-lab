@@ -9,6 +9,15 @@ A self-contained demo centered on Azure Monitor, AI, and Azure SRE Agent, with o
 
 It's built for demos, microhacks, and hackathons. Deploy it, poke around, break it, restore it, and tear it down.
 
+## Use The Lab
+
+| Experience | Start here |
+|---|---|
+| **Guided Scenarios** | Follow the existing [scenario walkthroughs](docs/DEMO-SCENARIOS.md) for the story, Azure portal steps, queries, and expected results. |
+| **Lab Control Center** | Check infrastructure health, generate traffic, try Foundry agents, and perform approved SRE MCP operations. Open the [Control Center guide](docs/LAB-CONTROL-CENTER.md) for screenshots, access requirements, and linked scenarios. |
+
+These are complementary entry points into the same lab. The Control Center links to the guided scenarios; it does not replace their setup or walkthroughs.
+
 ## Architecture
 
 Everything lands in a single resource group (`rg-azure-monitor-lab`), with telemetry flowing from left to right:
@@ -32,6 +41,7 @@ The GenAI workload and Azure SRE Agent can also be deployed on the same telemetr
 - PowerShell 7+
 - A subscription with quota for ~5 small VMs/nodes (`Standard_B2s`), 1 App Service B1, Managed Grafana, Storage, Event Hub, and Key Vault
 - For the optional AI stage only: Python 3.10+. `scripts/setup-ai.ps1` provisions the demo agents and traffic simulator from [`workloads/ai/`](workloads/ai/), and the models it deploys are billable.
+- For deployments with an SRE Agent: npm and tar on the deployment machine to package the pinned native MCP runtime. The deployed .NET app does not need Node.js.
 
 > Two IaC paths, one config. Bicep is the primary one (`infra/`); Terraform (`terraform/`) is a parallel implementation driven from the same `lab.config.json`. Pick one and don't mix them.
 
@@ -54,12 +64,12 @@ Opens a guided Custom deployment wizard in the Azure Portal, where you enter eve
 | **Basics** | Resource group (recommended `rg-azure-monitor-lab`), Region (recommended `northeurope`), name prefix, alert email, VM admin username + password |
 | **Workloads** | Deploy Linux/Windows VMs, VM size, AKS node size + count |
 | **Monitoring & cost** | Daily ingestion cap, Sentinel, platform-logs/metrics-export DCRs, LAW replication |
-| **Advanced** | Owner tag, App Service sample repo, optional SIEM/Teams webhook, optional AI and SRE Agent stages |
+| **Advanced** | Owner tag, optional Grafana administrator object ID, App Service sample repo, optional SIEM/Teams webhook, optional AI and SRE Agent stages |
 
 After the portal deployment succeeds, open **Cloud Shell** in the Azure portal, select **PowerShell**, and run the commands below. The Cloud Shell wrapper discovers the deployed resources, publishes the App Service sample, installs the AKS and Health Model demo components, and verifies the identity, RBAC, and Managed Prometheus prerequisites for the SLI demo without requiring optional Azure CLI extensions:
 
 ```powershell
-git clone https://github.com/claestom/azure-monitor-lab.git
+git clone --branch master https://github.com/claestom/azure-monitor-lab.git
 cd azure-monitor-lab
 $subscriptionId = Read-Host 'Subscription ID'
 $resourceGroup = Read-Host 'Resource group name'
@@ -71,7 +81,8 @@ If the repository is already present in Cloud Shell, update it before rerunning 
 
 ```powershell
 cd ~/azure-monitor-lab
-git pull
+git switch master
+git pull --ff-only origin master
 $subscriptionId = Read-Host 'Subscription ID'
 $resourceGroup = Read-Host 'Resource group name'
 ./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId $subscriptionId -ResourceGroup $resourceGroup
@@ -87,7 +98,7 @@ This repo ships no secrets. You fill in one central config file, and `sync-confi
 
 ```powershell
 # 1. Clone the repo and enter it
-git clone https://github.com/claestom/azure-monitor-lab.git
+git clone --branch master https://github.com/claestom/azure-monitor-lab.git
 cd azure-monitor-lab
 
 # 2. Copy the template and fill in subscriptionId, tenantId, alertEmail, vmAdminPassword, ...
@@ -130,6 +141,24 @@ Step-by-step guides:
 
 > **Next:** Follow the [post-deployment guide for the staged option](docs/POST-DEPLOYMENT.md#staged-deployment) after completing the stages you selected.
 
+### Grafana Access
+
+Lab deployment assigns **Grafana Admin** to the deploying identity at the Grafana instance scope. This permits dashboard and alert setup, not subscription-wide administration. It is separate from the **Monitoring Reader** assignment that lets Grafana's own managed identity query telemetry. The assignment is included in one-shot, portal, Stage B, and Terraform deployments.
+
+For a pipeline deployment or a different operator, set `grafanaAdminObjectId` in the [central configuration](lab.config.json.example), use the optional **Grafana administrator object ID** portal field, or set Terraform's `grafana_admin_object_id`. Use a Microsoft Entra user or group **object ID** in the deployment tenant, not an application/client ID. Empty defaults to the deployment identity; automation otherwise grants its service principal access rather than the human operator.
+
+The deploying identity needs `Microsoft.Authorization/roleAssignments/write` at the lab scope, such as Owner or Contributor plus Role Based Access Control Administrator. After deployment, allow up to an hour for Grafana role propagation and sign in with the assigned account. Updating the repository alone does not repair an already-deployed instance; redeploy its lab/Stage B template with the correct operator ID. For view-only participants, grant Grafana Viewer separately. See [Grafana post-deployment checks](docs/POST-DEPLOYMENT.md#grafana-access).
+
+### Lab Control Center
+
+The normal post-deployment step publishes the [Lab Control Center](docs/LAB-CONTROL-CENTER.md) from the checked-out branch. In the Azure portal, open the lab's **App Service**, then select **Browse** to see **Azure Monitor Lab Control Center**. **Infra Health** is the first/default tab, followed by **Traffic & Faults**, **SRE MCP Assistant**, and **Foundry Playground**. Infrastructure health combines Azure platform availability with the Health Dashboard's telemetry rules and requires [explicit read-only access setup](workloads/webapp/README.md#infrastructure-health). No separate frontend build is needed when deploying the checked-in assets. Technical setup and development commands remain in the [web app reference](workloads/webapp/README.md).
+
+Scripted, staged, and portal/Cloud Shell paths use the same packaging helper. If an SRE Agent is present, the Linux MCP runtime is included automatically. The portal template alone provisions infrastructure; complete its Cloud Shell post-deployment step to publish this application.
+
+Monitoring links and resource context are discovered during publishing. Hosted SRE/Foundry execution remains opt-in: configure App Service Authentication, scoped managed-identity access, and the model settings described in [SRE MCP setup](workloads/webapp/SRE-MCP.md) and [Foundry setup](workloads/webapp/README.md#enable-foundry-access). The console's health, latency, error, checkout, and traffic controls are available without enabling model usage.
+
+For an existing lab, [deploy-webapp.ps1](scripts/deploy-webapp.ps1) updates only the App Service. The optional [hosted access setup](scripts/setup-webapp-agent-access.ps1) configures operator-only sign-in and scoped agent permissions with an explicit opt-in. Both support `-WhatIf` and require explicit subscription and tenant parameters.
+
 ## Cost and lifecycle
 
 The full lab is roughly **EUR 6-11 / USD 7-12 per day** when left running 24/7, based on the indicative list-price estimate in [REFERENCE.md](docs/REFERENCE.md#cost-notes-north-europe-list-pricing-may-2026). The USD range uses a planning rate of EUR 1 = USD 1.10 and is rounded to whole dollars. The optional AI stage adds model usage when `setup-ai.ps1` generates traffic. Do not leave the environment deployed when it is not needed: stop or deallocate compute between sessions, or run `./scripts/teardown.ps1 -Yes` and redeploy the stages for the next demo. Actual costs vary by region, currency conversion, usage, retention, and Azure pricing.
@@ -146,6 +175,7 @@ $rg = "rg-azure-monitor-lab"   # change this to the RG used for your deployment
 | Doc | What's in it |
 |---|---|
 | [REFERENCE.md](docs/REFERENCE.md) | Full capability matrix · every deployed resource · demo walkthrough · cost breakdown · folder layout · optional add-ons · troubleshooting |
+| [Lab Control Center](docs/LAB-CONTROL-CENTER.md) | Application guide, screenshot, traffic and agent capabilities, safety boundaries, and links to the guided scenarios |
 | [DEMO-SCENARIOS.md](docs/DEMO-SCENARIOS.md) | All 58 demo scenarios, each with a story, a click-path, and a "killer line", plus audience-pivoted shortlists |
 | [POST-DEPLOYMENT.md](docs/POST-DEPLOYMENT.md) | Required post-deployment commands by deployment option, conditional stage setup, and optional scenario preparation |
 | [docs/DEPLOY-BICEP-STEP-BY-STEP.md](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md) | Staged deployment tutorials |
