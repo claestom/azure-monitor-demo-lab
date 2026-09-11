@@ -1,5 +1,10 @@
 const { test, expect } = require('@playwright/test');
 
+async function openTraffic(page) {
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Traffic & Faults', exact: true }).click();
+}
+
 test('API contracts, no-store, W3C correlation, and deterministic checkout', async ({ request }) => {
   const traceId = '0123456789abcdef0123456789abcdef';
   const health = await request.get('/healthz', { headers: { traceparent: `00-${traceId}-0123456789abcdef-01` } });
@@ -28,7 +33,7 @@ test('API contracts, no-store, W3C correlation, and deterministic checkout', asy
 test('real actions update metrics, history, trace details, chart, and reset', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
-  await page.goto('/');
+  await openTraffic(page);
   await expect(page.getByRole('heading', { name: 'Azure Monitor Lab Control Center' })).toBeVisible();
   await page.getByRole('button', { name: /Check Health/ }).click();
   await expect(page.locator('#total')).toHaveText('1');
@@ -51,7 +56,7 @@ test('real actions update metrics, history, trace details, chart, and reset', as
 });
 
 test('checkout channel and outcome controls produce business results', async ({ page }) => {
-  await page.goto('/');
+  await openTraffic(page);
   await page.getByLabel('Channel', { exact: true }).selectOption('mobile');
   await page.getByLabel('Payment', { exact: true }).selectOption('success');
   const pending = page.waitForRequest(request => request.url().includes('/api/checkout'));
@@ -65,7 +70,7 @@ test('checkout channel and outcome controls produce business results', async ({ 
 });
 
 test('bounded traffic run finishes and Stop prevents subsequent requests', async ({ page }) => {
-  await page.goto('/');
+  await openTraffic(page);
   await page.getByLabel('Profile', { exact: true }).selectOption('errors');
   await page.getByLabel('Requests', { exact: true }).selectOption('5');
   await page.getByRole('button', { name: 'Start Run' }).click();
@@ -87,7 +92,7 @@ test('bounded traffic run finishes and Stop prevents subsequent requests', async
 });
 
 test('performance experiment requires confirmation and respects server cooldown', async ({ page, request }) => {
-  await page.goto('/');
+  await openTraffic(page);
   await page.getByRole('button', { name: 'Run Inefficient Code' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
@@ -103,7 +108,7 @@ test('performance experiment requires confirmation and respects server cooldown'
 });
 
 test('dependency control reports a result and timeout is explicit', async ({ page }) => {
-  await page.goto('/');
+  await openTraffic(page);
   await page.getByRole('button', { name: /Test Dependency/ }).click();
   await expect(page.locator('#total')).toHaveText('1', { timeout: 20000 });
   await page.route('**/healthz', route => route.abort('failed'));
@@ -117,7 +122,7 @@ test('configured monitoring links are HTTPS-only and response content is inert',
     links: { ApplicationInsights: 'https://portal.azure.com/#resource/test', Logs: 'javascript:alert(1)', Workbook: null, Grafana: 'https://example.grafana.azure.com/' }, performanceCooldownSeconds: 30
   } }));
   await page.route('**/healthz', route => route.fulfill({ body: '<img src=x onerror="window.injected=true">', headers: { 'X-Amlab-Trace-Id': 'safe-trace' } }));
-  await page.goto('/');
+  await openTraffic(page);
   await expect(page.locator('[data-link="ApplicationInsights"]')).toHaveAttribute('href', 'https://portal.azure.com/#resource/test');
   await expect(page.locator('[data-link="Logs"]')).not.toHaveAttribute('href');
   await page.getByRole('button', { name: /Check Health/ }).click();
@@ -129,7 +134,7 @@ test('configured monitoring links are HTTPS-only and response content is inert',
 for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844 }, { width: 320, height: 740 }]) {
   test(`responsive layout and assets at ${viewport.width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
-    await page.goto('/');
+    await openTraffic(page);
     await page.evaluate(() => document.fonts.ready);
     await expect(page.locator('#brand-mark')).toBeVisible();
     expect(await page.locator('#brand-mark').evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);

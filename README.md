@@ -14,7 +14,7 @@ It's built for demos, microhacks, and hackathons. Deploy it, poke around, break 
 | Experience | Start here |
 |---|---|
 | **Guided Scenarios** | Follow the existing [scenario walkthroughs](docs/DEMO-SCENARIOS.md) for the story, Azure portal steps, queries, and expected results. |
-| **Lab Control Center** | Use the deployed app to generate traffic, try Foundry agents, and perform approved SRE MCP operations. Open the [Control Center guide](docs/LAB-CONTROL-CENTER.md) for screenshots, access requirements, and linked scenarios. |
+| **Lab Control Center** | Check infrastructure health, generate traffic, try Foundry agents, and perform approved SRE MCP operations. Open the [Control Center guide](docs/LAB-CONTROL-CENTER.md) for screenshots, access requirements, and linked scenarios. |
 
 These are complementary entry points into the same lab. The Control Center links to the guided scenarios; it does not replace their setup or walkthroughs.
 
@@ -151,7 +151,7 @@ The deploying identity needs `Microsoft.Authorization/roleAssignments/write` at 
 
 ### Lab Control Center
 
-The normal post-deployment step publishes the [Lab Control Center](docs/LAB-CONTROL-CENTER.md) from the checked-out branch. In the Azure portal, open the lab's **App Service**, then select **Browse** to see **Azure Monitor Lab Control Center**, with separate **Traffic & Faults**, **SRE MCP Assistant**, and **Foundry Playground** tabs. No separate frontend build is needed when deploying the checked-in assets. Technical setup and development commands remain in the [web app reference](workloads/webapp/README.md).
+The normal post-deployment step publishes the [Lab Control Center](docs/LAB-CONTROL-CENTER.md) from the checked-out branch. In the Azure portal, open the lab's **App Service**, then select **Browse** to see **Azure Monitor Lab Control Center**. **Infra Health** is the first/default tab, followed by **Traffic & Faults**, **SRE MCP Assistant**, and **Foundry Playground**. Infrastructure health combines Azure platform availability with the Health Dashboard's telemetry rules and requires [explicit read-only access setup](workloads/webapp/README.md#infrastructure-health). No separate frontend build is needed when deploying the checked-in assets. Technical setup and development commands remain in the [web app reference](workloads/webapp/README.md).
 
 Scripted, staged, and portal/Cloud Shell paths use the same packaging helper. If an SRE Agent is present, the Linux MCP runtime is included automatically. The portal template alone provisions infrastructure; complete its Cloud Shell post-deployment step to publish this application.
 

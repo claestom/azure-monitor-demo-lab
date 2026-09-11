@@ -23,6 +23,7 @@ let busy = false;
 let run = null;
 let cooldownUntil = 0;
 let toastTimer;
+let healthCheckVersion = 0;
 let configuration = { links: {}, performanceCooldownSeconds: 30 };
 
 byId('brand-mark').src = monitorMark;
@@ -40,6 +41,29 @@ const chart = new Chart(byId('latency-chart'), {
     }
   }
 });
+
+function startWebAppHealthCheck() {
+  byId('health-status').textContent = 'Checking...';
+  byId('health-status').removeAttribute('title');
+  return ++healthCheckVersion;
+}
+
+function reportWebAppHealth(healthy, duration, version) {
+  if (version !== healthCheckVersion) return;
+  byId('health-status').textContent = `${healthy ? 'Healthy' : 'Unavailable'} / ${Math.round(duration)} ms`;
+  byId('health-status').title = `/healthz checked at ${new Date().toLocaleTimeString()}`;
+}
+
+async function checkWebAppHealth() {
+  const version = startWebAppHealthCheck();
+  const started = performance.now();
+  let healthy = false;
+  try {
+    const response = await fetch('/healthz', { cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(10000) });
+    healthy = response.ok;
+  } catch { healthy = false; }
+  reportWebAppHealth(healthy, performance.now() - started, version);
+}
 
 function toast(message) {
   clearTimeout(toastTimer);
@@ -149,6 +173,7 @@ function showCheckout(result) {
 async function sendRequest(key, overrides = {}) {
   if (busy) return;
   const action = actions[key];
+  const healthVersion = key === 'health' ? startWebAppHealthCheck() : null;
   let path = action.path;
   const method = action.method || 'GET';
   const headers = {};
@@ -193,7 +218,7 @@ async function sendRequest(key, overrides = {}) {
     byId('live-text').textContent = `${action.title} ${result.ok ? 'completed' : result.key === 'explode' && result.status === 500 ? 'failed as expected' : 'failed'}`;
     byId('elapsed').textContent = `${Math.round(result.duration).toLocaleString()} ms`;
     byId('mobile-status').textContent = `${result.title} / ${result.status ? `HTTP ${result.status}` : 'Network error'}`;
-    if (key === 'health') byId('health-status').textContent = `${result.ok ? 'Healthy' : 'Unavailable'} / ${Math.round(result.duration)} ms`;
+    if (key === 'health') reportWebAppHealth(result.ok, result.duration, healthVersion);
     if (key === 'checkout') showCheckout(result);
     appendResult(result);
     updateMetrics();
@@ -265,7 +290,6 @@ byId('clear').addEventListener('click', () => {
   byId('live-text').textContent = 'Waiting for a request';
   byId('mobile-status').textContent = 'Waiting for a request';
   byId('elapsed').textContent = '';
-  byId('health-status').textContent = 'Not checked';
   byId('run-progress').value = 0;
   byId('run-count').textContent = `0 / ${byId('request-count').value}`;
   byId('run-status').textContent = 'Ready';
@@ -279,7 +303,7 @@ async function loadConfiguration() {
     if (!response.ok) throw new Error('Configuration unavailable');
     configuration = await response.json();
     configuration.performanceCooldownSeconds = Math.max(30, Number(configuration.performanceCooldownSeconds) || 30);
-    let count = 0;
+    const configured = new Set();
     document.querySelectorAll('[data-link]').forEach(link => {
       const value = configuration.links?.[link.dataset.link];
       link.title = 'Not configured for this deployment';
@@ -291,10 +315,10 @@ async function loadConfiguration() {
         link.rel = 'noopener noreferrer';
         link.removeAttribute('aria-disabled');
         link.title = 'Open in Azure; your account permissions apply';
-        count++;
+        configured.add(link.dataset.link);
       } catch { link.title = 'Not configured for this deployment'; }
     });
-    byId('links-status').textContent = count === 4 ? '' : `${4 - count} destinations not configured`;
+    byId('links-status').textContent = configured.size === 4 ? '' : `${4 - configured.size} destinations not configured`;
   } catch {
     byId('links-status').textContent = 'Monitoring destinations unavailable';
   }
@@ -302,5 +326,5 @@ async function loadConfiguration() {
 loadConfiguration();
 initializeAgentViews({
   snapshot: () => history.map(({ time, duration, method, path, status, traceId, title, ok }) => ({ time, duration, method, path, status, traceId, title, ok })),
-  resizeChart: () => chart.resize(), toast, refreshIcons
+  resizeChart: () => chart.resize(), toast, refreshIcons, checkWebAppHealth
 });

@@ -9,7 +9,7 @@
   <script src="/console.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#controls">Skip to lab controls</a>
+  <a class="skip-link" href="#panel-health">Skip to active view</a>
   <header class="topbar">
     <a class="brand" href="/"><img id="brand-mark" width="28" height="28" alt=""><span>Azure Monitor <strong>Lab</strong></span></a>
     <nav class="documentation-nav" aria-label="Lab documentation">
@@ -24,7 +24,7 @@
     <dl class="environment-strip" aria-label="Lab environment">
       <div class="environment-resource"><dt>Resource group</dt><dd id="lab-resource">Loading...</dd></div>
       <div><dt>App Service</dt><dd id="lab-app">Loading...</dd></div>
-      <div><dt>Web app health</dt><dd id="health-status"><i data-lucide="circle-help"></i>Not checked</dd></div>
+      <div><dt>Web app health</dt><dd id="health-status" role="status"><i data-lucide="circle-help"></i>Not checked</dd></div>
       <div><dt>SRE MCP runtime</dt><dd id="sre-connection" role="status">Not checked</dd></div>
       <div><dt>Foundry catalog</dt><dd id="foundry-connection" role="status">Not checked</dd></div>
     </dl>
@@ -38,11 +38,29 @@
     </nav>
     <noscript>This lab console requires JavaScript.</noscript>
     <div class="app-tabs" role="tablist" aria-label="Lab views">
-      <button id="tab-console" role="tab" aria-controls="panel-console" aria-selected="true" tabindex="0"><i data-lucide="activity"></i>Traffic &amp; Faults</button>
+      <button id="tab-health" role="tab" aria-label="Infrastructure Health" aria-controls="panel-health" aria-selected="true" tabindex="0"><i data-lucide="heart-pulse"></i>Infra Health</button>
+      <button id="tab-console" role="tab" aria-controls="panel-console" aria-selected="false" tabindex="-1"><i data-lucide="activity"></i>Traffic &amp; Faults</button>
       <button id="tab-sre" role="tab" aria-controls="panel-sre" aria-selected="false" tabindex="-1"><i data-lucide="scan-line"></i>SRE MCP Assistant</button>
       <button id="tab-foundry" role="tab" aria-controls="panel-foundry" aria-selected="false" tabindex="-1"><i data-lucide="messages-square"></i>Foundry Playground</button>
     </div>
-    <div id="panel-console" role="tabpanel" aria-labelledby="tab-console" tabindex="0" class="workspace">
+    <section id="panel-health" role="tabpanel" aria-labelledby="tab-health" tabindex="0">
+      <div class="infra-heading"><div><h2>Infrastructure Health</h2><p id="infra-checked" class="muted">Not checked</p></div><div class="tool-actions"><a data-link="Workbook" class="button secondary" aria-disabled="true"><i data-lucide="external-link"></i>Health Dashboard</a><button id="infra-refresh" class="button primary" type="button" title="Refresh infrastructure health"><i data-lucide="refresh-cw"></i>Refresh</button></div></div>
+      <div class="infra-summary" aria-label="Last snapshot resource counts">
+        <div><span>Resources</span><strong id="infra-count-total">-</strong></div>
+        <div class="infra-healthy"><span>Healthy</span><strong id="infra-count-healthy">-</strong></div>
+        <div class="infra-warning"><span>Warning</span><strong id="infra-count-warning">-</strong></div>
+        <div class="infra-critical"><span>Critical</span><strong id="infra-count-critical">-</strong></div>
+        <div class="infra-unknown"><span>Unknown</span><strong id="infra-count-unknown">-</strong></div>
+      </div>
+      <div class="infra-status"><span id="infra-status" role="status">Health check not started.</span><a id="infra-sign-in" class="button secondary" href="/.auth/login/aad?post_login_redirect_uri=/" hidden><i data-lucide="external-link"></i>Sign In</a></div>
+      <p id="infra-stale" class="infra-stale" role="status" hidden></p>
+      <div class="infra-toolbar"><label>Find resource<input id="infra-search" type="search" placeholder="Name, type, or region" autocomplete="off"></label><label>Status<select id="infra-filter" aria-label="Status"><option value="">All statuses</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="unknown">Unknown</option><option value="healthy">Healthy</option></select></label><span id="infra-visible" class="muted"></span></div>
+      <table id="infra-table" class="infra-table" aria-label="Infrastructure resource health" hidden><thead><tr><th scope="col">Resource</th><th scope="col">Status</th><th scope="col">Platform availability</th><th scope="col">Workbook telemetry</th></tr></thead><tbody id="infra-rows"></tbody></table>
+      <div id="infra-empty" class="empty-history"><i data-lucide="heart-pulse"></i><p id="infra-empty-text">No infrastructure snapshot available.</p></div>
+      <details id="infra-source-details" class="infra-sources" hidden><summary>Health sources</summary><ul id="infra-sources"></ul></details>
+      <nav class="scenario-links infra-scenarios" aria-label="Related scenarios for infrastructure health"><span>Related Scenarios</span><a data-documentation href="https://github.com/claestom/azure-monitor-lab/blob/master/docs/DEMO-SCENARIOS.md#s1" target="_blank" rel="noopener noreferrer">1: Health Dashboard</a></nav>
+    </section>
+    <div id="panel-console" role="tabpanel" aria-labelledby="tab-console" tabindex="0" class="workspace" hidden>
       <aside id="controls" aria-label="Lab controls">
         <section class="control-section" aria-labelledby="request-heading">
           <div class="section-heading"><h2 id="request-heading">Send a request</h2><span class="section-number">01</span></div>
@@ -165,7 +183,7 @@
     </section>
     <footer><span>Azure Monitor Lab Control Center</span><span>Demo environment <span aria-hidden="true">/</span> Intentional failures enabled</span></footer>
   </main>
-  <div class="mobile-feedback"><div><span class="field-label">LATEST REQUEST</span><span id="mobile-status" role="status">Waiting for a request</span></div><a class="button secondary" href="#session-heading" aria-label="View session activity"><i data-lucide="activity"></i>Activity</a></div>
+  <div class="mobile-feedback" hidden><div><span class="field-label">LATEST REQUEST</span><span id="mobile-status" role="status">Waiting for a request</span></div><a class="button secondary" href="#session-heading" aria-label="View session activity"><i data-lucide="activity"></i>Activity</a></div>
   <dialog id="performance-dialog" aria-labelledby="dialog-heading">
     <form method="dialog"><div class="dialog-icon"><i data-lucide="cpu"></i></div><h2 id="dialog-heading">Run performance experiment?</h2><p>This request deliberately consumes CPU, creates handled exceptions, and makes an outbound call. It can affect other users of this demo app.</p><p>One console experiment per 30 seconds per app instance. Profiler recommendations are not immediate.</p><div class="dialog-actions"><button class="button secondary" value="cancel">Cancel</button><button class="button primary" id="confirm-performance" value="confirm"><i data-lucide="play"></i>Run Experiment</button></div></form>
   </dialog>

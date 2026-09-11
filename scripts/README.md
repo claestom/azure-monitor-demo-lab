@@ -18,6 +18,7 @@ Most scripts use the Azure CLI and require `az login`. Scripts that work with AK
 | `post-deploy.ps1` | Publishes the .NET sample to App Service and applies the AKS frontend, load generator, and OpenTelemetry workloads. Normally called by `deploy.ps1`. | `./scripts/post-deploy.ps1 -ResourceGroup <rg> -WebAppName <app> -AksName <aks> -WebAppHost <host>` |
 | `post-staged-deploy.ps1` | After Stage B, discovers the App Service, AKS cluster, and central LAW, then configures the workloads. SLI verification runs only when the Stage E identity exists. | `./scripts/post-staged-deploy.ps1 -ResourceGroup <rg>` |
 | `post-cloud-shell-deploy.ps1` | Cloud Shell-specific portal wrapper that pins the subscription, configures workloads, and verifies SLI prerequisites. It prints the manual portal handoff because preview SLIs are not created automatically. | `./scripts/post-cloud-shell-deploy.ps1 -SubscriptionId <sub> -ResourceGroup <rg>` |
+| [setup-webapp-health-access.ps1](setup-webapp-health-access.ps1) | Opt-in read-only access for the Control Center's first Infra Health tab. Requires existing operator sign-in; grants resource-group Reader and workspace Log Analytics Reader, preserves agent settings, and enables health last. | See [health setup and WhatIf](../workloads/webapp/README.md#hosted-access). |
 | `gen-architecture-svg.ps1` | Regenerates `docs/architecture-overview-sre.svg` from the architecture definition and local Azure icons. | `./scripts/gen-architecture-svg.ps1` |
 
 For a fresh deployment, use `deploy.ps1` rather than calling `post-deploy.ps1` directly.

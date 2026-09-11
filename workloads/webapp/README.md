@@ -1,8 +1,53 @@
 # Azure Monitor Lab Control Center
 
-The ASP.NET Core 8 app serves **Azure Monitor Lab Control Center** at `/`. Three keyboard-accessible tabs separate Traffic & Faults, SRE MCP Assistant, and Foundry Playground. It runs in the existing App Service and uses the existing Application Insights integration. Basic console actions need no additional resources. MCP assistant and Foundry execution require explicit enablement, authenticated access, and a backend identity with service permissions.
+The ASP.NET Core 8 app serves **Azure Monitor Lab Control Center** at `/`. Four keyboard-accessible tabs separate Infra Health (first/default), Traffic & Faults, SRE MCP Assistant, and Foundry Playground. It runs in the existing App Service and uses the existing Application Insights integration. Basic traffic actions need no additional resources. Health reads, MCP assistant, and Foundry execution require explicit enablement, authenticated access, and a backend identity with the appropriate permissions.
 
 Start with the [Control Center guide](../../docs/LAB-CONTROL-CENTER.md) for the application overview, screenshot, and scenario mapping. This page is the technical reference for configuration, local development, deployment, and runtime limits. The shared environment strip reuses existing context/catalog calls; it does not perform background model requests. Guide and Related Scenarios links open repository documentation without executing actions.
+
+## Infrastructure Health
+
+`GET /api/infra/health` performs read-only checks against one configured lab resource group. It uses `Azure.Identity` with system-assigned managed identity when hosted and `AzureCliCredential` locally, plus `Azure.Monitor.Query.Logs` for fixed workspace queries. The backend never accepts a resource scope, endpoint, time range, or KQL query from the browser.
+
+The tab includes only `Microsoft.Compute/virtualMachines`, `Microsoft.Compute/virtualMachineScaleSets`, `Microsoft.ContainerService/managedClusters`, and `Microsoft.Web/sites`. This case-insensitive filter is applied before selecting telemetry queries and computing the response, so supporting resources do not appear in rows or status totals. The tab combines Azure Resource Health availability with the existing [workbook](../../infra/modules/workbook.bicep) thresholds for VM heartbeats, AKS node/pod reporting, and App Service HTTP 5xx. Signals join by resource ID, not resource name. Read failures, absent telemetry, and partial query results remain explicit. Provisioning success is not an availability signal. The [Control Center guide](../../docs/LAB-CONTROL-CENTER.md#infrastructure-health) explains thresholds and limitations.
+
+### Hosted Access
+
+1. Publish this version of the app. The standard package helper discovers the central workspace and the App Insights component's associated workspace in the same resource group. Health reads default to disabled.
+2. Configure single-tenant App Service Authentication and `LabConsole__AllowedPrincipalIds__0` for an approved operator. Existing agent-tab authentication can be reused; the health helper does not create or modify an Entra registration. Without AI/SRE, configure the same operator-only authentication directly in App Service, preserving anonymous access to the demo endpoints.
+3. Review the opt-in helper using the actual workspace names, including any deployment suffix:
+
+```powershell
+../../scripts/setup-webapp-health-access.ps1 `
+  -SubscriptionId '<lab-subscription-id>' -TenantId '<lab-tenant-id>' `
+  -ResourceGroup '<lab-resource-group>' -WebAppName '<lab-web-app>' `
+  -CentralLawName '<central-workspace-name>' -AppInsightsLawName '<application-workspace-name>' `
+  -WhatIf
+```
+
+Remove `-WhatIf` only after reviewing the scope. The helper requires an existing system-assigned app identity, matching tenant, configured authentication, and a backend operator allowlist. It grants **Reader** on this resource group and **Log Analytics Reader** on the two named workspaces, preserves unrelated settings and all agent settings, and enables health only after role setup succeeds. A role failure leaves health disabled. Repeated runs reuse existing exact assignments. The caller needs role-assignment write permission and permission to update this App Service's settings. Allow RBAC propagation before refreshing.
+
+The roles are not subscription-wide, but the shared backend identity can read resource metadata across this lab and logs in the assigned workspaces. The API restricts queries to this resource group and returns only aggregates. This is not delegated browser-user access. No workload start/stop, AI execution, secret access, or authentication change is performed by the helper. Disabling `LabConsole__Health__Enabled` stops future queries but does not revoke roles already granted.
+
+### Configuration And Limits
+
+| Setting | Value |
+|---|---|
+| `LabConsole__Health__Enabled` | `true` to opt in; defaults to `false` |
+| `LabConsole__Health__SubscriptionId` | Expected lab subscription GUID |
+| `LabConsole__Health__TenantId` | Intended Azure CLI tenant for local runs; stored by hosted setup too |
+| `LabConsole__Health__CentralWorkspaceResourceId` | Full ARM ID of the central workspace in this lab resource group |
+| `LabConsole__Health__AppInsightsWorkspaceResourceId` | Retained for setup compatibility; the infra-only view does not query this workspace |
+| `LabConsole__ResourceGroup` | Resource group used by the existing console context |
+
+For local access, use the existing config helper with `-EnableInfrastructureHealth -TenantId '<lab-tenant-id>'`, or set the health environment variables before starting the app. Local requests require loopback IP and Host; hosted requests use the existing authenticated operator allowlist. Use the intended signed-in Azure CLI account with read access. Do not overwrite an existing local agent configuration without preserving its settings.
+
+The UI checks once on first opening and offers manual refresh. A per-instance semaphore coalesces concurrent checks; snapshots are cached for 60 seconds and top-level failures for 15 seconds. The endpoint allows 30 requests per minute per app instance. One check is bounded by 45 seconds, at most 10 pages / 500 resources per ARM list, and at most three concurrent fixed telemetry queries against the central workspace. Each Logs query has a 15-second server timeout, a one-hour upper time range, a 500-row cap, and at most one SDK retry. Pagination cannot change the ARM host or scoped path; redirects are disabled. No background queries or model calls are scheduled. Usual Azure Monitor data/query charges and workspace policies still apply.
+
+Snapshot age and failed refreshes remain visible. Platform reports older than 30 minutes are unknown. Missing tables are not created; missing or partial queries are discarded for that signal. VM scale sets use platform availability only; other supporting resource types and out-of-group resources such as AKS-managed infrastructure are excluded. This is not the preview Azure Monitor Health Model or an autonomous remediation engine.
+
+The shared **Web app health** header independently probes `/healthz` on initial page load and each accepted Infra Health refresh. The probe bypasses the browser cache, rejects redirects, and times out after 10 seconds. It never contributes to traffic counters, latency charts, or request history, but the server can still record the HTTP request in telemetry. Manual health actions continue to update both the header and traffic results. Clearing traffic preserves the last header result; request sequencing prevents an older response from overwriting a newer check. These probes do not poll in the background or depend on Azure operator access.
+
+References: [Azure Monitor Logs SDK](https://learn.microsoft.com/en-us/dotnet/api/overview/azure/monitor.query.logs-readme?view=azure-dotnet), [Resource Health list by resource group](https://learn.microsoft.com/en-us/rest/api/resourcehealth/availability-statuses/list-by-resource-group?view=rest-resourcehealth-2025-05-01).
 
 ## Agent Views
 
@@ -79,10 +124,11 @@ npm test
 ./tests/console-config.Tests.ps1
 ./tests/webapp-package.Tests.ps1
 ./tests/webapp-access.Tests.ps1
+./tests/webapp-health-access.Tests.ps1
 dotnet test ../webapp.Tests/AmlabHello.Tests.csproj -c Release
 ```
 
-Playwright starts and stops its own app at `http://127.0.0.1:5188`; keep that port free. Tests force both agent integrations off and mock successful responses, so no paid traffic or Azure changes occur. Coverage includes API contracts, W3C correlation, checkout outcomes, traffic completion/stopping, cooldowns, tab navigation, MCP questions and write review, consent/cancellation/error states, safe rendering, and desktop/mobile screenshots with canvas-pixel checks. Configuration tests use mocked read-only CLI calls. Unit tests cover direct-MCP scope validation, ownership, one-time approvals, rejected investigations, bounded tool selection, and the actual model SDK wire format, plus existing Foundry usage/cleanup behavior.
+Playwright starts and stops its own app at `http://127.0.0.1:5188`; keep that port free. Tests force health reads and both agent integrations off and mock successful responses, so no paid traffic or Azure changes occur. Coverage includes health snapshots, filters, freshness, partial failures, API guards, W3C correlation, checkout outcomes, traffic completion/stopping, cooldowns, tab navigation, MCP questions and write review, consent/cancellation/error states, safe rendering, and desktop/mobile screenshots with canvas-pixel checks. Configuration and access-helper tests mock all Azure operations. Unit tests cover health thresholds, SDK response handling, scoped pagination, caching, direct-MCP scope validation, ownership, one-time approvals, rejected investigations, bounded tool selection, and the actual model SDK wire format, plus existing Foundry usage/cleanup behavior.
 
 Commit regenerated `wwwroot` bundles/assets with frontend source changes. `dotnet publish` includes those assets and excludes frontend sources, Node dependencies, tests, and local `lab-console.json`. The deployment helper generates fresh disabled-by-default configuration after publishing. App Service ZIP deployment continues to use `dotnet AmlabHello.dll`.
 
@@ -100,7 +146,7 @@ Remove `-WhatIf` to deploy after reviewing the target. This does not enable agen
 
 The existing [post-deploy script](../../scripts/post-deploy.ps1), shared by scripted, staged, and Cloud Shell deployments, calls [prepare-webapp-package.ps1](../../scripts/prepare-webapp-package.ps1) before creating the ZIP. It verifies the published console assets, generates fresh configuration through [write-webapp-console-config.ps1](../../scripts/write-webapp-console-config.ps1), and packages the pinned Linux MCP runtime automatically when an SRE Agent is discovered. Discovery uses explicit subscription and resource-group parameters and only reads Azure resources. Packaging fails visibly if a required asset or MCP runtime cannot be prepared.
 
-The four destinations are Application Insights, the central workspace's Logs view, the lab Health Dashboard/Traffic Lights workbook, and the Grafana endpoint. Missing resources remain unavailable in the UI; no destination is guessed. Opening them uses the signed-in user's Azure permissions, not the app identity. The console does not fetch live monitoring data.
+The four destinations are Application Insights, the central workspace's Logs view, the lab Health Dashboard/Traffic Lights workbook, and the Grafana endpoint. Missing resources remain unavailable in the UI; no destination is guessed. Opening them uses the signed-in user's Azure permissions, not the app identity. Separately, the opt-in Infrastructure Health tab fetches its read-only snapshot with the backend identity.
 
 For a local preview with links to an existing lab, run from this directory:
 

@@ -43,6 +43,7 @@ test('agent API rejects unsafe requests, enforces consent and size, defaults off
 test('tabs preserve console state, support keyboard navigation, and validate agent destinations', async ({ page }) => {
   await page.route('**/api/agents/context', route => route.fulfill({ json: { resourceGroup: 'test-rg', appService: 'test-app', sreUrl: 'https://sre.azure.com/#/agent/test', foundryUrl: 'javascript:alert(1)' } }));
   await page.goto('/');
+  await page.getByRole('tab', { name: 'Traffic & Faults', exact: true }).click();
   await page.getByRole('button', { name: /Check Health/ }).click();
   await expect(page.locator('#total')).toHaveText('1');
   await page.getByRole('button', { name: /Trigger Error/ }).click();
@@ -58,6 +59,9 @@ test('tabs preserve console state, support keyboard navigation, and validate age
   await page.keyboard.press('End');
   await expect(page.locator('#tab-foundry')).toBeFocused();
   await page.keyboard.press('Home');
+  await expect(page.locator('#tab-health')).toBeFocused();
+  await expect(page.locator('#panel-health')).toBeVisible();
+  await page.keyboard.press('ArrowRight');
   await expect(page.locator('#panel-console')).toBeVisible();
   await expect(page.locator('#total')).toHaveText('2');
   await page.getByRole('button', { name: 'Clear session results' }).click();

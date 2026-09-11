@@ -4,6 +4,7 @@ param(
   [Parameter(Mandatory)] [string] $SubscriptionId,
   [Parameter(Mandatory)] [string] $OutputPath,
   [string] $CentralLawName,
+  [switch] $EnableInfrastructureHealth,
   [switch] $EnableFoundryPlayground,
   [Alias('EnableSreConversation')] [switch] $EnableSreAssistant,
   [string] $TenantId,
@@ -13,6 +14,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+if ($EnableInfrastructureHealth -and -not $TenantId) { throw 'Infrastructure health requires the intended tenant ID.' }
 if ($EnableSreAssistant -and (-not $TenantId -or -not $SreMcpExecutable -or -not $SreModelEndpoint -or -not $SreModelDeployment)) {
   throw 'SRE MCP assistant requires a tenant ID, MCP executable, model endpoint, and model deployment.'
 }
@@ -40,6 +42,16 @@ $grafana = $resources | Where-Object { $_.type -ieq 'Microsoft.Dashboard/grafana
 $links = [ordered]@{ ApplicationInsights = $null; Logs = $null; Workbook = $null; Grafana = $null }
 if ($appInsights) { $links.ApplicationInsights = "https://portal.azure.com/#resource$($appInsights.id)/overview" }
 if ($workspace) { $links.Logs = "https://portal.azure.com/#resource$($workspace.id)/logs" }
+
+$applicationWorkspaceId = $null
+if ($appInsights) {
+  $linkedWorkspace = az resource show --subscription $SubscriptionId --ids $appInsights.id `
+    --api-version 2020-02-02 --query properties.WorkspaceResourceId --output tsv
+  if ($LASTEXITCODE -eq 0 -and $linkedWorkspace) {
+    $matchedWorkspace = $workspaces | Where-Object { $_.id -ieq $linkedWorkspace } | Select-Object -First 1
+    if ($matchedWorkspace) { $applicationWorkspaceId = $matchedWorkspace.id }
+  }
+}
 
 foreach ($workbook in ($resources | Where-Object { $_.type -ieq 'Microsoft.Insights/workbooks' })) {
   $displayName = az resource show --subscription $SubscriptionId --ids $workbook.id `
@@ -94,6 +106,11 @@ $appName = if ($apps.Count -eq 1) { $apps[0].name } else { $null }
 if ($EnableSreAssistant -and $sreAgents.Count -ne 1) { throw 'SRE MCP assistant requires exactly one discovered agent.' }
 @{ LabConsole = @{
   Links = $links; ResourceGroup = $ResourceGroup; AppService = $appName
+  Health = @{
+    Enabled = [bool]$EnableInfrastructureHealth; SubscriptionId = $SubscriptionId; TenantId = $TenantId
+    CentralWorkspaceResourceId = $(if ($workspace) { $workspace.id } else { $null })
+    AppInsightsWorkspaceResourceId = $applicationWorkspaceId
+  }
   Foundry = @{ Enabled = [bool]$EnableFoundryPlayground; ProjectEndpoint = $projectEndpoint }
   Sre = @{
     Enabled = [bool]$EnableSreAssistant; SubscriptionId = $SubscriptionId; TenantId = $TenantId

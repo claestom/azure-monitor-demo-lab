@@ -1,8 +1,10 @@
 import { initializeSreAssistant } from './sre-assistant.js';
+import { initializeInfrastructureHealth } from './infrastructure-health.js';
 
-export function initializeAgentViews({ resizeChart, toast, refreshIcons }) {
+export function initializeAgentViews({ resizeChart, toast, refreshIcons, checkWebAppHealth }) {
   const byId = id => document.getElementById(id);
   const sre = initializeSreAssistant();
+  const infrastructure = initializeInfrastructureHealth({ refreshIcons, checkWebAppHealth });
   let context = {};
   let availableAgents = [];
   let activeRequest = null;
@@ -22,6 +24,7 @@ export function initializeAgentViews({ resizeChart, toast, refreshIcons }) {
     document.querySelector('.skip-link').href = consoleActive ? '#controls' : `#${tab.getAttribute('aria-controls')}`;
     document.querySelector('.skip-link').textContent = consoleActive ? 'Skip to lab controls' : 'Skip to active view';
     if (consoleActive) requestAnimationFrame(resizeChart);
+    if (tab.id === 'tab-health') infrastructure.load();
     if (tab.id === 'tab-sre') sre.load();
     if (tab.id === 'tab-foundry' && !catalogLoaded) loadCatalog();
   }
@@ -189,5 +192,6 @@ export function initializeAgentViews({ resizeChart, toast, refreshIcons }) {
     byId('agent-consent').checked = false;
     updateAgentControls();
   });
+  activate(tabs[0]);
   loadContext();
 }

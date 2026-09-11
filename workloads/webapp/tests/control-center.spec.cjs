@@ -13,6 +13,7 @@ async function prepare(page) {
   await page.route('**/api/sre/availability', route => route.fulfill({ json: { available: true, message: 'MCP tools connected', tools: [], model: 'example-model' } }));
   await page.goto('/');
   await expect(page.locator('#lab-resource')).toHaveText(context.resourceGroup);
+  await page.getByRole('tab', { name: 'Traffic & Faults', exact: true }).click();
 }
 
 test('Control Center presents two documentation entry points and valid contextual scenario links', async ({ page }) => {
@@ -24,7 +25,7 @@ test('Control Center presents two documentation entry points and valid contextua
   await expect(page.getByRole('link', { name: 'Guide', exact: true })).toHaveAttribute('href', `${docsUrl}LAB-CONTROL-CENTER.md`);
   await expect(page.getByRole('link', { name: 'Scenarios', exact: true })).toHaveAttribute('href', `${docsUrl}DEMO-SCENARIOS.md`);
   const links = await page.locator('[data-documentation]').evaluateAll(items => items.map(item => ({ href: item.href, target: item.target, rel: item.rel })));
-  expect(links.length).toBe(10);
+  expect(links.length).toBe(11);
   for (const link of links) {
     expect(link.href.startsWith(docsUrl)).toBe(true);
     expect(link.target).toBe('_blank');
@@ -76,7 +77,8 @@ test('Control Center reports unavailable context and sign-in requirements withou
   await expect(page.locator('#foundry-connection')).toHaveText('Sign-in required');
   await page.getByRole('tab', { name: 'SRE MCP Assistant', exact: true }).click();
   await expect(page.locator('#sre-connection')).toHaveText('Sign-in required');
-  await expect(page.locator('#health-status')).toContainText('Not checked');
+  await expect(page.locator('#health-status')).toContainText('Healthy');
+  await expect(page.locator('#total')).toHaveText('0');
 });
 
 for (const width of [1440, 390, 320]) {

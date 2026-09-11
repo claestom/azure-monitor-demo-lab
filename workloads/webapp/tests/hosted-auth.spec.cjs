@@ -5,6 +5,7 @@ test('protected agent tabs offer platform sign-in without affecting anonymous la
   await page.route('**/api/sre/availability', route => route.fulfill({ status: 401, json: unauthorized }));
   await page.route('**/api/agents/catalog', route => route.fulfill({ status: 401, json: unauthorized }));
   await page.goto('/');
+  await page.getByRole('tab', { name: 'Traffic & Faults', exact: true }).click();
   await page.getByRole('button', { name: /Check Health/ }).click();
   await expect(page.locator('#total')).toHaveText('1');
   await page.getByRole('tab', { name: 'SRE MCP Assistant', exact: true }).click();

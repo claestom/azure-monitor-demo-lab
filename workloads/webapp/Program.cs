@@ -27,6 +27,12 @@ builder.Services.AddSingleton<AgentPlayground>();
 builder.Services.AddSingleton<ISreMcpClient, SreMcpClient>();
 builder.Services.AddSingleton<ISreModel, SreModel>();
 builder.Services.AddSingleton<SreAssistant>();
+builder.Services.AddSingleton<InfrastructureHealthService>();
+builder.Services.AddHttpClient("infrastructure-health", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(15);
+    client.MaxResponseContentBufferSize = 4 * 1024 * 1024;
+}).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false });
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -43,6 +49,12 @@ builder.Services.AddHttpClient(Microsoft.Extensions.Options.Options.DefaultName,
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddFixedWindowLimiter("infrastructure-health", limiter =>
+    {
+        limiter.PermitLimit = 30;
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.QueueLimit = 0;
+    });
     options.AddFixedWindowLimiter("sre-messages", limiter =>
     {
         limiter.PermitLimit = 6;
@@ -104,7 +116,7 @@ app.UseStaticFiles();
 app.UseSession();
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path == "/api/agents/run" || context.Request.Path == "/api/agents/catalog" || context.Request.Path.StartsWithSegments("/api/sre"))
+    if (context.Request.Path == "/api/infra/health" || context.Request.Path == "/api/agents/run" || context.Request.Path == "/api/agents/catalog" || context.Request.Path.StartsWithSegments("/api/sre"))
     {
         var hosted = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID"));
         var allowed = hosted
@@ -115,7 +127,7 @@ app.Use(async (context, next) =>
                 && context.Request.Host.Host is "localhost" or "127.0.0.1" or "[::1]" or "::1";
         if (!allowed)
         {
-            await Results.Json(new { available = false, state = "authentication_required", message = "Sign in with an approved lab operator account to use the agent tabs.", error = "Authenticated operator access is required.", agents = Array.Empty<object>() }, statusCode: 401).ExecuteAsync(context);
+            await Results.Json(new { available = false, state = "authentication_required", message = "Sign in with an approved lab operator account to use protected lab views.", error = "Authenticated operator access is required.", agents = Array.Empty<object>() }, statusCode: 401).ExecuteAsync(context);
             return;
         }
         if (context.Request.Path.StartsWithSegments("/api/sre"))
@@ -153,6 +165,8 @@ app.MapGet("/api/console/config", (IConfiguration configuration) =>
     return Results.Json(new { links, performanceCooldownSeconds = 30 });
 });
 app.MapGet("/healthz", () => Results.Text("OK"));
+app.MapGet("/api/infra/health", (InfrastructureHealthService service, CancellationToken cancellationToken) => service.CheckAsync(cancellationToken))
+    .RequireRateLimiting("infrastructure-health");
 
 app.MapGet("/api/sre/availability", (SreAssistant service, CancellationToken cancellationToken) => service.AvailabilityAsync(cancellationToken))
     .RequireRateLimiting("sre-reads");
