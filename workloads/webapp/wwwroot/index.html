@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Welcome to the Azure Monitor Lab</title>
+  <title>Azure Monitor Lab Control Center</title>
   <link rel="stylesheet" href="/console.css">
   <script src="/console.js" defer></script>
 </head>
@@ -12,13 +12,22 @@
   <a class="skip-link" href="#controls">Skip to lab controls</a>
   <header class="topbar">
     <a class="brand" href="/"><img id="brand-mark" width="28" height="28" alt=""><span>Azure Monitor <strong>Lab</strong></span></a>
-    <span class="environment"><span class="status-dot"></span>Interactive console</span>
+    <nav class="documentation-nav" aria-label="Lab documentation">
+      <a data-documentation href="https://github.com/claestom/azure-monitor-lab/blob/master/docs/LAB-CONTROL-CENTER.md" target="_blank" rel="noopener noreferrer" aria-label="Guide" title="Control Center guide"><i data-lucide="book-open"></i><span>Guide</span></a>
+      <a data-documentation href="https://github.com/claestom/azure-monitor-lab/blob/master/docs/DEMO-SCENARIOS.md" target="_blank" rel="noopener noreferrer" aria-label="Scenarios" title="Guided scenarios"><i data-lucide="panels-top-left"></i><span>Scenarios</span></a>
+    </nav>
   </header>
   <main>
     <section class="intro" aria-labelledby="welcome">
-      <div><p class="eyebrow">OBSERVABILITY / HANDS-ON LAB</p><h1 id="welcome">Welcome to the Azure Monitor Lab</h1></div>
-      <div class="health-readout"><span class="field-label">WEB APP HEALTH</span><span id="health-status"><i data-lucide="circle-help"></i>Not checked</span></div>
+      <div><p class="eyebrow">OBSERVABILITY / HANDS-ON OPERATIONS</p><h1 id="welcome">Azure Monitor Lab Control Center</h1></div>
     </section>
+    <dl class="environment-strip" aria-label="Lab environment">
+      <div class="environment-resource"><dt>Resource group</dt><dd id="lab-resource">Loading...</dd></div>
+      <div><dt>App Service</dt><dd id="lab-app">Loading...</dd></div>
+      <div><dt>Web app health</dt><dd id="health-status"><i data-lucide="circle-help"></i>Not checked</dd></div>
+      <div><dt>SRE MCP runtime</dt><dd id="sre-connection" role="status">Not checked</dd></div>
+      <div><dt>Foundry catalog</dt><dd id="foundry-connection" role="status">Not checked</dd></div>
+    </dl>
     <nav class="monitoring" aria-label="Monitoring destinations">
       <span class="nav-label">MONITORING</span>
       <a data-link="ApplicationInsights" aria-disabled="true"><i data-lucide="scan-line"></i>Application Insights<i data-lucide="external-link"></i></a>
@@ -29,9 +38,9 @@
     </nav>
     <noscript>This lab console requires JavaScript.</noscript>
     <div class="app-tabs" role="tablist" aria-label="Lab views">
-      <button id="tab-console" role="tab" aria-controls="panel-console" aria-selected="true" tabindex="0"><i data-lucide="activity"></i>Lab Console</button>
+      <button id="tab-console" role="tab" aria-controls="panel-console" aria-selected="true" tabindex="0"><i data-lucide="activity"></i>Traffic &amp; Faults</button>
       <button id="tab-sre" role="tab" aria-controls="panel-sre" aria-selected="false" tabindex="-1"><i data-lucide="scan-line"></i>SRE MCP Assistant</button>
-      <button id="tab-foundry" role="tab" aria-controls="panel-foundry" aria-selected="false" tabindex="-1"><i data-lucide="messages-square"></i>Foundry Agent Playground</button>
+      <button id="tab-foundry" role="tab" aria-controls="panel-foundry" aria-selected="false" tabindex="-1"><i data-lucide="messages-square"></i>Foundry Playground</button>
     </div>
     <div id="panel-console" role="tabpanel" aria-labelledby="tab-console" tabindex="0" class="workspace">
       <aside id="controls" aria-label="Lab controls">
@@ -43,6 +52,7 @@
             <button class="action danger-accent" data-action="explode"><i data-lucide="triangle-alert"></i><span>Trigger Error<small>GET /api/explode</small></span><i data-lucide="arrow-up-right"></i></button>
             <button class="action" data-action="dependency"><i data-lucide="network"></i><span>Test Dependency<small>GET /api/dep</small></span><i data-lucide="arrow-up-right"></i></button>
           </div>
+          <nav class="scenario-links" aria-label="Related scenarios for requests"><span>Related Scenarios</span><a data-documentation href="https://github.com/claestom/azure-monitor-lab/blob/master/docs/DEMO-SCENARIOS.md#s3" target="_blank" rel="noopener noreferrer">3: Application Insights</a></nav>
         </section>
         <section class="control-section" aria-labelledby="checkout-heading">
           <div class="section-heading"><h2 id="checkout-heading">Business transaction</h2><span class="section-number">02</span></div>
@@ -52,6 +62,7 @@
           </div>
           <button class="button secondary full" data-action="checkout"><i data-lucide="shopping-cart"></i>Simulate Checkout<i data-lucide="arrow-right"></i></button>
           <div id="checkout-result" class="checkout-result" aria-live="polite"><span class="muted">No transactions yet</span></div>
+          <nav class="scenario-links" aria-label="Related scenarios for checkout"><span>Related Scenarios</span><a data-documentation href="https://github.com/claestom/azure-monitor-lab/blob/master/docs/DEMO-SCENARIOS.md#s28" target="_blank" rel="noopener noreferrer">28: Business metrics</a></nav>
         </section>
         <section class="control-section" aria-labelledby="traffic-heading">
           <div class="section-heading"><h2 id="traffic-heading">Traffic run</h2><span class="section-number">03</span></div>
@@ -63,11 +74,13 @@
           <div class="run-buttons"><button id="start-run" class="button primary"><i data-lucide="play"></i>Start Run</button><button id="stop-run" class="button secondary" disabled><i data-lucide="square"></i>Stop</button></div>
           <progress id="run-progress" value="0" max="10" aria-label="Traffic run progress"></progress>
           <div class="run-caption"><span id="run-status" role="status">Ready</span><span id="run-count">0 / 10</span></div>
+          <nav class="scenario-links" aria-label="Related scenarios for traffic"><span>Related Scenarios</span><a data-documentation href="https://github.com/claestom/azure-monitor-lab/blob/master/docs/DEMO-SCENARIOS.md#s7" target="_blank" rel="noopener noreferrer">7: Alerts</a><a data-documentation href="https://github.com/claestom/azure-monitor-lab/blob/master/docs/DEMO-SCENARIOS.md#s13" target="_blank" rel="noopener noreferrer">13: Smart Detection</a></nav>
         </section>
         <section class="advanced control-section" aria-labelledby="performance-heading">
           <div class="section-heading"><h2 id="performance-heading">Performance experiment</h2><i data-lucide="flask-conical"></i></div>
           <button id="performance" class="button secondary full"><i data-lucide="cpu"></i>Run Inefficient Code</button>
           <span id="cooldown" class="muted" role="status">Confirmation required</span>
+          <nav class="scenario-links" aria-label="Related scenarios for performance"><span>Related Scenarios</span><a data-documentation href="https://github.com/claestom/azure-monitor-lab/blob/master/docs/DEMO-SCENARIOS.md#s18" target="_blank" rel="noopener noreferrer">18: Code Optimizations</a><a data-documentation href="https://github.com/claestom/azure-monitor-lab/blob/master/docs/DEMO-SCENARIOS.md#s29" target="_blank" rel="noopener noreferrer">29: Profiler</a></nav>
         </section>
       </aside>
       <div class="results">
@@ -106,6 +119,7 @@
           <div class="run-buttons"><button id="sre-send" type="submit" class="button primary" disabled><i data-lucide="send"></i>Send</button><button id="sre-stop" type="button" class="button secondary" disabled><i data-lucide="square"></i>Stop Waiting</button></div>
           <p class="history-note">Model charges may apply. Do not submit secrets. Approved operations run with the backend identity's permissions.</p>
           <p id="sre-destination-status" class="history-note">Loading SRE destination...</p>
+          <nav class="scenario-links" aria-label="Related scenarios for SRE"><span>Related Scenarios</span><a data-documentation href="https://github.com/claestom/azure-monitor-lab/blob/master/docs/DEMO-SCENARIOS.md#s54" target="_blank" rel="noopener noreferrer">54: SRE Agent readiness</a></nav>
           <details class="sre-tools"><summary id="sre-tool-count">MCP tools</summary><ul id="sre-tools"></ul></details>
         </form>
         <div class="agent-workspace">
@@ -126,7 +140,7 @@
       </div>
     </section>
     <section id="panel-foundry" role="tabpanel" aria-labelledby="tab-foundry" tabindex="0" hidden>
-      <div class="agent-heading"><div><p class="eyebrow">FOUNDRY / EXISTING LAB AGENTS</p><h2>Foundry Agent Playground</h2></div><a id="foundry-open" class="button secondary" aria-disabled="true"><i data-lucide="external-link"></i>Open Foundry</a></div>
+      <div class="agent-heading"><div><p class="eyebrow">FOUNDRY / EXISTING LAB AGENTS</p><h2>Foundry Playground</h2></div><a id="foundry-open" class="button secondary" aria-disabled="true"><i data-lucide="external-link"></i>Open Foundry</a></div>
       <div class="agent-layout">
         <form id="agent-form" class="agent-settings">
           <div class="section-heading"><h2>New task</h2><button id="agent-refresh" type="button" class="icon-button" title="Refresh agent availability" aria-label="Refresh agent availability"><i data-lucide="refresh-cw"></i></button></div>
@@ -139,6 +153,7 @@
           <label class="consent"><input id="agent-consent" type="checkbox">I approve billable model usage for this task.</label>
           <div class="run-buttons"><button id="agent-send" type="submit" class="button primary" disabled><i data-lucide="send"></i>Run Agent</button><button id="agent-cancel" type="button" class="button secondary" disabled><i data-lucide="square"></i>Cancel</button></div>
           <p class="history-note">Do not submit secrets or sensitive data. Cancellation is best-effort; incurred usage may still be billed.</p>
+          <nav class="scenario-links" aria-label="Related scenarios for Foundry"><span>Related Scenarios</span><a data-documentation href="https://github.com/claestom/azure-monitor-lab/blob/master/docs/DEMO-SCENARIOS.md#s53" target="_blank" rel="noopener noreferrer">53: AI FinOps</a></nav>
         </form>
         <div class="agent-workspace">
           <div class="section-heading"><h2>Task results</h2><button id="agent-clear" class="icon-button" title="Clear task results" aria-label="Clear task results"><i data-lucide="trash-2"></i></button></div>
@@ -148,7 +163,7 @@
         </div>
       </div>
     </section>
-    <footer><span>Azure Monitor Lab</span><span>Demo environment <span aria-hidden="true">/</span> Intentional failures enabled</span></footer>
+    <footer><span>Azure Monitor Lab Control Center</span><span>Demo environment <span aria-hidden="true">/</span> Intentional failures enabled</span></footer>
   </main>
   <div class="mobile-feedback"><div><span class="field-label">LATEST REQUEST</span><span id="mobile-status" role="status">Waiting for a request</span></div><a class="button secondary" href="#session-heading" aria-label="View session activity"><i data-lucide="activity"></i>Activity</a></div>
   <dialog id="performance-dialog" aria-labelledby="dialog-heading">

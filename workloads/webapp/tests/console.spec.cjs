@@ -29,7 +29,7 @@ test('real actions update metrics, history, trace details, chart, and reset', as
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Welcome to the Azure Monitor Lab' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Azure Monitor Lab Control Center' })).toBeVisible();
   await page.getByRole('button', { name: /Check Health/ }).click();
   await expect(page.locator('#total')).toHaveText('1');
   await expect(page.locator('#health-status')).toContainText('Healthy');

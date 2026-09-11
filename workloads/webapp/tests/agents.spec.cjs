@@ -8,7 +8,7 @@ const answer = { agent: 'Support Triage', model: 'test-model', text: 'Technical:
 async function ready(page) {
   await page.route('**/api/agents/catalog', route => route.fulfill({ json: catalog }));
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Foundry Agent Playground' }).click();
+  await page.getByRole('tab', { name: 'Foundry Playground' }).click();
   await expect(page.getByLabel('Agent', { exact: true })).toBeEnabled();
 }
 async function approve(page) {
@@ -47,7 +47,7 @@ test('tabs preserve console state, support keyboard navigation, and validate age
   await expect(page.locator('#total')).toHaveText('1');
   await page.getByRole('button', { name: /Trigger Error/ }).click();
   await expect(page.locator('#total')).toHaveText('2');
-  await page.getByRole('tab', { name: 'Lab Console', exact: true }).focus();
+  await page.getByRole('tab', { name: 'Traffic & Faults', exact: true }).focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('tab', { name: 'SRE MCP Assistant', exact: true })).toBeFocused();
   await expect(page.locator('#panel-console')).toBeHidden();
@@ -91,7 +91,7 @@ test('playground shows actual returned metadata, requires per-task consent, and 
 
 test('playground reports unavailable services and recovers after cancellation and upstream failure', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Foundry Agent Playground' }).click();
+  await page.getByRole('tab', { name: 'Foundry Playground' }).click();
   await expect(page.locator('#agent-availability')).toContainText('not enabled');
   await expect(page.getByRole('button', { name: 'Run Agent', exact: true })).toBeDisabled();
   await page.route('**/api/agents/catalog', route => route.fulfill({ json: catalog }));
@@ -126,7 +126,7 @@ for (const width of [1440, 390, 320]) {
     await approve(page);
     await page.getByRole('button', { name: 'Run Agent', exact: true }).click();
     await expect(page.locator('#agent-status')).toContainText('Completed');
-    for (const name of ['Foundry Agent Playground', 'SRE MCP Assistant']) {
+    for (const name of ['Foundry Playground', 'SRE MCP Assistant']) {
       await page.getByRole('tab', { name, exact: true }).click();
       await expect(page.locator('.mobile-feedback')).toBeHidden();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

@@ -57,11 +57,17 @@ export function initializeAgentViews({ resizeChart, toast, refreshIcons }) {
       const response = await fetch('/api/agents/context', { cache: 'no-store', signal: AbortSignal.timeout(10000) });
       if (!response.ok) throw new Error('Context unavailable');
       context = await response.json();
+      byId('lab-resource').textContent = context.resourceGroup || 'Not configured';
+      byId('lab-app').textContent = context.appService || 'Not configured';
       byId('sre-resource').textContent = context.resourceGroup || 'Not configured';
       byId('sre-app').textContent = context.appService || 'Not configured';
       byId('sre-destination-status').textContent = setDestination('sre-open', context.sreUrl) ? 'SRE Agent destination configured' : 'SRE Agent destination not configured';
       setDestination('foundry-open', context.foundryUrl);
-    } catch { byId('sre-destination-status').textContent = 'Agent destinations unavailable'; }
+    } catch {
+      byId('lab-resource').textContent = 'Unavailable';
+      byId('lab-app').textContent = 'Unavailable';
+      byId('sre-destination-status').textContent = 'Agent destinations unavailable';
+    }
   }
 
   function updateAgentControls() {
@@ -82,18 +88,22 @@ export function initializeAgentViews({ resizeChart, toast, refreshIcons }) {
     catalogLoaded = true;
     updateAgentControls();
     byId('agent-availability').textContent = 'Checking agent availability...';
+    byId('foundry-connection').textContent = 'Checking...';
     const previous = byId('agent-choice').value;
     try {
       const response = await fetch('/api/agents/catalog', { cache: 'no-store', signal: AbortSignal.timeout(20000) });
       byId('agent-sign-in').hidden = response.status !== 401;
       const data = await response.json();
       availableAgents = response.ok && data.available && Array.isArray(data.agents) ? data.agents : [];
+      byId('foundry-connection').textContent = response.status === 401 ? 'Sign-in required' : availableAgents.length
+        ? `${availableAgents.length} agent${availableAgents.length === 1 ? '' : 's'} available` : 'Unavailable';
       byId('agent-availability').textContent = data.message || 'Agent discovery failed';
       byId('agent-choice').replaceChildren(...availableAgents.map(item => new Option(item.name, item.key)));
       if (!availableAgents.length) byId('agent-choice').append(new Option('No agents available', ''));
       if (availableAgents.some(item => item.key === previous)) byId('agent-choice').value = previous;
     } catch {
       availableAgents = [];
+      byId('foundry-connection').textContent = 'Unavailable';
       byId('agent-choice').replaceChildren(new Option('No agents available', ''));
       byId('agent-availability').textContent = 'Agent discovery unavailable. Retry shortly.';
     } finally { refreshing = false; updateAgentControls(); }

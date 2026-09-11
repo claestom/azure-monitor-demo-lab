@@ -31,11 +31,13 @@ export function initializeSreAssistant() {
     checking = true;
     controls();
     byId('sre-availability').textContent = 'Connecting to SRE MCP...';
+    byId('sre-connection').textContent = 'Checking...';
     try {
       const response = await fetch('/api/sre/availability', { cache: 'no-store', signal: AbortSignal.timeout(25000) });
       byId('sre-sign-in').hidden = response.status !== 401;
       const data = await response.json();
       available = response.ok && data.available === true;
+      byId('sre-connection').textContent = response.status === 401 ? 'Sign-in required' : available ? 'Runtime connected' : 'Unavailable';
       byId('sre-availability').textContent = data.message || 'MCP connection unavailable';
       const tools = Array.isArray(data.tools) ? data.tools : [];
       byId('sre-tool-count').textContent = `${tools.length} MCP tools${data.model ? ` / ${data.model}` : ''}`;
@@ -46,6 +48,7 @@ export function initializeSreAssistant() {
       }));
     } catch {
       available = false;
+      byId('sre-connection').textContent = 'Unavailable';
       byId('sre-availability').textContent = 'MCP connection unavailable. Check the backend configuration and retry.';
     } finally { checking = false; controls(); }
   }

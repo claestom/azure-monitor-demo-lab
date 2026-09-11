@@ -11,7 +11,7 @@ test('protected agent tabs offer platform sign-in without affecting anonymous la
   await expect(page.locator('#sre-sign-in')).toBeVisible();
   await expect(page.locator('#sre-sign-in')).toHaveAttribute('href', '/.auth/login/aad?post_login_redirect_uri=/');
   await expect(page.locator('#sre-send')).toBeDisabled();
-  await page.getByRole('tab', { name: 'Foundry Agent Playground', exact: true }).click();
+  await page.getByRole('tab', { name: 'Foundry Playground', exact: true }).click();
   await expect(page.locator('#agent-sign-in')).toBeVisible();
   await expect(page.locator('#agent-send')).toBeDisabled();
   await page.unroute('**/api/agents/catalog');

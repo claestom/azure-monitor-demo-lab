@@ -9,6 +9,15 @@ A self-contained demo centered on Azure Monitor, AI, and Azure SRE Agent, with o
 
 It's built for demos, microhacks, and hackathons. Deploy it, poke around, break it, restore it, and tear it down.
 
+## Use The Lab
+
+| Experience | Start here |
+|---|---|
+| **Guided Scenarios** | Follow the existing [scenario walkthroughs](docs/DEMO-SCENARIOS.md) for the story, Azure portal steps, queries, and expected results. |
+| **Lab Control Center** | Use the deployed app to generate traffic, try Foundry agents, and perform approved SRE MCP operations. Open the [Control Center guide](docs/LAB-CONTROL-CENTER.md) for screenshots, access requirements, and linked scenarios. |
+
+These are complementary entry points into the same lab. The Control Center links to the guided scenarios; it does not replace their setup or walkthroughs.
+
 ## Architecture
 
 Everything lands in a single resource group (`rg-azure-monitor-lab`), with telemetry flowing from left to right:
@@ -140,9 +149,9 @@ For a pipeline deployment or a different operator, set `grafanaAdminObjectId` in
 
 The deploying identity needs `Microsoft.Authorization/roleAssignments/write` at the lab scope, such as Owner or Contributor plus Role Based Access Control Administrator. After deployment, allow up to an hour for Grafana role propagation and sign in with the assigned account. Updating the repository alone does not repair an already-deployed instance; redeploy its lab/Stage B template with the correct operator ID. For view-only participants, grant Grafana Viewer separately. See [Grafana post-deployment checks](docs/POST-DEPLOYMENT.md#grafana-access).
 
-### Web App Console
+### Lab Control Center
 
-The normal post-deployment step publishes the improved [web app](workloads/webapp/README.md) from the checked-out branch. In the Azure portal, open the lab's **App Service**, then select **Browse** to see **Welcome to the Azure Monitor Lab**, with separate **Lab Console**, **SRE MCP Assistant**, and **Foundry Agent Playground** tabs. No separate frontend build is needed when deploying the checked-in assets.
+The normal post-deployment step publishes the [Lab Control Center](docs/LAB-CONTROL-CENTER.md) from the checked-out branch. In the Azure portal, open the lab's **App Service**, then select **Browse** to see **Azure Monitor Lab Control Center**, with separate **Traffic & Faults**, **SRE MCP Assistant**, and **Foundry Playground** tabs. No separate frontend build is needed when deploying the checked-in assets. Technical setup and development commands remain in the [web app reference](workloads/webapp/README.md).
 
 Scripted, staged, and portal/Cloud Shell paths use the same packaging helper. If an SRE Agent is present, the Linux MCP runtime is included automatically. The portal template alone provisions infrastructure; complete its Cloud Shell post-deployment step to publish this application.
 
@@ -166,6 +175,7 @@ $rg = "rg-azure-monitor-lab"   # change this to the RG used for your deployment
 | Doc | What's in it |
 |---|---|
 | [REFERENCE.md](docs/REFERENCE.md) | Full capability matrix · every deployed resource · demo walkthrough · cost breakdown · folder layout · optional add-ons · troubleshooting |
+| [Lab Control Center](docs/LAB-CONTROL-CENTER.md) | Application guide, screenshot, traffic and agent capabilities, safety boundaries, and links to the guided scenarios |
 | [DEMO-SCENARIOS.md](docs/DEMO-SCENARIOS.md) | All 58 demo scenarios, each with a story, a click-path, and a "killer line", plus audience-pivoted shortlists |
 | [POST-DEPLOYMENT.md](docs/POST-DEPLOYMENT.md) | Required post-deployment commands by deployment option, conditional stage setup, and optional scenario preparation |
 | [docs/DEPLOY-BICEP-STEP-BY-STEP.md](docs/DEPLOY-BICEP-STEP-BY-STEP.md) · [docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md](docs/DEPLOY-TERRAFORM-STEP-BY-STEP.md) | Staged deployment tutorials |
